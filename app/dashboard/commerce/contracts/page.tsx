@@ -21,7 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
 import { FileSpreadsheet, Plus, Package } from 'lucide-react'

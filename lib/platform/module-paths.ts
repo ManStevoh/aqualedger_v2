@@ -125,8 +125,6 @@ export function resolveModuleFromDashboardPath(pathname: string): ModuleId | nul
     climate: 'fishing',
     mobile: 'fishing',
     risk: 'fishing',
-    investments: 'accounting',
-    portfolio: 'accounting',
     export: 'fishing',
   }
   return prefixMap[segment] ?? null
