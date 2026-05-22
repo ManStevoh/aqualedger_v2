@@ -19,6 +19,7 @@ import {
   PackageCheck,
   FileCheck,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +34,7 @@ export interface WorkspaceNavItem {
 export const COMMERCE_WORKSPACE_NAV: WorkspaceNavItem[] = [
   { href: '/dashboard/commerce/storefront', label: 'Storefront', icon: Palette },
   { href: '/dashboard/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/dashboard/commerce/sales', label: 'Sales', icon: TrendingUp },
   { href: '/dashboard/commerce/payouts', label: 'Payouts', icon: Wallet },
   { href: '/dashboard/commerce/coupons', label: 'Coupons', icon: Ticket },
   { href: '/dashboard/marketplace', label: 'Marketplace', icon: ShoppingCart },

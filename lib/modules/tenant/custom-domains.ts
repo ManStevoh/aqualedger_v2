@@ -1,7 +1,36 @@
 import { resolveTxt } from 'dns/promises'
 import { query, queryOne, execute, generateId } from '@/lib/db'
 import { tenantWhere } from '@/lib/tenant'
-import { notFound } from '@/lib/api-handler'
+import { notFound, ApiError } from '@/lib/api-handler'
+import { getPlatformHost } from '@/lib/platform/tenant-url'
+
+function normalizeDomainInput(domain: string): string {
+  return domain
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/:\d+$/, '')
+}
+
+function assertValidCustomDomain(hostname: string): void {
+  if (!hostname || hostname.length < 4 || !hostname.includes('.')) {
+    throw new ApiError('Enter a valid domain (e.g. shop.yourcompany.com)', 400, 'INVALID_DOMAIN')
+  }
+  const platformHost = getPlatformHost()
+  if (
+    hostname === platformHost ||
+    hostname.endsWith(`.${platformHost}`) ||
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost')
+  ) {
+    throw new ApiError(
+      'Custom domain cannot be the platform domain or a platform subdomain',
+      400,
+      'INVALID_DOMAIN',
+    )
+  }
+}
 
 export async function listCustomDomains(tenantId: string) {
   return query(
@@ -12,7 +41,17 @@ export async function listCustomDomains(tenantId: string) {
 }
 
 export async function addCustomDomain(tenantId: string, domain: string) {
-  const normalized = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '')
+  const normalized = normalizeDomainInput(domain)
+  assertValidCustomDomain(normalized)
+
+  const duplicate = await queryOne<{ id: string }>(
+    `SELECT id FROM tenant_custom_domains WHERE domain = ? LIMIT 1`,
+    [normalized],
+  )
+  if (duplicate) {
+    throw new ApiError('This domain is already registered on the platform', 409, 'DOMAIN_TAKEN')
+  }
+
   const id = generateId()
   const verifyToken = `aqua-${generateId().slice(0, 12)}`
   await execute(
@@ -64,4 +103,40 @@ export async function verifyCustomDomainDns(tenantId: string, domainId: string) 
 
   await execute(`UPDATE tenant_custom_domains SET verified = 1 WHERE id = ?`, [domainId])
   return { ...row, verified: true, dnsVerified: true }
+}
+
+export async function removeCustomDomain(tenantId: string, domainId: string): Promise<void> {
+  const row = await queryOne<{ id: string }>(
+    `SELECT id FROM tenant_custom_domains WHERE id = ? AND ${tenantWhere()}`,
+    [domainId, tenantId],
+  )
+  if (!row) throw notFound('Domain not found')
+  await execute(`DELETE FROM tenant_custom_domains WHERE id = ? AND ${tenantWhere()}`, [
+    domainId,
+    tenantId,
+  ])
+}
+
+export async function setPrimaryCustomDomain(
+  tenantId: string,
+  domainId: string,
+): Promise<{ id: string; domain: string }> {
+  const row = await queryOne<{ id: string; domain: string; verified: number }>(
+    `SELECT id, domain, verified FROM tenant_custom_domains WHERE id = ? AND ${tenantWhere()}`,
+    [domainId, tenantId],
+  )
+  if (!row) throw notFound('Domain not found')
+  if (!row.verified) {
+    throw new ApiError('Verify DNS before setting as primary domain', 400, 'DOMAIN_NOT_VERIFIED')
+  }
+
+  await execute(
+    `UPDATE tenant_custom_domains SET primary_domain = 0 WHERE ${tenantWhere()}`,
+    [tenantId],
+  )
+  await execute(
+    `UPDATE tenant_custom_domains SET primary_domain = 1 WHERE id = ? AND ${tenantWhere()}`,
+    [domainId, tenantId],
+  )
+  return { id: row.id, domain: row.domain }
 }

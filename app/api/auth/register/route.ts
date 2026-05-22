@@ -14,6 +14,8 @@ import {
   createTenantWithOwner,
   type BusinessType,
 } from '@/lib/modules/tenant/onboarding'
+import { hostingSummaryForSlug } from '@/lib/modules/tenant/hosting'
+import { ApiError } from '@/lib/api-handler'
 import { assertRecaptcha } from '@/lib/modules/security/recaptcha'
 import { getSignupLocked } from '@/lib/platform/platform-settings'
 
@@ -65,11 +67,30 @@ export async function POST(request: NextRequest) {
       initialStatus: 'active',
     })
 
-    const { tenantId, slug } = await createTenantWithOwner(
-      user.id,
-      parsed.organizationName,
-      businessType,
-    )
+    let tenantId: string
+    let slug: string
+    try {
+      const created = await createTenantWithOwner(
+        user.id,
+        parsed.organizationName,
+        businessType,
+        parsed.tenantSlug,
+      )
+      tenantId = created.tenantId
+      slug = created.slug
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not create organization'
+      if (
+        message.includes('subdomain') ||
+        message.includes('taken') ||
+        message.includes('reserved')
+      ) {
+        throw new ApiError(message, 400, 'INVALID_TENANT_SLUG')
+      }
+      throw err
+    }
+
+    const hosting = hostingSummaryForSlug(slug, parsed.organizationName)
 
     const userAgent = request.headers.get('user-agent')
     const { accessToken, refreshToken, expiresAt } = await createSession(
@@ -106,6 +127,12 @@ export async function POST(request: NextRequest) {
           id: tenantId,
           slug,
           name: parsed.organizationName,
+        },
+        hosting: {
+          subdomainHost: hosting.subdomainHost,
+          subdomainUrl: hosting.subdomainUrl,
+          subdomainStoreUrl: hosting.subdomainStoreUrl,
+          platformStoreUrl: hosting.platformStoreUrl,
         },
         onboardingRequired: true,
       },

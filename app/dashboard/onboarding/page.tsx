@@ -68,6 +68,12 @@ export default function OnboardingPage() {
   } | null>(null)
   const [mpesaTesting, setMpesaTesting] = useState(false)
   const [mfaEnabled, setMfaEnabled] = useState(false)
+  const [hosting, setHosting] = useState<{
+    subdomainHost: string
+    subdomainStoreUrl: string
+    platformStoreUrl: string
+    slug: string
+  } | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -108,10 +114,29 @@ export default function OnboardingPage() {
       authFetchJson<{ success: boolean; data?: { mfa?: { enabled: boolean } } }>(
         '/api/v2/auth/mfa',
       ),
+      authFetchJson<{
+        success: boolean
+        data?: {
+          hosting?: {
+            slug: string
+            subdomainHost: string
+            subdomainStoreUrl: string
+            platformStoreUrl: string
+          }
+        }
+      }>('/api/v2/tenant/hosting'),
     ])
-      .then(([mpesaRes, mfaRes]) => {
+      .then(([mpesaRes, mfaRes, hostingRes]) => {
         if (mpesaRes.success && mpesaRes.data) setMpesaStatus(mpesaRes.data)
         if (mfaRes.success && mfaRes.data?.mfa) setMfaEnabled(mfaRes.data.mfa.enabled)
+        if (hostingRes.success && hostingRes.data?.hosting) {
+          setHosting({
+            slug: hostingRes.data.hosting.slug,
+            subdomainHost: hostingRes.data.hosting.subdomainHost,
+            subdomainStoreUrl: hostingRes.data.hosting.subdomainStoreUrl,
+            platformStoreUrl: hostingRes.data.hosting.platformStoreUrl,
+          })
+        }
       })
       .catch(() => {})
   }, [activeStep])
@@ -363,6 +388,28 @@ export default function OnboardingPage() {
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 Business type: {onboarding?.business_type ?? '—'}
               </li>
+              {hosting && (
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span>
+                    Subdomain ready:{' '}
+                    <a
+                      href={hosting.subdomainStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-primary hover:underline"
+                    >
+                      {hosting.subdomainHost}
+                    </a>
+                    <span className="block text-xs text-muted-foreground mt-1">
+                      Custom domain optional —{' '}
+                      <Link href="/dashboard/organization/domains" className="text-primary hover:underline">
+                        Organization → Domains
+                      </Link>
+                    </span>
+                  </span>
+                </li>
+              )}
             </ul>
             {mpesaStatus && (
               <Card className="border-dashed">

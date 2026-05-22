@@ -1,6 +1,6 @@
 # AquaERP — Overall pending vs complete
 
-Last updated: **2026-06-12** full suggested-features pass.
+Last updated: **2026-05-22**
 
 ## Legend
 
@@ -8,39 +8,55 @@ Last updated: **2026-06-12** full suggested-features pass.
 |--------|---------|
 | ✅ | Implemented in monolith |
 | 🟡 | Code complete; needs production `.env` / external service |
+| 🔧 | Can implement next in this repo (no new infra) |
 | ⬜ | Phase 5 / separate infra (not in this repo scope) |
 
 ---
 
-## ✅ Implemented (suggested features pass)
+## ✅ Recently completed (monolith)
 
 | Feature | Where |
 |---------|--------|
-| Custom domain DNS verification | TXT `_aquaerp-verify.{domain}` → `POST` domains `verify-dns` |
-| Custom domain host routing | Verified domain → `x-tenant-id` in middleware |
-| Stripe Billing Portal | `/dashboard/organization/billing` → `POST /api/v2/tenant/billing-portal` |
-| Per-tenant feature flags | `tenant_feature_flags` + admin tenants dialog |
-| Tenant-scoped module nav | `GET /api/v2/tenant/modules` + API `assertApiModuleEnabled` with `x-tenant-id` |
-| M-Pesa reconciliation job | `POST /api/v2/platform/payments/reconcile` + admin Payments button |
-| Scheduled GDPR exports | `tenant_data_exports` + `POST /api/v2/platform/exports` |
-| Platform user invite | `POST /api/v2/platform/users/invite` + admin Users dialog |
-| Tenant isolation unit tests | `lib/__tests__/tenant-isolation.test.ts` |
-| Super admin suite (prior) | Command center, tenants, users, impersonation, analytics, payments, billing, broadcast, purge, settings |
+| `DashboardPageLayout` shared shell | `components/dashboard/dashboard-page-layout.tsx` |
+| Order detail page + API | `/dashboard/orders/[id]`, `GET /api/v2/orders/[id]` |
+| Orders list → detail link | `/dashboard/orders` “View order” |
+| Edge-safe custom domains | `GET /api/internal/resolve-host` |
+| Server dashboard module gate | `DashboardModuleServerGate` + `lib/platform/dashboard-access.ts` |
+| GDPR export cron + download | `npm run exports:process`, download API |
+| Env / deploy tooling | `npm run preflight`, `npm run predeploy`, `npm run smoke` |
+
+---
+
+## 🔧 Good next implementations (this repo)
+
+| Item | Effort | Notes |
+|------|--------|--------|
+| Migrate remaining pages to `DashboardPageLayout` | Medium | Many pages already import it; run `fix-dashboard-layout.mjs` only after `git diff` review |
+| `PATCH /api/v2/orders/[id]` | Low | REST alias for status updates (PUT on collection exists) |
+| Live push / SMS providers UI | Low | Wire admin health to show channel status from `preflight` |
+| Multi-currency on wallet FX tab | Low | Wallet page has FX UI — ensure rates API seeded |
+| E2E smoke with test DB | Medium | Vitest + optional Playwright for login → order flow |
+| Scheduled report runner cron | Low | Mirror `exports:process` pattern for `reports/run-scheduled` |
 
 ---
 
 ## 🟡 Wire environment (not code gaps)
 
-| Feature | Variables |
-|---------|-----------|
-| M-Pesa STK | `MPESA_*` |
-| Stripe portal & cards | `STRIPE_SECRET_KEY` |
-| Email outbox | `SMTP_*` |
-| SMS / WhatsApp | `SMS_API_KEY`, `WHATSAPP_API_KEY` |
-| FCM push | `FCM_SERVER_KEY` |
-| Google OAuth | `GOOGLE_OAUTH_*` |
-| OpenAI | `OPENAI_API_KEY` |
-| reCAPTCHA | Platform security settings |
+| Feature | Variables | Check |
+|---------|-----------|--------|
+| M-Pesa STK | `MPESA_*` | `npm run mpesa:check` |
+| Stripe portal & cards | `STRIPE_SECRET_KEY` | |
+| Email outbox | `SMTP_*` / `RESEND_API_KEY` | |
+| SMS / WhatsApp | `SMS_API_KEY`, `WHATSAPP_API_KEY` | |
+| FCM push | `FCM_SERVER_KEY` | |
+| Google OAuth | `GOOGLE_OAUTH_*` | |
+| OpenAI | `OPENAI_API_KEY` | |
+| reCAPTCHA | Platform security settings | |
+| Cron jobs | `CRON_SECRET` | `npm run setup:cron` |
+
+```bash
+npm run preflight
+```
 
 ---
 
@@ -52,6 +68,7 @@ Last updated: **2026-06-12** full suggested-features pass.
 - Blockchain traceability, data warehouse, Elasticsearch
 - Full SAP/Oracle ERP connectors (stub connectors exist)
 - Multi-warehouse ATP, read replicas, CDN edge
+- Native MQTT subscriber service
 
 ---
 
@@ -64,8 +81,9 @@ npm run typecheck
 npm test
 npm run mpesa:check
 npm run smoke
+npm run preflight
 ```
 
-Deploy: [`DEPLOYMENT.md`](DEPLOYMENT.md)
+Deploy: [`DEPLOYMENT.md`](DEPLOYMENT.md) · Safe edits: [`WORKING_SAFELY.md`](WORKING_SAFELY.md)
 
 Migration: **`20260612_suggested_features.sql`**

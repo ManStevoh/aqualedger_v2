@@ -68,6 +68,8 @@ Last updated after **20260531** full-feature enhancement pass.
 |---------|--------|
 | Customers, campaigns, segments | ✅ |
 | Leads pipeline + **Kanban board** (drag stage) | ✅ `PATCH /api/v2/crm/leads/[id]` |
+| **Sales tracking** (orders revenue, trends, top buyers/products) | ✅ `/dashboard/commerce/sales` · `GET /api/v2/commerce/sales` |
+| Forward sales contracts | ✅ `/dashboard/commerce/contracts` |
 | Campaign send | 🟡 SMTP/SMS env |
 
 ## H. Accounting & Finance — ✅ (payment intents 🟡)

@@ -5,6 +5,7 @@ import { getExecutiveSummary } from '@/lib/modules/analytics/service'
 import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
 import { analyticsTenantScope, pushAnalyticsTenant } from '@/lib/modules/analytics/tenant-scope'
+import { tenantWhere } from '@/lib/tenant'
 
 // GET /api/v2/analytics - Get analytics data
 export async function GET(request: NextRequest) {
@@ -181,6 +182,16 @@ export async function GET(request: NextRequest) {
         revParams,
       )
 
+      const salesConditions = [tenantWhere('o'), "o.status != 'cancelled'", `o.${dateFilter}`]
+      const salesParams: unknown[] = [auth.tenantId]
+      const [orderSales] = await query<{ total: number }>(
+        `SELECT COALESCE(SUM(o.total), 0) as total FROM orders o WHERE ${salesConditions.join(' AND ')}`,
+        salesParams,
+      )
+
+      const catchRevenue = Number(revenue?.total ?? 0)
+      const salesRevenue = Number(orderSales?.total ?? 0)
+
       const expConditions = ['user_id = ?', "status = 'approved'", dateFilter]
       const expParams: unknown[] = [auth.userId]
       if (tenantScoped) {
@@ -199,33 +210,47 @@ export async function GET(request: NextRequest) {
       )
 
       const monthlyProfitLoss = await query<{ month: string; revenue: number; expenses: number }>(
-        `SELECT months.month, COALESCE(rev.revenue, 0) as revenue, COALESCE(exp.expenses, 0) as expenses
+        `SELECT months.month,
+           COALESCE(rev.catch_revenue, 0) + COALESCE(sales.order_revenue, 0) as revenue,
+           COALESCE(exp.expenses, 0) as expenses
          FROM (
            SELECT DATE_FORMAT(t.departure_time, '%Y-%m') as month FROM fishing_trips t ${revJoin} ${revWhere}
+           UNION
+           SELECT DATE_FORMAT(o.created_at, '%Y-%m') FROM orders o WHERE ${salesConditions.join(' AND ')}
            UNION
            SELECT DATE_FORMAT(expense_date, '%Y-%m') FROM expenses WHERE ${expConditions.join(' AND ')}
          ) months
          LEFT JOIN (
-           SELECT DATE_FORMAT(t.departure_time, '%Y-%m') as month, SUM(t.total_revenue) as revenue
+           SELECT DATE_FORMAT(t.departure_time, '%Y-%m') as month, SUM(t.total_revenue) as catch_revenue
            FROM fishing_trips t ${revJoin} ${revWhere}
            GROUP BY DATE_FORMAT(t.departure_time, '%Y-%m')
          ) rev ON months.month = rev.month
+         LEFT JOIN (
+           SELECT DATE_FORMAT(o.created_at, '%Y-%m') as month, SUM(o.total) as order_revenue
+           FROM orders o WHERE ${salesConditions.join(' AND ')}
+           GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
+         ) sales ON months.month = sales.month
          LEFT JOIN (
            SELECT DATE_FORMAT(expense_date, '%Y-%m') as month, SUM(amount) as expenses
            FROM expenses WHERE ${expConditions.join(' AND ')}
            GROUP BY DATE_FORMAT(expense_date, '%Y-%m')
          ) exp ON months.month = exp.month
          ORDER BY months.month`,
-        [...revParams, ...expParams, ...revParams, ...expParams],
+        [...revParams, ...salesParams, ...expParams, ...revParams, ...salesParams, ...expParams],
       )
       
+      const totalRevenue = catchRevenue + salesRevenue
+      const totalExpenses = Number(expenses?.total ?? 0)
+
       return NextResponse.json({
         success: true,
         data: {
           summary: {
-            totalRevenue: revenue?.total || 0,
-            totalExpenses: expenses?.total || 0,
-            netProfit: (revenue?.total || 0) - (expenses?.total || 0),
+            totalRevenue,
+            catchRevenue,
+            salesRevenue,
+            totalExpenses,
+            netProfit: totalRevenue - totalExpenses,
           },
           expensesByCategory,
           monthlyProfitLoss,

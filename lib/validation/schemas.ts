@@ -40,6 +40,13 @@ export const registerSchema = z.object({
     .optional()
     .or(z.literal('')),
   organizationName: z.string().min(2, 'Organization name is required').max(200),
+  /** Optional preferred subdomain (else derived from organization name) */
+  tenantSlug: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Invalid subdomain format')
+    .optional(),
   businessType: businessTypeSchema,
   role: userRoleSchema
     .refine((r) => r !== 'super_admin', 'Invalid role')

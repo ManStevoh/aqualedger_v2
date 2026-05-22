@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
 import { Shield, Plus } from 'lucide-react'
@@ -181,13 +182,11 @@ export default function InsurancePage() {
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Insurance & claims</h1>
-          <p className="text-muted-foreground">Hull, liability, and cargo cover for fleet operations</p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardPageLayout
+      title="Insurance & claims"
+      description="Hull, liability, and cargo cover for fleet operations"
+      actions={
+        <>
           <Button variant="outline" className="gap-2" onClick={() => setClaimDialog(true)}>
             <Plus className="h-4 w-4" />
             File claim
@@ -196,9 +195,9 @@ export default function InsurancePage() {
             <Plus className="h-4 w-4" />
             Add policy
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <StatCardGrid>
         <StatCard title="Active policies" value={summary.activePolicies} icon={<Shield className="h-4 w-4" />} loading={loading} />
         <StatCard title="Expiring (30d)" value={summary.expiringSoon} loading={loading} />
@@ -344,6 +343,6 @@ export default function InsurancePage() {
           <DialogFooter><Button onClick={createClaim}>Submit claim</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

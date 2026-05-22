@@ -21,6 +21,18 @@ Default database name: **`aquaerp_operating`** (set `DB_NAME` in `.env`).
 
 Migrations: … → `20260610` (boats fixup) → **`20260612`** (DNS verify, tenant flags, GDPR exports). See [`docs/DATABASE_SETUP.md`](docs/DATABASE_SETUP.md), [`docs/PENDING_OVERALL.md`](docs/PENDING_OVERALL.md)
 
+### Demo tenants (20 orgs, full module data)
+
+```bash
+npm run db:seed:demo          # skip existing slugs
+npm run db:seed:demo:fresh    # wipe demo tenants/users first, then re-seed
+```
+
+- **Owners:** `owner-{slug}@demo.aquaerp.local` / `Demo@123`
+- **Buyer (orders):** `buyer@demo.aquaerp.local` / `Demo@123`
+- **Subdomains:** `{slug}.localhost:3000` (see `PLATFORM_HOST` in production)
+- Script: `database/seed-demo-tenants.ts` — onboarding complete, chart of accounts, fishing, commerce, cold chain, CRM, HR, accounting, procurement, logistics, insurance, IoT, AI insights
+
 ## Latest pass (enterprise final)
 
 ### Commerce (full Shopify-style flow)
@@ -141,8 +153,10 @@ Verify: `npm run db:verify`
 
 ## Phase 2 (tenant SaaS routing)
 
-- **Subdomain tenants** — `{slug}.localhost` / `{slug}.PLATFORM_HOST` sets `x-tenant-slug`; APIs scope to that org when user is a member
-- **Custom domains** — verified `shop.client.com` → `x-tenant-id`; DNS TXT verify at Organization → Domains
+- **Subdomain at signup** — every registration gets `{slug}.PLATFORM_HOST` (slug from org name or chosen at register); preview via `GET /api/public/tenant-slug/check`
+- **Subdomain tenants** — `{slug}.localhost` / `{slug}.PLATFORM_HOST` sets `x-tenant-slug`; `/` → `/store/{slug}`
+- **Custom domains** — tenants request at Organization → Domains; TXT verify + CNAME to platform; optional primary domain
+- Docs: [`docs/TENANT_HOSTING.md`](docs/TENANT_HOSTING.md)
 - **Onboarding wizard** — `/dashboard/onboarding` with M-Pesa sandbox STK test on go-live step
 - **DB repair** — `npm run db:verify` after `schema.sql` + migrations
 

@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import type { Connection } from 'mysql2/promise'
 import { queryOne, execute, generateId, transaction } from '@/lib/db'
 import type { UserRole } from '@/lib/auth'
+import { slugifyOrganizationName, validateTenantSlug } from '@/lib/platform/tenant-slug'
 
 export type BusinessType =
   | 'fisherman'
@@ -44,18 +45,8 @@ export function businessTypeToUserRole(businessType: BusinessType): UserRole {
   return BUSINESS_TYPE_USER_ROLE[businessType] ?? 'fisherman'
 }
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 80)
-}
-
 async function uniqueSlug(baseName: string, conn?: Connection): Promise<string> {
-  const base = slugify(baseName) || 'org'
+  const base = slugifyOrganizationName(baseName) || 'org'
   let slug = base
   let attempt = 0
 
@@ -121,13 +112,30 @@ export async function createTenantWithOwner(
   userId: string,
   organizationName: string,
   businessType: BusinessType,
+  preferredSlug?: string,
 ): Promise<{ tenantId: string; slug: string; branchId: string }> {
   const tenantId = generateId()
   const branchId = generateId()
   const memberId = generateId()
 
   const slug = await transaction(async (conn) => {
-    const unique = await uniqueSlug(organizationName, conn)
+    let unique: string
+    if (preferredSlug?.trim()) {
+      const check = validateTenantSlug(preferredSlug)
+      if (!check.ok) {
+        throw new Error(check.error || 'Invalid subdomain')
+      }
+      const [rows] = await conn.execute(`SELECT id FROM tenants WHERE slug = ? LIMIT 1`, [
+        check.normalized,
+      ])
+      const existing = (rows as { id: string }[])[0]
+      if (existing) {
+        throw new Error('This subdomain is already taken')
+      }
+      unique = check.normalized
+    } else {
+      unique = await uniqueSlug(organizationName, conn)
+    }
 
     await conn.execute(
       `INSERT INTO tenants (id, slug, name, legal_name, plan, status)

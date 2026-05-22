@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -69,6 +69,16 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1)
   const [businessType, setBusinessType] = useState<BusinessType>('fisherman')
   const [organizationName, setOrganizationName] = useState('')
+  const [customizeSlug, setCustomizeSlug] = useState(false)
+  const [tenantSlug, setTenantSlug] = useState('')
+  const [slugPreview, setSlugPreview] = useState<{
+    slug: string
+    available: boolean
+    subdomainHost: string
+    subdomainUrl: string
+    error?: string
+  } | null>(null)
+  const [slugChecking, setSlugChecking] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -99,7 +109,64 @@ export default function RegisterPage() {
     }
   }, [])
 
-  const canProceedStep1 = organizationName.trim().length >= 2
+  const canProceedStep1 =
+    organizationName.trim().length >= 2 &&
+    slugPreview?.available === true &&
+    !slugChecking
+
+  useEffect(() => {
+    if (organizationName.trim().length < 2) {
+      setSlugPreview(null)
+      return
+    }
+    const q = customizeSlug && tenantSlug.trim() ? tenantSlug.trim() : organizationName.trim()
+    const t = window.setTimeout(() => {
+      setSlugChecking(true)
+      const params = new URLSearchParams()
+      if (customizeSlug && tenantSlug.trim()) {
+        params.set('slug', tenantSlug.trim())
+      } else {
+        params.set('organization', organizationName.trim())
+      }
+      fetch(`/api/public/tenant-slug/check?${params}`)
+        .then((r) => r.json())
+        .then(
+          (json: {
+            success?: boolean
+            data?: {
+              slug: string
+              available: boolean
+              subdomainHost?: string
+              subdomainUrl?: string
+              error?: string
+            }
+          }) => {
+            if (json.success && json.data) {
+              setSlugPreview({
+                slug: json.data.slug,
+                available: json.data.available,
+                subdomainHost: json.data.subdomainHost ?? `${json.data.slug}.localhost`,
+                subdomainUrl: json.data.subdomainUrl ?? '',
+                error: json.data.error,
+              })
+              if (customizeSlug && !tenantSlug) {
+                setTenantSlug(json.data.slug)
+              }
+            }
+          },
+        )
+        .catch(() => setSlugPreview(null))
+        .finally(() => setSlugChecking(false))
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [organizationName, tenantSlug, customizeSlug])
+
+  const slugHint = useMemo(() => {
+    if (slugChecking) return 'Checking subdomain…'
+    if (!slugPreview) return null
+    if (!slugPreview.available) return slugPreview.error ?? 'Subdomain not available'
+    return `Your storefront: ${slugPreview.subdomainHost}`
+  }, [slugPreview, slugChecking])
 
   const handleStep1Next = (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,6 +213,8 @@ export default function RegisterPage() {
           phone: phone || undefined,
           organizationName: organizationName.trim(),
           businessType,
+          tenantSlug:
+            customizeSlug && tenantSlug.trim() ? tenantSlug.trim() : slugPreview?.slug,
           recaptchaToken,
         }),
       })
@@ -285,6 +354,54 @@ export default function RegisterPage() {
                     placeholder="Lake Victoria Fisheries Co-op"
                   />
                 </div>
+
+                {slugHint && (
+                  <div
+                    className={cn(
+                      'rounded-lg border px-3 py-2 text-sm',
+                      slugPreview?.available
+                        ? 'border-primary/30 bg-primary/5 text-foreground'
+                        : 'border-destructive/30 bg-destructive/5 text-destructive',
+                    )}
+                  >
+                    {slugHint}
+                    {slugPreview?.available && slugPreview.subdomainUrl && (
+                      <p className="mt-1 text-xs text-muted-foreground font-mono break-all">
+                        {slugPreview.subdomainUrl}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={customizeSlug}
+                    onChange={(e) => setCustomizeSlug(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Choose a custom subdomain
+                </label>
+
+                {customizeSlug && (
+                  <div className="space-y-2">
+                    <Label htmlFor="tenantSlug">Subdomain</Label>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        id="tenantSlug"
+                        value={tenantSlug}
+                        onChange={(e) => setTenantSlug(e.target.value.toLowerCase())}
+                        placeholder="coastfish"
+                        className="font-mono"
+                      />
+                      <span className="text-sm text-muted-foreground shrink-0">.your-platform</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Letters, numbers, and hyphens only. Custom domains (e.g. shop.yourbrand.com) can be
+                      added later in Organization → Domains.
+                    </p>
+                  </div>
+                )}
 
                 <Button
                   type="submit"

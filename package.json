@@ -15,7 +15,10 @@
     "exports:process": "node scripts/process-exports.mjs",
     "smoke": "node scripts/smoke-platform.mjs",
     "setup:cron": "node scripts/ensure-cron-secret.mjs",
-    "predeploy": "node scripts/predeploy.mjs"
+    "predeploy": "node scripts/predeploy.mjs",
+    "preflight": "node scripts/preflight-env.mjs",
+    "db:seed:demo": "npx tsx database/seed-demo-tenants.ts",
+    "db:seed:demo:fresh": "npx tsx database/seed-demo-tenants.ts --fresh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

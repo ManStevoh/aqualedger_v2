@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -308,6 +309,9 @@ export default function OrdersPage() {
                     </div>
 
                     <div className="flex flex-col gap-2 min-w-[140px]">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={`/dashboard/orders/${order.id}`}>View order</Link>
+                      </Button>
                       {orderRole === 'seller' ? sellerActions(order) : buyerActions(order)}
                     </div>
                   </div>
