@@ -18,6 +18,13 @@ const mono = Geist_Mono({
   display: 'swap',
 })
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover' as const,
+}
+
 export const metadata: Metadata = {
   title: {
     default: APP_NAME,
@@ -55,7 +62,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
-      <body className="font-sans antialiased min-h-screen">
+      <body className="font-sans antialiased min-h-dvh overflow-x-hidden">
         <ThemeProvider>
           {children}
           <Toaster

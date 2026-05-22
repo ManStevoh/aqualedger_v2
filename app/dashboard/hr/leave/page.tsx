@@ -159,7 +159,7 @@ export default function HRLeavePage() {
 
       <div className="flex gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="filter-control">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>

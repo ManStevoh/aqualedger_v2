@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,6 +40,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 export default function UsersPage() {
+  const meta = useDashboardPageMeta()
+
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -202,21 +206,11 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage all users across the platform
-          </p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add User
-        </Button>
-      </div>
-
-      {/* Stats Overview */}
+        </Button></>}>
+{/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Total Users"
@@ -441,6 +435,7 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

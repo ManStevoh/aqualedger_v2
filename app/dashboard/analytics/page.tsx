@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,6 +26,8 @@ type AnalyticsShape = {
 }
 
 export default function AnalyticsPage() {
+  const meta = useDashboardPageMeta()
+
   const [analyticsData, setAnalyticsData] = useState<AnalyticsShape | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -187,13 +191,8 @@ export default function AnalyticsPage() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Financial Analytics</h1>
-        <p className="text-muted-foreground">Comprehensive financial and operational insights</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Total Revenue"
           value={`KES ${revenue.toLocaleString()}`}
@@ -473,6 +472,7 @@ export default function AnalyticsPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

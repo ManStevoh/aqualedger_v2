@@ -1,9 +1,10 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { useAppStore } from '@/lib/store'
 import { getNavForRole } from '@/lib/platform/modules'
 import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
@@ -21,17 +22,15 @@ export default function ModuleDashboardsIndexPage() {
   }, [currentRole, enabledModuleIds, modulesLoaded])
 
   return (
-    <div className="space-y-8">
-      <ModulePageHeader
+    <DashboardPageLayout
         title="Module dashboards"
         description="Dedicated operational command centers for every ERP module — live KPIs, trends, alerts, and quick links."
         breadcrumbs={[
           { label: 'Command Center', href: '/dashboard' },
           { label: 'Module dashboards' },
         ]}
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      >
+<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {modules.map((mod) => {
           const dash = mod.nav.find((n) => n.title === 'Dashboard')
           if (!dash) return null
@@ -59,6 +58,7 @@ export default function ModuleDashboardsIndexPage() {
           )
         })}
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

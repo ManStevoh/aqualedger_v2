@@ -13,6 +13,7 @@ export const productCatalogCreateSchema = z.object({
   taxCode: z.string().max(20).optional().nullable(),
   hsCode: z.string().max(20).optional().nullable(),
   status: productCatalogStatusSchema.default('active'),
+  vendorId: z.string().uuid().optional().nullable(),
 })
 
 export const productCatalogUpdateSchema = productCatalogCreateSchema.partial().extend({
@@ -146,10 +147,14 @@ export const wishlistRemoveSchema = z.object({
   message: 'listingId or id is required',
 })
 
+export const checkoutPaymentMethodSchema = z.enum(['mpesa', 'cod', 'paystack', 'stripe'])
+
 export const checkoutSchema = z.object({
   cartId: z.string().uuid(),
   couponCode: z.string().max(50).optional().nullable(),
   deliveryAddress: z.string().max(2000).optional().nullable(),
+  paymentMethod: checkoutPaymentMethodSchema.optional().default('cod'),
+  phoneNumber: z.string().min(9).max(15).optional(),
 })
 
 export const commissionListQuerySchema = paginationSchema.extend({

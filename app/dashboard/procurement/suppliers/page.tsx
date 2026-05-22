@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import {
   Dialog,
   DialogContent,
@@ -190,7 +191,7 @@ export default function SuppliersPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="filter-control"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
@@ -240,6 +241,7 @@ export default function SuppliersPage() {
               </Button>
             </div>
           ) : (
+            <DataTableShell label="Suppliers">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -297,6 +299,7 @@ export default function SuppliersPage() {
                 ))}
               </TableBody>
             </Table>
+            </DataTableShell>
           )}
         </CardContent>
       </Card>

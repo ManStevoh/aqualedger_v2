@@ -2,12 +2,15 @@
 
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DataTable } from '@/components/dashboard/data-table'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
+import { PortalInviteDialog } from '@/components/dashboard/portal-invite-dialog'
 import { authFetchJson } from '@/lib/api'
-import { Shield, UserCheck, Users } from 'lucide-react'
+import { Shield, UserCheck, Users, Store, Settings, UserPlus } from 'lucide-react'
 
 interface TenantMember {
   id: string
@@ -24,8 +27,11 @@ interface TenantMember {
 export default function TeamPage() {
   const [members, setMembers] = useState<TenantMember[]>([])
   const [loading, setLoading] = useState(true)
+  const [vendorInviteOpen, setVendorInviteOpen] = useState(false)
+  const [clientInviteOpen, setClientInviteOpen] = useState(false)
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true)
     authFetchJson<{
       success: boolean
       data?: { members: TenantMember[] }
@@ -37,10 +43,16 @@ export default function TeamPage() {
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    load()
   }, [])
 
   const activeMembers = members.filter((m) => m.status === 'active').length
   const roles = new Set(members.map((m) => m.role)).size
+  const portalVendors = members.filter((m) => m.role === 'vendor' && m.status === 'active').length
+  const portalClients = members.filter((m) => m.role === 'customer' && m.status === 'active').length
 
   const initials = (member: TenantMember) => {
     const a = member.first_name?.[0] ?? ''
@@ -51,9 +63,26 @@ export default function TeamPage() {
   return (
     <DashboardPageLayout
       title="Team"
-      description="Tenant members and roles"
+      description="Staff, vendors, and clients with portal access"
     >
-            <StatCardGrid>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button className="gap-2" variant="outline" onClick={() => setVendorInviteOpen(true)}>
+          <Store className="h-4 w-4" />
+          Invite vendor
+        </Button>
+        <Button className="gap-2" variant="outline" onClick={() => setClientInviteOpen(true)}>
+          <UserPlus className="h-4 w-4" />
+          Invite client
+        </Button>
+        <Button className="gap-2" variant="ghost" asChild>
+          <Link href="/dashboard/settings/roles">
+            <Settings className="h-4 w-4" />
+            Portal roles
+          </Link>
+        </Button>
+      </div>
+
+      <StatCardGrid>
         <StatCard
           title="Members"
           value={members.length}
@@ -73,10 +102,16 @@ export default function TeamPage() {
           icon={<Shield className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
-          title="Invited / suspended"
-          value={members.filter((m) => m.status !== 'active').length}
+          title="Portal vendors"
+          value={portalVendors}
           loading={loading}
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          icon={<Store className="h-4 w-4 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Portal clients"
+          value={portalClients}
+          loading={loading}
+          icon={<UserPlus className="h-4 w-4 text-muted-foreground" />}
         />
       </StatCardGrid>
 
@@ -129,6 +164,19 @@ export default function TeamPage() {
             cell: (row) => row.joined_at?.split('T')[0] ?? '—',
           },
         ]}
+      />
+
+      <PortalInviteDialog
+        kind="vendor"
+        open={vendorInviteOpen}
+        onOpenChange={setVendorInviteOpen}
+        onSuccess={load}
+      />
+      <PortalInviteDialog
+        kind="customer"
+        open={clientInviteOpen}
+        onOpenChange={setClientInviteOpen}
+        onSuccess={load}
       />
     </DashboardPageLayout>
   )

@@ -29,7 +29,7 @@ Last updated after **20260531** full-feature enhancement pass.
 | Multi-branch | ✅ |
 | Subscription plan display | ✅ |
 | Tenant analytics API | ✅ `/api/v2/tenant/analytics` |
-| Custom domain table | ✅ `tenant_custom_domains` (verify DNS Phase 5) |
+| Custom domain + DNS verify | ✅ `/dashboard/organization/domains`, `resolve-host` |
 
 ## C. E-Commerce & Marketplace
 | Feature | Status |
@@ -40,7 +40,7 @@ Last updated after **20260531** full-feature enhancement pass.
 | Checkout + coupons | ✅ |
 | Wishlist, reviews, loyalty | ✅ |
 | Multi-vendor + commissions + payouts | ✅ |
-| M-Pesa Daraja STK (wallet + **guest checkout**) | 🟡 `MPESA_*` env → live; else stub |
+| M-Pesa Daraja STK (wallet + **guest** + **dashboard cart** + order pay) | 🟡 `MPESA_*` env → live; else stub |
 | Stripe Payment Intents | 🟡 `STRIPE_SECRET_KEY` |
 | Dynamic pricing (AI) | ✅ |
 | 14 storefront themes | ✅ |

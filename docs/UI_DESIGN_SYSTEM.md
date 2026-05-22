@@ -28,6 +28,7 @@ Premium maritime SaaS aesthetic — inspired by Linear, Stripe, and Shopify Admi
 - Use `ModulePageHeader` on every dashboard page (avoid raw `<h1 className="text-2xl">`).
 - Avoid extra `p-6` on pages — layout already pads content.
 - Cards: default shadcn `Card` with hover elevation on interactive tiles.
+- **Mobile-first:** closed sidebar drawer on `<lg`, bottom nav + Menu tab, `min-h-dvh`, safe-area insets. See [`RESPONSIVE_UI_STANDARDS.md`](RESPONSIVE_UI_STANDARDS.md).
 - Mobile: floating pill nav (`MobileNav`), sidebar drawer on small screens.
 - List pages: `ListPageToolbar` (search, filters, views, actions) above the table.
 - Tables: `TablePagination` for page size and prev/next controls.
@@ -49,7 +50,15 @@ Premium maritime SaaS aesthetic — inspired by Linear, Stripe, and Shopify Admi
 
 ### `WorkspaceNav`
 
-`components/dashboard/workspace-nav.tsx` — horizontal sub-nav for multi-page workspaces (e.g. Commerce, Accounting). Export preset arrays like `COMMERCE_WORKSPACE_NAV`.
+`components/dashboard/workspace-nav.tsx` — horizontal scroll sub-nav for workspaces (Commerce, Accounting, etc.). Export preset arrays like `COMMERCE_WORKSPACE_NAV`.
+
+### `DataTableShell`
+
+`components/dashboard/data-table-shell.tsx` — mobile-safe horizontal scroll wrapper for wide tables.
+
+### `ResponsiveFormGrid` / `FilterControl`
+
+`components/dashboard/responsive-form-grid.tsx` — stack form fields on mobile; full-width filters in toolbars.
 
 ### `CommandPalette` (⌘K)
 

@@ -1,3 +1,5 @@
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -22,6 +24,8 @@ interface CountyGroup {
 }
 
 export default function LogisticsRoutesPage() {
+  const meta = useDashboardPageMeta()
+
   const [groups, setGroups] = useState<CountyGroup[]>([])
   const [totalDeliveries, setTotalDeliveries] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -60,15 +64,8 @@ export default function LogisticsRoutesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Route Planner</h1>
-        <p className="text-muted-foreground">
-          Stub route optimization — pending deliveries grouped by county
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<div className="grid gap-4 md:grid-cols-4">
         <StatCard title="Pending deliveries" value={totalDeliveries} icon={<Truck className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Counties" value={counties} icon={<MapPin className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Largest group" value={largestGroup} icon={<Package className="h-4 w-4 text-muted-foreground" />} loading={loading} />
@@ -111,6 +108,7 @@ export default function LogisticsRoutesPage() {
           </Card>
         )}
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

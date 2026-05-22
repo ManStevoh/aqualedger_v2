@@ -167,6 +167,9 @@ export async function createTenantWithOwner(
   const { seedDefaultChartOfAccounts } = await import('@/lib/modules/accounting/chart-of-accounts')
   await seedDefaultChartOfAccounts(tenantId, { missingOnly: false })
 
+  const { seedTenantRolePermissions } = await import('@/lib/platform/tenant-role-permissions')
+  await seedTenantRolePermissions(tenantId)
+
   return { tenantId, slug, branchId }
 }
 

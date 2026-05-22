@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,6 +44,8 @@ interface StorageFacility {
 }
 
 export default function StoragePage() {
+  const meta = useDashboardPageMeta()
+
   const [facilities, setFacilities] = useState<StorageFacility[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -146,13 +150,7 @@ export default function StoragePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Storage Facilities</h1>
-          <p className="text-muted-foreground">Monitor cold storage and inventory</p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex gap-2">
           <Button variant="outline" className="gap-2" asChild>
             <Link href="/dashboard/coldchain/zones">
               <Layers className="w-4 h-4" />
@@ -163,8 +161,7 @@ export default function StoragePage() {
             <Plus className="w-4 h-4" />
             Add Facility
           </Button>
-        </div>
-      </div>
+        </div></>}>
 
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
@@ -348,6 +345,7 @@ export default function StoragePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +12,8 @@ import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
 
 export default function DeliverySlotsPage() {
+  const meta = useDashboardPageMeta({ title: 'Delivery scheduling', description: 'Cold-chain slots for storefront checkout' })
+
   const [slots, setSlots] = useState<Record<string, unknown>[]>([])
   const [date, setDate] = useState('')
   const [start, setStart] = useState('08:00')
@@ -35,10 +39,8 @@ export default function DeliverySlotsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Delivery scheduling</h1>
-      <p className="text-muted-foreground">Cold-chain slots for storefront checkout</p>
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>Add slot</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-4 items-end">
           <div><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
@@ -60,6 +62,7 @@ export default function DeliverySlotsPage() {
           </Card>
         ))}
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

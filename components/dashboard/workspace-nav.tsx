@@ -74,34 +74,39 @@ export function WorkspaceNav({ items, className }: WorkspaceNavProps) {
 
   return (
     <nav
-      className={cn('flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1', className)}
+      className={cn(
+        'rounded-lg border bg-muted/40 p-1',
+        className,
+      )}
       aria-label="Workspace"
     >
-      {items.map((item) => {
-        const Icon = item.icon
-        const base = item.href.split('?')[0]
-        const active = item.exact
-          ? pathname === item.href || pathname === base
-          : pathname === item.href ||
-            pathname === base ||
-            pathname?.startsWith(`${base}/`)
+      <div className="flex gap-1 overflow-x-auto overscroll-x-contain scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {items.map((item) => {
+          const Icon = item.icon
+          const base = item.href.split('?')[0]
+          const active = item.exact
+            ? pathname === item.href || pathname === base
+            : pathname === item.href ||
+              pathname === base ||
+              pathname?.startsWith(`${base}/`)
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-              active
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {item.label}
-          </Link>
-        )
-      })}
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'inline-flex shrink-0 touch-target items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:py-2',
+                active
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              {item.label}
+            </Link>
+          )
+        })}
+      </div>
     </nav>
   )
 }

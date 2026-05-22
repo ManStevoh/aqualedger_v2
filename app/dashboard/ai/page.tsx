@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -74,6 +76,8 @@ interface InventoryRow {
 }
 
 export default function AiInsightsPage() {
+  const meta = useDashboardPageMeta()
+
   const chatRef = useRef<HTMLDivElement>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -285,21 +289,7 @@ export default function AiInsightsPage() {
       : 0
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Sparkles className="h-8 w-8" />
-            AI Command Center
-          </h1>
-          <p className="text-muted-foreground">
-            Predictive models, executive briefs, and data-grounded assistant —{' '}
-            <Badge variant={aiEnabled ? 'default' : 'secondary'}>
-              {aiEnabled ? `LLM: ${aiModel}` : 'Rules + statistics (set OPENAI_API_KEY for LLM)'}
-            </Badge>
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex gap-2">
           <Button
             variant="outline"
             className="gap-2"
@@ -316,8 +306,7 @@ export default function AiInsightsPage() {
           <Button className="gap-2" disabled={automationBusy} onClick={runAutomation}>
             {automationBusy ? 'Running…' : 'Run full AI automation'}
           </Button>
-        </div>
-      </div>
+        </div></>}>
 
       <Card id="brief">
         <CardHeader>
@@ -633,6 +622,7 @@ export default function AiInsightsPage() {
           },
         ]}
       />
-    </div>
+    </DashboardPageLayout>
   )
 }
+

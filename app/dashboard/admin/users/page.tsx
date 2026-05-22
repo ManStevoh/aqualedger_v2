@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -31,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { AdminHubNav } from '@/components/dashboard/admin-hub-nav'
 import { authFetchJson } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
@@ -71,6 +74,8 @@ const MEMBER_ROLES: TenantMemberRole[] = [
 ]
 
 function PlatformUsersContent() {
+  const meta = useDashboardPageMeta()
+
   const searchParams = useSearchParams()
   const { currentRole } = useAppStore()
   const [users, setUsers] = useState<PlatformUser[]>([])
@@ -211,22 +216,11 @@ function PlatformUsersContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-7 w-7" />
-            Platform users
-          </h1>
-          <p className="text-muted-foreground">Cross-tenant directory with support impersonation</p>
-        </div>
-        <Button className="gap-2" onClick={() => setInviteOpen(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setInviteOpen(true)}>
           <UserPlus className="h-4 w-4" />
           Invite user
-        </Button>
-      </div>
-
-      <AdminHubNav />
+        </Button></>}>
+<AdminHubNav />
 
       <Card>
         <CardHeader>
@@ -240,7 +234,7 @@ function PlatformUsersContent() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search email or name…"
-                  className="pl-8 w-[220px]"
+                  className="pl-8 filter-control"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && load()}
@@ -259,6 +253,7 @@ function PlatformUsersContent() {
               Loading…
             </div>
           ) : (
+            <DataTableShell label="Platform users">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -321,6 +316,7 @@ function PlatformUsersContent() {
                 })}
               </TableBody>
             </Table>
+            </DataTableShell>
           )}
         </CardContent>
       </Card>
@@ -404,9 +400,10 @@ function PlatformUsersContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 
 export default function PlatformUsersPage() {
   return (

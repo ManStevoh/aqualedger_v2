@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +32,9 @@ interface PlatformSettings {
   announcementEnabled: boolean
   announcementTitle: string
   announcementBody: string
+  brandingLogoUrl: string
+  brandingPrimaryColor: string
+  brandingAppName: string
 }
 
 const DEFAULT_SETTINGS: PlatformSettings = {
@@ -39,9 +44,14 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   announcementEnabled: false,
   announcementTitle: '',
   announcementBody: '',
+  brandingLogoUrl: '',
+  brandingPrimaryColor: '#0ea5e9',
+  brandingAppName: '',
 }
 
 export default function PlatformSettingsPage() {
+  const meta = useDashboardPageMeta()
+
   const { currentRole } = useAppStore()
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
@@ -217,22 +227,11 @@ export default function PlatformSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Settings className="h-7 w-7" />
-            Platform settings
-          </h1>
-          <p className="text-muted-foreground">Maintenance mode, signup lock, and announcements</p>
-        </div>
-        <Button className="gap-2" onClick={save} disabled={saving || loading}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={save} disabled={saving || loading}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
-
-      <AdminHubNav />
+        </Button></>}>
+<AdminHubNav />
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground py-12 justify-center">
@@ -282,6 +281,45 @@ export default function PlatformSettingsPage() {
                   id="signup-lock"
                   checked={settings.signupLocked}
                   onCheckedChange={(checked) => update('signupLocked', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Platform branding</CardTitle>
+              <CardDescription>
+                Login, register, and default shell styling. Tenants override with their own logo and color in
+                Organization settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="branding-app-name">Product name (optional)</Label>
+                <Input
+                  id="branding-app-name"
+                  value={settings.brandingAppName}
+                  onChange={(e) => update('brandingAppName', e.target.value)}
+                  placeholder="AquaERP"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="branding-logo">Logo URL</Label>
+                <Input
+                  id="branding-logo"
+                  value={settings.brandingLogoUrl}
+                  onChange={(e) => update('brandingLogoUrl', e.target.value)}
+                  placeholder="https://…"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="branding-color">Primary color</Label>
+                <Input
+                  id="branding-color"
+                  type="color"
+                  value={settings.brandingPrimaryColor || '#0ea5e9'}
+                  onChange={(e) => update('brandingPrimaryColor', e.target.value)}
                 />
               </div>
             </CardContent>
@@ -454,6 +492,7 @@ export default function PlatformSettingsPage() {
           </Card>
         </div>
       )}
-    </div>
+    </DashboardPageLayout>
   )
 }
+

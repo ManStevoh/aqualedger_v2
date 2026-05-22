@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -48,6 +50,8 @@ interface Species {
 }
 
 export default function CatchQuotasPage() {
+  const meta = useDashboardPageMeta()
+
   const [quotas, setQuotas] = useState<Quota[]>([])
   const [summary, setSummary] = useState({ active: 0, atRisk: 0, overLimit: 0, totalQuotaKg: 0, totalUsedKg: 0 })
   const [species, setSpecies] = useState<Species[]>([])
@@ -128,21 +132,11 @@ export default function CatchQuotasPage() {
     new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 }).format(n)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Catch quotas</h1>
-          <p className="text-muted-foreground">
-            Regulatory allocations vs logged landings — avoid overfishing penalties
-          </p>
-        </div>
-        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4" />
           Register quota
-        </Button>
-      </div>
-
-      <StatCardGrid>
+        </Button></>}>
+<StatCardGrid>
         <StatCard title="Active quotas" value={summary.active} icon={<Scale className="h-4 w-4" />} loading={loading} />
         <StatCard title="At risk (≥85%)" value={summary.atRisk} icon={<AlertTriangle className="h-4 w-4" />} loading={loading} />
         <StatCard title="Over limit" value={summary.overLimit} icon={<AlertTriangle className="h-4 w-4 text-destructive" />} loading={loading} />
@@ -255,6 +249,7 @@ export default function CatchQuotasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -274,6 +274,7 @@ export interface ApInvoice {
   tax_amount: number
   total_amount: number
   status: string
+  gl_journal_id?: string | null
   created_at: string
 }
 
@@ -290,6 +291,9 @@ export interface ArInvoice {
   tax_amount: number
   total_amount: number
   status: string
+  gl_journal_id?: string | null
+  order_number?: string | null
+  customer_name?: string | null
   created_at: string
 }
 
@@ -435,18 +439,20 @@ export async function listApInvoices(
 
 export async function createApInvoice(
   tenantId: string,
-  input: ApInvoiceCreateInput,
+  input: ApInvoiceCreateInput & { purchaseOrderId?: string | null; grnId?: string | null },
 ): Promise<ApInvoice> {
   const id = generateId()
   await execute(
     `INSERT INTO ap_invoices
-     (id, tenant_id, supplier_id, invoice_number, invoice_date, due_date, currency,
+     (id, tenant_id, supplier_id, purchase_order_id, grn_id, invoice_number, invoice_date, due_date, currency,
       subtotal, tax_amount, total_amount, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       tenantId,
       input.supplierId ?? null,
+      input.purchaseOrderId ?? null,
+      input.grnId ?? null,
       input.invoiceNumber,
       input.invoiceDate,
       input.dueDate ?? null,
@@ -472,24 +478,30 @@ export async function listArInvoices(
   const page = opts.page ?? 1
   const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100)
   const pagination = buildPagination(page, limit)
-  const conditions = [tenantWhere()]
+  const conditions = [tenantWhere('ar')]
   const params: unknown[] = [tenantId]
 
   if (opts.status) {
-    conditions.push('status = ?')
+    conditions.push('ar.status = ?')
     params.push(opts.status)
   }
 
   const where = conditions.join(' AND ')
   const [countRow] = await query<{ total: number }>(
-    `SELECT COUNT(*) as total FROM ar_invoices WHERE ${where}`,
+    `SELECT COUNT(*) as total FROM ar_invoices ar WHERE ${where}`,
     params,
   )
   const total = countRow?.total ?? 0
 
   const invoices = await query<ArInvoice>(
-    `SELECT * FROM ar_invoices WHERE ${where}
-     ORDER BY invoice_date DESC, created_at DESC
+    `SELECT ar.*,
+            o.order_number,
+            c.name as customer_name
+     FROM ar_invoices ar
+     LEFT JOIN orders o ON ar.order_id = o.id
+     LEFT JOIN crm_customers c ON ar.customer_id = c.id
+     WHERE ${where}
+     ORDER BY ar.invoice_date DESC, ar.created_at DESC
      ${pagination.clause}`,
     params,
   )

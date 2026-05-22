@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,8 @@ import { toast } from 'sonner'
 import { Heart, Plus } from 'lucide-react'
 
 export default function BenefitsPage() {
+  const meta = useDashboardPageMeta()
+
   const [plans, setPlans] = useState<{ id: string; name: string; plan_type: string }[]>([])
   const [enrollments, setEnrollments] = useState<{ employee_name?: string; plan_name?: string; enrolled_at: string }[]>([])
   const [planName, setPlanName] = useState('')
@@ -41,13 +45,8 @@ export default function BenefitsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Heart className="h-8 w-8" />Benefits</h1>
-        <p className="text-muted-foreground">Health, pension, and crew benefit plans</p>
-      </div>
-
-      <Tabs defaultValue="plans">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Tabs defaultValue="plans">
         <TabsList><TabsTrigger value="plans">Plans</TabsTrigger><TabsTrigger value="enrollments">Enrollments</TabsTrigger></TabsList>
         <TabsContent value="plans" className="mt-4">
           <Card>
@@ -80,6 +79,7 @@ export default function BenefitsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

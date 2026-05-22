@@ -555,11 +555,33 @@ export function useCatches(filters?: Record<string, string>) {
   })
 }
 
-export function useFishListings(status = 'available', limit = '50') {
+export type MarketplaceListFilters = {
+  status?: string
+  grade?: string
+  speciesId?: string
+  minPrice?: string
+  maxPrice?: string
+  search?: string
+  landingSiteId?: string
+  limit?: string
+}
+
+export function useFishListings(
+  status = 'available',
+  limit = '50',
+  filters: MarketplaceListFilters = {},
+) {
   const params = new URLSearchParams()
-  params.set('status', status)
-  params.set('limit', limit)
-  return useSWR(`/api/v2/marketplace?${params}`, async (url) => {
+  params.set('status', filters.status ?? status)
+  params.set('limit', filters.limit ?? limit)
+  if (filters.grade) params.set('grade', filters.grade)
+  if (filters.speciesId) params.set('species_id', filters.speciesId)
+  if (filters.minPrice) params.set('min_price', filters.minPrice)
+  if (filters.maxPrice) params.set('max_price', filters.maxPrice)
+  if (filters.search) params.set('search', filters.search)
+  if (filters.landingSiteId) params.set('landing_site_id', filters.landingSiteId)
+  const key = `/api/v2/marketplace?${params}`
+  return useSWR(key, async (url) => {
     const raw = await authFetchJson<{
       success: boolean
       data?: { listings: Record<string, unknown>[]; pagination: { total: number; page: number; limit: number } }

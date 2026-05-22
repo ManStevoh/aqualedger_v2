@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -65,6 +67,8 @@ const QUICK_ACTIONS = [
 ]
 
 export default function AdminPage() {
+  const meta = useDashboardPageMeta()
+
   const { currentRole } = useAppStore()
   const [users, setUsers] = useState<AdminUserRow[]>([])
   const [overview, setOverview] = useState<PlatformOverview | null>(null)
@@ -145,15 +149,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Platform Command Center</h1>
-        <p className="text-muted-foreground">
-          Super-admin overview — tenants, users, and platform health
-        </p>
-      </div>
-
-      <AdminHubNav />
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<AdminHubNav />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -243,7 +240,7 @@ export default function AdminPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users..."
-                  className="pl-8 w-[200px]"
+                  className="pl-8 filter-control"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -310,6 +307,7 @@ export default function AdminPage() {
       <p className="text-sm text-muted-foreground">
         Active users: <span className="font-medium text-foreground">{activeUsers}</span>
       </p>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

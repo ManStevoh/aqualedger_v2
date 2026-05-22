@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +32,8 @@ function parseUserAgent(ua: string | null): string {
 }
 
 export default function SecuritySessionsPage() {
+  const meta = useDashboardPageMeta({ title: 'Security & sessions', description: 'Active logins across devices. Revoke suspicious sessions; your current browser session is kept when using &quot;Revoke all others&quot;.' })
+
   const [sessions, setSessions] = useState<UserSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -155,25 +159,7 @@ export default function SecuritySessionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2 gap-2" asChild>
-            <Link href="/dashboard/settings">
-              <ArrowLeft className="h-4 w-4" />
-              Settings
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Shield className="h-7 w-7 text-primary" />
-            Security & sessions
-          </h1>
-          <p className="text-muted-foreground">
-            Active logins across devices. Revoke suspicious sessions; your current browser session is kept when using
-            &quot;Revoke all others&quot;.
-          </p>
-        </div>
-        <Button
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button
           variant="destructive"
           className="gap-2"
           onClick={revokeAllOthers}
@@ -181,10 +167,8 @@ export default function SecuritySessionsPage() {
         >
           <LogOut className="h-4 w-4" />
           Revoke all others
-        </Button>
-      </div>
-
-      <Card>
+        </Button></>}>
+<Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5" />
@@ -215,7 +199,7 @@ export default function SecuritySessionsPage() {
                   value={mfaToken}
                   onChange={(e) => setMfaToken(e.target.value)}
                   maxLength={6}
-                  className="mt-1 max-w-[200px]"
+                  className="mt-1 max-w-full sm:max-w-[200px]"
                 />
               </div>
               <Button onClick={confirmMfa}>Confirm and enable</Button>
@@ -282,6 +266,7 @@ export default function SecuritySessionsPage() {
           />
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

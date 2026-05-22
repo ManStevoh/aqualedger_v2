@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +12,8 @@ import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
 
 export default function WholesalePricingPage() {
+  const meta = useDashboardPageMeta({ title: 'B2B wholesale pricing' })
+
   const [tiers, setTiers] = useState<Record<string, unknown>[]>([])
   const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [productId, setProductId] = useState('')
@@ -51,9 +55,8 @@ export default function WholesalePricingPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">B2B wholesale pricing</h1>
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>Add / update tier</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div>
@@ -95,6 +98,7 @@ export default function WholesalePricingPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

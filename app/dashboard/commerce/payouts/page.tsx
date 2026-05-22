@@ -1,3 +1,5 @@
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
@@ -58,6 +60,8 @@ interface Vendor {
 }
 
 export default function CommercePayoutsPage() {
+  const meta = useDashboardPageMeta()
+
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -159,15 +163,8 @@ export default function CommercePayoutsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Vendor payouts</h1>
-        <p className="text-muted-foreground">
-          Commission ledger and payout processing for marketplace vendors
-        </p>
-      </div>
-
-      <StatCardGrid>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<StatCardGrid>
         <StatCard
           title="Payable commissions"
           value={`KES ${payableTotal.toLocaleString()}`}
@@ -193,7 +190,7 @@ export default function CommercePayoutsPage() {
         <CardContent>
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="filter-control">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -334,6 +331,7 @@ export default function CommercePayoutsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

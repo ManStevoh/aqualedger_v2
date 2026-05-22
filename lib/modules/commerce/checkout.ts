@@ -4,7 +4,14 @@ import { tenantWhere } from '@/lib/tenant'
 import { conflict, notFound } from '@/lib/api-handler'
 import { publishDomainEvent } from '@/lib/events/workflow'
 import type { CheckoutInput } from './schemas'
-import type { CouponRow } from './service'
+import { validateCoupon } from './coupon-validate'
+import {
+  resolveProductVendor,
+  groupCartLinesByVendor,
+  pickPrimarySeller,
+  allocateVendorCommissions,
+  type ResolvedVendor,
+} from './vendor-resolve'
 
 interface CartItemForCheckout {
   id: string
@@ -35,48 +42,58 @@ export interface CheckoutResult {
   total: number
   couponCode: string | null
   itemCount: number
+  paymentIntentId?: string
+  paymentPending?: boolean
+  paymentSimulated?: boolean
+  checkoutUrl?: string
 }
 
 function orderNumber(): string {
   return `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
 }
 
-async function validateCoupon(
+async function buildCatalogVendorShares(
+  conn: Connection,
   tenantId: string,
-  code: string | null | undefined,
-  subtotal: number,
-): Promise<{ coupon: CouponRow | null; discount: number }> {
-  if (!code?.trim()) return { coupon: null, discount: 0 }
+  items: CartItemForCheckout[],
+) {
+  const vendorLines: { productId: string; lineTotal: number; vendor: ResolvedVendor }[] = []
+  for (const item of items) {
+    if (!item.product_id) continue
+    const vendor = await resolveProductVendor(conn, tenantId, item.product_id)
+    if (!vendor) continue
+    vendorLines.push({
+      productId: item.product_id,
+      lineTotal: Number(item.line_total),
+      vendor,
+    })
+  }
+  return groupCartLinesByVendor(vendorLines)
+}
 
-  const coupon = await queryOne<CouponRow>(
-    `SELECT * FROM coupons
-     WHERE ${tenantWhere()} AND code = ? AND status = 'active'`,
-    [tenantId, code.trim().toUpperCase()],
+async function legacySingleVendorCommission(
+  conn: Connection,
+  tenantId: string,
+  sellerId: string,
+  total: number,
+) {
+  const [vendorRows] = await conn.execute(
+    `SELECT id, user_id, commission_rate FROM marketplace_vendors
+     WHERE ${tenantWhere()} AND user_id = ? AND status = 'active'`,
+    [tenantId, sellerId],
   )
-  if (!coupon) throw notFound('Coupon not found or inactive')
-
-  const now = new Date()
-  if (coupon.valid_from && new Date(coupon.valid_from) > now) {
-    throw conflict('Coupon is not yet valid')
+  const vendor = (vendorRows as { id: string; user_id: string; commission_rate: number }[])[0]
+  if (!vendor) return []
+  const resolved: ResolvedVendor = {
+    vendorId: vendor.id,
+    userId: vendor.user_id,
+    commissionRate: Number(vendor.commission_rate),
   }
-  if (coupon.valid_to && new Date(coupon.valid_to) < now) {
-    throw conflict('Coupon has expired')
-  }
-  if (Number(coupon.min_order_amount) > subtotal) {
-    throw conflict(`Minimum order amount is KES ${coupon.min_order_amount}`)
-  }
-  if (coupon.max_uses != null && coupon.uses_count >= coupon.max_uses) {
-    throw conflict('Coupon usage limit reached')
-  }
-
-  let discount = 0
-  if (coupon.discount_type === 'percent') {
-    discount = Math.round(subtotal * (Number(coupon.discount_value) / 100) * 100) / 100
-  } else {
-    discount = Math.min(Number(coupon.discount_value), subtotal)
-  }
-
-  return { coupon, discount }
+  return allocateVendorCommissions(
+    [{ vendor: resolved, lineTotal: total }],
+    total,
+    total,
+  )
 }
 
 async function resolveCheckoutLines(
@@ -144,25 +161,19 @@ async function resolveCheckoutLines(
       if (product.status !== 'active') throw conflict('A cart product is not available')
       if (!product.species_id) throw conflict('Product missing species for order fulfillment')
 
-      const [vendorRows] = await conn.execute(
-        `SELECT user_id FROM marketplace_vendors
-         WHERE ${tenantWhere()} AND status = 'active'
-         ORDER BY created_at ASC LIMIT 1`,
-        [tenantId],
-      )
-      const vendor = (vendorRows as { user_id: string }[])[0]
-      if (!vendor) throw conflict('No active vendor configured for catalog checkout')
+      const productVendor = await resolveProductVendor(conn, tenantId, item.product_id)
+      if (!productVendor) throw conflict('No active vendor configured for catalog checkout')
 
-      if (sellerId === null) sellerId = vendor.user_id
-      else if (sellerId !== vendor.user_id) {
-        throw conflict('All items must be from the same seller')
+      if (sellerId === null) sellerId = productVendor.userId
+      else if (sellerId !== productVendor.userId) {
+        /* multi-vendor catalog cart: primary seller chosen after all lines resolve */
       }
 
       lines.push({
         listingId: null,
         productId: item.product_id,
         speciesId: product.species_id,
-        sellerId: vendor.user_id,
+        sellerId: productVendor.userId,
         quantityKg: Number(item.quantity_kg),
         unitPrice: Number(product.base_price),
         lineTotal: Number(item.line_total),
@@ -202,15 +213,24 @@ export async function checkout(
 
   const result = await transaction(async (conn) => {
     const lines = await resolveCheckoutLines(conn, tenantId, cartItems)
-    const sellerId = lines[0].sellerId
+    const catalogShares = await buildCatalogVendorShares(conn, tenantId, cartItems)
+    const sellerId =
+      catalogShares.length > 0
+        ? pickPrimarySeller(catalogShares).userId
+        : lines[0].sellerId
     const orderId = generateId()
     const number = orderNumber()
+
+    const paymentStatus =
+      input.paymentMethod === 'mpesa' || input.paymentMethod === 'paystack'
+        ? 'pending'
+        : 'unpaid'
 
     await conn.execute(
       `INSERT INTO orders (
         id, tenant_id, order_number, buyer_id, seller_id, status,
         subtotal, delivery_fee, tax, total, payment_status, delivery_address
-      ) VALUES (?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, 'unpaid', ?)`,
+      ) VALUES (?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?, ?, ?)`,
       [
         orderId,
         tenantId,
@@ -221,6 +241,7 @@ export async function checkout(
         deliveryFee,
         tax,
         total,
+        paymentStatus,
         input.deliveryAddress ?? null,
       ],
     )
@@ -256,16 +277,13 @@ export async function checkout(
       }
     }
 
-    const [vendorRows] = await conn.execute(
-      `SELECT id, commission_rate FROM marketplace_vendors
-       WHERE ${tenantWhere()} AND user_id = ? AND status = 'active'`,
-      [tenantId, sellerId],
-    )
-    const vendor = (vendorRows as { id: string; commission_rate: number }[])[0]
+    const preDiscountSubtotal = cartItems.reduce((sum, item) => sum + Number(item.line_total), 0)
+    const commissionShares =
+      catalogShares.length > 0
+        ? allocateVendorCommissions(catalogShares, preDiscountSubtotal, total)
+        : await legacySingleVendorCommission(conn, tenantId, sellerId, total)
 
-    if (vendor) {
-      const commissionRate = Number(vendor.commission_rate)
-      const commissionAmount = Math.round(total * (commissionRate / 100) * 100) / 100
+    for (const row of commissionShares) {
       await conn.execute(
         `INSERT INTO vendor_commissions (
           id, tenant_id, vendor_id, order_id, order_amount,
@@ -274,11 +292,11 @@ export async function checkout(
         [
           generateId(),
           tenantId,
-          vendor.id,
+          row.vendor.vendorId,
           orderId,
-          total,
-          commissionRate,
-          commissionAmount,
+          row.orderAmount,
+          row.vendor.commissionRate,
+          row.commissionAmount,
         ],
       )
     }
@@ -333,7 +351,7 @@ export async function checkout(
     },
   })
 
-  return {
+  const base = {
     orderId: result.orderId,
     orderNumber: result.orderNumber,
     subtotal: result.subtotal,
@@ -344,4 +362,66 @@ export async function checkout(
     couponCode: result.couponCode,
     itemCount: result.itemCount,
   }
+
+  if (input.paymentMethod === 'paystack') {
+    const buyer = await queryOne<{ email: string | null }>(
+      `SELECT email FROM users WHERE id = ?`,
+      [userId],
+    )
+    const email = buyer?.email?.trim()
+    if (!email) {
+      throw conflict('Paystack checkout requires an email on your user profile')
+    }
+    const { initializePaystackTransaction } = await import('@/lib/modules/integrations/paystack')
+    const ps = await initializePaystackTransaction({
+      tenantId,
+      amount: result.total,
+      email,
+      orderId: result.orderId,
+      metadata: {
+        purpose: 'order_checkout',
+        order_number: result.orderNumber,
+        buyer_id: userId,
+      },
+    })
+    return {
+      ...base,
+      paymentIntentId: ps.paymentIntentId,
+      paymentPending: !ps.stub,
+      paymentSimulated: ps.stub,
+      checkoutUrl: ps.authorizationUrl,
+    }
+  }
+
+  if (input.paymentMethod === 'mpesa') {
+    const buyerPhone = await queryOne<{ phone: string | null }>(
+      `SELECT phone FROM users WHERE id = ?`,
+      [userId],
+    )
+    const phone = (input.phoneNumber?.trim() || buyerPhone?.phone?.trim() || '').replace(/\s/g, '')
+    if (!phone) {
+      throw conflict('M-Pesa checkout requires a phone number on your profile or at checkout')
+    }
+    const { initiateStkPush } = await import('@/lib/modules/integrations/mpesa')
+    const stk = await initiateStkPush({
+      tenantId,
+      amount: result.total,
+      phoneNumber: phone,
+      orderId: result.orderId,
+      description: `Order ${result.orderNumber}`,
+      metadata: {
+        purpose: 'order_checkout',
+        order_number: result.orderNumber,
+        buyer_id: userId,
+      },
+    })
+    return {
+      ...base,
+      paymentIntentId: stk.paymentIntentId,
+      paymentPending: !stk.simulated,
+      paymentSimulated: stk.simulated,
+    }
+  }
+
+  return base
 }

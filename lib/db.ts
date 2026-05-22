@@ -12,6 +12,7 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  connectTimeout: 10_000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
 }

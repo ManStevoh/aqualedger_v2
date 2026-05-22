@@ -394,12 +394,19 @@ async function seedFishing(
 
 async function seedCommerce(ctx: TenantSeedCtx, buyerId: string): Promise<void> {
   const speciesId = ctx.speciesIds[0]
+  const vendorId = generateId()
+  await execute(
+    `INSERT INTO marketplace_vendors (id, tenant_id, user_id, shop_name, commission_rate, status)
+     VALUES (?, ?, ?, ?, 10, 'active')`,
+    [vendorId, ctx.tenantId, ctx.ownerId, `${ctx.name} Seafood Shop`],
+  )
+
   const sku = `SKU-${ctx.slug.toUpperCase().slice(0, 12)}`
   const catalogId = generateId()
   await execute(
-    `INSERT INTO product_catalog (id, tenant_id, sku, name, species_id, category, unit, base_price, status)
-     VALUES (?, ?, ?, ?, ?, 'fresh', 'kg', ?, 'active')`,
-    [catalogId, ctx.tenantId, sku, `${ctx.name} Fresh Fillet`, speciesId, 450 + ctx.index * 10],
+    `INSERT INTO product_catalog (id, tenant_id, vendor_id, sku, name, species_id, category, unit, base_price, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'fresh', 'kg', ?, 'active')`,
+    [catalogId, ctx.tenantId, vendorId, sku, `${ctx.name} Fresh Fillet`, speciesId, 450 + ctx.index * 10],
   )
 
   const listingId = generateId()

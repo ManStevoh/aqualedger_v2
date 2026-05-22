@@ -61,9 +61,62 @@ Runs for **all active tenants**: demand forecast, price model, fraud scan, busin
 - Insights stored in `ai_insights` with model version stamp.  
 - Disable LLM anytime: unset `OPENAI_API_KEY` — statistical AI remains.
 
-## Roadmap (Phase 5)
+## In this monolith (shipped)
 
-- RAG over documents (contracts, HACCP PDFs)  
-- Tool-calling agents (create PO, post journal)  
-- Per-tenant AI quotas and cost dashboard  
-- Custom fine-tuned species demand models  
+| Area | Status |
+|------|--------|
+| Demand forecast (moving average) | ✅ |
+| Species / price signal (linear regression) | ✅ |
+| Wallet anomaly (z-score) | ✅ |
+| Inventory reorder urgency | ✅ |
+| Business brief (rules; + LLM when keyed) | ✅ |
+| Cold-chain & inventory AI reviews | ✅ |
+| Report email narrative (LLM) | ✅ with `OPENAI_API_KEY` |
+| Grounded copilot (`/api/v2/ai/chat`) | ✅ rules + LLM |
+| One-click + cron automation | ✅ `POST /api/v2/ai/automation/run` |
+| UI | ✅ `/dashboard/ai` (AI Command Center) |
+
+**Positioning:** Without `OPENAI_API_KEY` → **AI-assisted analytics** (statistics + rule-based briefs). With the key → **AI-enabled vertical ERP** (narratives + conversational layer on the same data).
+
+---
+
+## Still Phase 5 (not in this pass)
+
+These are **roadmap only** — do not claim in RFPs or homepage copy until built:
+
+| Item | Notes |
+|------|--------|
+| **RAG over documents** | Contracts, HACCP PDFs, export certs — vector search + citations |
+| **Agent tools** | Create PO, post journal, approve workflow steps from chat |
+| **Per-tenant AI cost / usage dashboard** | Token spend, quotas, model selection per org |
+| **Custom ML models** | Beyond moving average / regression (e.g. fine-tuned species demand) |
+
+See also [`docs/PENDING_OVERALL.md`](PENDING_OVERALL.md) § Phase 5 and [`docs/MIGRATION_ROADMAP.md`](MIGRATION_ROADMAP.md).
+
+---
+
+## Database setup
+
+AI tables (`ai_insights`, `ai_automation_runs`, chat sessions, etc.) come from migration **`20260605_ai_enablement.sql`**.
+
+```bash
+# Apply all pending migrations (includes 20260605)
+node scripts/run-migrations.mjs
+
+# Or full fresh DB
+npm run db:setup
+```
+
+Then verify:
+
+```bash
+npm run db:verify
+```
+
+Enable LLM (optional):
+
+```bash
+# .env
+OPENAI_API_KEY=sk-...
+AI_CRON_SECRET=...   # for daily automation cron
+```

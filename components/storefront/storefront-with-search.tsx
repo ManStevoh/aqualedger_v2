@@ -59,6 +59,7 @@ export function StorefrontWithSearch({ initialProducts, storeSlug, ...rest }: Pr
       <div className="sticky top-16 z-40 border-b border-[var(--sf-border)]/80 bg-[var(--sf-surface)]/90 px-4 py-3 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3">
           <input
+            id="store-search"
             type="search"
             placeholder="Search seafood…"
             className="flex-1 min-w-[200px] rounded-[var(--sf-radius)] border border-[var(--sf-border)] bg-[var(--sf-bg)] px-4 py-2.5 min-h-[44px] shadow-sm transition-shadow focus:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--sf-primary)]/30"

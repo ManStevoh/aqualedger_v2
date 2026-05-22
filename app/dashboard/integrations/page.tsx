@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -94,6 +96,8 @@ const PROVIDER_CARDS = [
 ]
 
 export default function IntegrationsPage() {
+  const meta = useDashboardPageMeta()
+
   const [connections, setConnections] = useState<IntegrationConnection[]>([])
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([])
   const [loading, setLoading] = useState(true)
@@ -230,19 +234,11 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
-          <p className="text-muted-foreground">Connections and outbound webhook endpoints</p>
-        </div>
-        <Button variant="outline" className="gap-2" onClick={fetchAll}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button variant="outline" className="gap-2" onClick={fetchAll}>
           <RefreshCw className="h-4 w-4" />
           Refresh
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
+        </Button></>}>
+<div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -477,6 +473,7 @@ export default function IntegrationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

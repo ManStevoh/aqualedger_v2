@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Smartphone, Banknote } from 'lucide-react'
+import { ArrowLeft, Smartphone, Banknote, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import { publicApiFetch } from '@/lib/client-api'
 import { useRecaptcha } from '@/components/security/use-recaptcha'
@@ -19,7 +19,7 @@ type DeliverySlot = {
   status: string
 }
 
-type PaymentMethod = 'mpesa' | 'cod'
+type PaymentMethod = 'mpesa' | 'cod' | 'stripe' | 'paystack'
 
 export default function StoreCheckoutPage() {
   const params = useParams()
@@ -33,6 +33,7 @@ export default function StoreCheckoutPage() {
   const [slots, setSlots] = useState<DeliverySlot[]>([])
   const [slotId, setSlotId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa')
+  const [couponCode, setCouponCode] = useState('')
   const recaptcha = useRecaptcha('guest_checkout')
 
   useEffect(() => {
@@ -109,9 +110,16 @@ export default function StoreCheckoutPage() {
         paymentIntentId?: string
         paymentPending?: boolean
         paymentSimulated?: boolean
+        checkoutUrl?: string
       }
 
-      if (order.paymentIntentId && order.paymentPending) {
+      if (order.checkoutUrl) {
+        toast.message('Complete card payment', { description: 'Redirecting to secure checkout…' })
+        window.location.href = order.checkoutUrl
+        return
+      }
+
+      if (order.paymentIntentId && order.paymentPending && paymentMethod === 'mpesa') {
         toast.message('Approve M-Pesa on your phone', {
           description: 'Waiting for payment confirmation…',
         })
@@ -144,7 +152,7 @@ export default function StoreCheckoutPage() {
           <ArrowLeft className="h-4 w-4" /> Back to cart
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Checkout</h1>
-        <p className="text-sm text-slate-500">Guest checkout · M-Pesa STK or pay on delivery</p>
+        <p className="text-sm text-slate-500">Guest checkout · M-Pesa, Paystack, Stripe, or pay on delivery</p>
       </header>
       <form onSubmit={submit} className="mx-auto max-w-lg px-4 py-8 space-y-4">
         <div>
@@ -160,6 +168,7 @@ export default function StoreCheckoutPage() {
           <input
             id="phone"
             required={paymentMethod === 'mpesa'}
+            aria-required={paymentMethod === 'mpesa'}
             className="mt-1 w-full rounded border px-3 py-2 min-h-[44px]"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -170,6 +179,17 @@ export default function StoreCheckoutPage() {
           <label className="text-sm font-medium" htmlFor="address">Delivery address</label>
           <textarea id="address" rows={3} className="mt-1 w-full rounded border px-3 py-2" value={address} onChange={(e) => setAddress(e.target.value)} />
         </div>
+        <div>
+          <label className="text-sm font-medium" htmlFor="coupon">Promo code (optional)</label>
+          <input
+            id="coupon"
+            className="mt-1 w-full rounded border px-3 py-2 min-h-[44px] uppercase"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value)}
+            placeholder="SAVE10"
+          />
+        </div>
+
         {slots.length > 0 && (
           <div>
             <label className="text-sm font-medium" htmlFor="slot">Cold-chain delivery window</label>
@@ -202,6 +222,34 @@ export default function StoreCheckoutPage() {
             <div>
               <p className="font-medium text-sm">M-Pesa</p>
               <p className="text-xs text-slate-500">STK push to your phone now</p>
+            </div>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
+            <input
+              type="radio"
+              name="pay"
+              checked={paymentMethod === 'paystack'}
+              onChange={() => setPaymentMethod('paystack')}
+              className="h-4 w-4"
+            />
+            <CreditCard className="h-5 w-5 text-emerald-600" />
+            <div>
+              <p className="font-medium text-sm">Card / bank (Paystack)</p>
+              <p className="text-xs text-slate-500">Redirect to Paystack checkout (KES)</p>
+            </div>
+          </label>
+          <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
+            <input
+              type="radio"
+              name="pay"
+              checked={paymentMethod === 'stripe'}
+              onChange={() => setPaymentMethod('stripe')}
+              className="h-4 w-4"
+            />
+            <CreditCard className="h-5 w-5 text-indigo-600" />
+            <div>
+              <p className="font-medium text-sm">Card (Stripe)</p>
+              <p className="text-xs text-slate-500">Secure card payment when configured</p>
             </div>
           </label>
           <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
@@ -241,7 +289,11 @@ export default function StoreCheckoutPage() {
               : 'Placing order…'
             : paymentMethod === 'mpesa'
               ? 'Pay with M-Pesa'
-              : 'Place order'}
+              : paymentMethod === 'paystack'
+                ? 'Pay with Paystack'
+                : paymentMethod === 'stripe'
+                  ? 'Pay with card'
+                  : 'Place order'}
         </button>
       </form>
     </div>

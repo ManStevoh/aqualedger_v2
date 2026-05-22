@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   resolveTenantIdByCustomDomain,
+  resolveTenantIdBySlug,
   resolveTenantSlugById,
 } from '@/lib/platform/tenant-resolve'
-import { isSkippablePlatformHost } from '@/lib/platform/tenant-host'
+import { extractTenantSlugFromHost, isSkippablePlatformHost } from '@/lib/platform/tenant-host'
 
 export const runtime = 'nodejs'
 
-/** Edge-safe host → tenant lookup (used by middleware via fetch). */
+/** Host → tenant (subdomain slug or verified custom domain). Used by middleware. */
 export async function GET(request: NextRequest) {
   const host = request.nextUrl.searchParams.get('host')
   if (!host) {
@@ -16,14 +17,22 @@ export async function GET(request: NextRequest) {
 
   const hostname = host.split(':')[0].toLowerCase()
   if (isSkippablePlatformHost(hostname)) {
-    return NextResponse.json({ tenantId: null, tenantSlug: null })
+    return NextResponse.json({ tenantId: null, tenantSlug: null, source: null })
+  }
+
+  const slugFromHost = extractTenantSlugFromHost(host)
+  if (slugFromHost) {
+    const tenantId = await resolveTenantIdBySlug(slugFromHost)
+    if (tenantId) {
+      return NextResponse.json({ tenantId, tenantSlug: slugFromHost, source: 'subdomain' })
+    }
   }
 
   const tenantId = await resolveTenantIdByCustomDomain(hostname)
   if (!tenantId) {
-    return NextResponse.json({ tenantId: null, tenantSlug: null })
+    return NextResponse.json({ tenantId: null, tenantSlug: null, source: null })
   }
 
   const tenantSlug = await resolveTenantSlugById(tenantId)
-  return NextResponse.json({ tenantId, tenantSlug })
+  return NextResponse.json({ tenantId, tenantSlug, source: 'custom_domain' })
 }

@@ -24,6 +24,7 @@ import { getNavForRole } from '@/lib/platform/modules'
 import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
 import { resolvePageContext } from '@/lib/platform/page-context'
 import { useTenantContext } from '@/lib/hooks/use-tenant-context'
+import { useBrand } from '@/components/branding/brand-provider'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/types'
 
@@ -43,6 +44,7 @@ export function DashboardHeader() {
   const [searchFocused, setSearchFocused] = useState(false)
   const pageContext = useMemo(() => resolvePageContext(pathname), [pathname])
   const tenant = useTenantContext()
+  const brand = useBrand()
   const {
     currentUser,
     currentRole,
@@ -121,37 +123,37 @@ export function DashboardHeader() {
   const showSearchDropdown = searchFocused && navSearchQuery.trim().length > 0
 
   return (
-    <header className="sticky top-0 z-40 flex h-[4.25rem] shrink-0 items-center gap-3 border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 lg:gap-4 lg:px-8">
+    <header className="sticky top-0 z-40 flex min-h-[3.5rem] shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-background/70 px-3 py-2 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 safe-area-pt sm:min-h-[4.25rem] sm:flex-nowrap sm:gap-3 sm:px-4 lg:gap-4 lg:px-8">
       <Button
         variant="ghost"
         size="icon"
         onClick={toggleSidebar}
-        className="shrink-0 lg:hidden"
+        className="touch-target shrink-0 lg:hidden"
       >
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle menu</span>
       </Button>
 
-      <div className="hidden min-w-0 md:block">
+      <div className="min-w-0 flex-1 sm:max-w-[40%] md:max-w-none lg:flex-none">
         <p className="truncate text-sm font-semibold tracking-tight">{pageContext.title}</p>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="truncate text-xs text-muted-foreground max-md:hidden sm:block">
           {pageContext.moduleLabel
             ? `${pageContext.moduleLabel}${pageContext.subtitle ? ` · ${pageContext.subtitle}` : ''}`
             : (pageContext.subtitle ?? 'Operations')}
         </p>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:justify-center lg:gap-3">
-        <div ref={searchRef} className="relative w-full max-w-md">
+      <div className="order-last flex w-full min-w-0 basis-full items-center gap-2 sm:order-none sm:w-auto sm:flex-1 sm:basis-auto lg:justify-center lg:gap-3">
+        <div ref={searchRef} className="relative w-full min-w-0 max-w-full sm:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search modules… (⌘K)"
+            placeholder="Search…"
             value={navSearchQuery}
             onChange={(e) => setNavSearchQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             className={cn(
-              'h-10 w-full rounded-xl border-transparent bg-muted/60 pl-9 shadow-none transition-all',
+              'h-11 w-full rounded-xl border-transparent bg-muted/60 pl-9 text-base shadow-none transition-all sm:h-10 sm:text-sm',
               searchFocused && 'bg-background ring-2 ring-ring/30',
             )}
           />
@@ -209,7 +211,7 @@ export function DashboardHeader() {
 
         <ThemeToggle />
 
-        <Button variant="ghost" size="icon" className="relative rounded-xl" asChild>
+        <Button variant="ghost" size="icon" className="touch-target relative rounded-xl" asChild>
           <Link href="/dashboard/notifications">
             <Bell className="h-[1.125rem] w-[1.125rem]" />
             {unreadCount > 0 && (

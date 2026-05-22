@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +24,8 @@ interface Asset {
 }
 
 export default function FixedAssetsPage() {
+  const meta = useDashboardPageMeta()
+
   const [assets, setAssets] = useState<Asset[]>([])
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
@@ -71,16 +75,8 @@ export default function FixedAssetsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2"><Building2 className="h-8 w-8" />Fixed Assets</h1>
-          <p className="text-muted-foreground">Vessels, cold storage equipment, vehicles — straight-line depreciation</p>
-        </div>
-        <Button variant="outline" onClick={depreciate}><RefreshCw className="h-4 w-4 mr-2" />Run depreciation</Button>
-      </div>
-
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button variant="outline" onClick={depreciate}><RefreshCw className="h-4 w-4 mr-2" />Run depreciation</Button></>}>
+<Card>
         <CardHeader><CardTitle>Register asset</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-4">
           <div><Label>Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} /></div>
@@ -107,6 +103,7 @@ export default function FixedAssetsPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

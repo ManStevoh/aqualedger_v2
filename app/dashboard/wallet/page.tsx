@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Minus, CreditCard, Smartphone, Coins } from 'lucide-react'
@@ -38,6 +40,8 @@ interface FxRate {
 }
 
 function WalletPageContent() {
+  const meta = useDashboardPageMeta()
+
   const searchParams = useSearchParams()
   const showFx = searchParams.get('fx') === '1'
   const [fxRates, setFxRates] = useState<FxRate[]>([])
@@ -217,15 +221,7 @@ function WalletPageContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
-          <p className="text-muted-foreground">
-            Manage your funds and transactions
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowWithdrawDialog(true)}>
             <ArrowUpRight className="mr-2 h-4 w-4" />
             Withdraw
@@ -234,8 +230,7 @@ function WalletPageContent() {
             <Plus className="mr-2 h-4 w-4" />
             Deposit
           </Button>
-        </div>
-      </div>
+        </div></>}>
 
       <StatCardGrid>
         <StatCard
@@ -508,9 +503,10 @@ function WalletPageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 
 export default function WalletPage() {
   return (

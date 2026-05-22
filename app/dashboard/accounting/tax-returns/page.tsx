@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,8 @@ interface TaxReturn {
 }
 
 export default function TaxReturnsPage() {
+  const meta = useDashboardPageMeta()
+
   const [returns, setReturns] = useState<TaxReturn[]>([])
   const [returnType, setReturnType] = useState('vat')
   const [periodLabel, setPeriodLabel] = useState('')
@@ -60,13 +64,8 @@ export default function TaxReturnsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><FileText className="h-8 w-8" />Tax Returns</h1>
-        <p className="text-muted-foreground">VAT, PAYE, withholding, and corporate tax tracking</p>
-      </div>
-
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>New return</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-4 items-end">
           <div>
@@ -105,6 +104,7 @@ export default function TaxReturnsPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

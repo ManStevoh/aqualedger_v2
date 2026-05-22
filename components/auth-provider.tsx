@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/client-api'
 import type { User, UserRole } from '@/lib/types'
+import type { TenantMemberRole } from '@/lib/tenant'
+import type { Permission } from '@/lib/platform/permissions'
 
 type MeResponse = {
   success: boolean
@@ -21,6 +23,8 @@ type MeResponse = {
       avatarUrl: string | null
       createdAt: string
     }
+    memberRole?: TenantMemberRole | null
+    permissions?: Permission[] | null
   }
   error?: string
 }
@@ -47,7 +51,8 @@ async function tryRefreshSession(): Promise<boolean> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { setCurrentUser, setCurrentRole, setEnabledModuleIds } = useAppStore()
+  const { setCurrentUser, setCurrentRole, setMemberRole, setRolePermissions, setEnabledModuleIds } =
+    useAppStore()
 
   useEffect(() => {
     if (!pathname?.startsWith('/dashboard')) {
@@ -77,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = mapMeUser(me.data.user)
         setCurrentUser(user)
         setCurrentRole(user.role)
+        setMemberRole(me.data.memberRole ?? null)
+        setRolePermissions(me.data.permissions ?? null)
 
         try {
           const tenantModRes = await apiFetch('/v2/tenant/modules').then((r) =>

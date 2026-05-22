@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -80,6 +82,8 @@ interface BudgetVsActualReport {
 }
 
 export default function AccountingReportsPage() {
+  const meta = useDashboardPageMeta()
+
   const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [trialBalance, setTrialBalance] = useState<TrialBalanceReport | null>(null)
   const [profitLoss, setProfitLoss] = useState<ProfitLossReport | null>(null)
@@ -201,13 +205,8 @@ export default function AccountingReportsPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Financial Reports</h1>
-        <p className="text-muted-foreground">IFRS-style reports derived from general ledger data</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="GL Accounts"
           value={summary?.accountCount ?? 0}
@@ -614,6 +613,7 @@ export default function AccountingReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

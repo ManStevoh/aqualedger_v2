@@ -29,9 +29,20 @@ function parseCallbackMetadata(
 }
 
 export async function processMpesaStkCallback(body: MpesaStkCallbackBody): Promise<{ ok: boolean }> {
+  const { logWebhookEvent, markWebhookEvent } = await import(
+    '@/lib/modules/platform/webhook-events'
+  )
+  const eventId = await logWebhookEvent({
+    provider: 'mpesa',
+    eventType: 'stk_callback',
+    externalId: body.Body?.stkCallback?.CheckoutRequestID ?? null,
+    payload: body,
+  })
+
   const cb = body.Body?.stkCallback
   if (!cb?.CheckoutRequestID) {
     logger.warn('M-Pesa callback missing CheckoutRequestID', { body })
+    await markWebhookEvent(eventId, 'failed', 'Missing CheckoutRequestID')
     return { ok: false }
   }
 
@@ -50,6 +61,7 @@ export async function processMpesaStkCallback(body: MpesaStkCallbackBody): Promi
 
   if (!intent) {
     logger.warn('M-Pesa callback: payment intent not found', { externalRef })
+    await markWebhookEvent(eventId, 'failed', 'Payment intent not found')
     return { ok: false }
   }
 
@@ -79,6 +91,7 @@ export async function processMpesaStkCallback(body: MpesaStkCallbackBody): Promi
     await creditWalletFromMpesaIntent(intent.id, intent.tenant_id)
     await completeOrderFromMpesaIntent(intent.id, intent.tenant_id)
     logger.info('M-Pesa payment completed', { paymentIntentId: intent.id, receipt })
+    await markWebhookEvent(eventId, 'processed')
   } else {
     await execute(
       `UPDATE payment_intents SET status = 'failed', metadata = JSON_MERGE_PATCH(COALESCE(metadata, '{}'), ?), updated_at = NOW()
@@ -93,6 +106,7 @@ export async function processMpesaStkCallback(body: MpesaStkCallbackBody): Promi
       ],
     )
     logger.info('M-Pesa payment failed', { paymentIntentId: intent.id, resultCode, desc: cb.ResultDesc })
+    await markWebhookEvent(eventId, 'processed')
   }
 
   return { ok: true }

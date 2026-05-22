@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { apiFetch } from '@/lib/client-api'
-import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
+import { BrandMark } from '@/components/branding/brand-mark'
+import { usePlatformBrand } from '@/components/branding/platform-brand-provider'
 import { useRecaptcha } from '@/components/security/use-recaptcha'
 import { RecaptchaNotice } from '@/components/security/recaptcha-notice'
 import {
@@ -30,19 +31,8 @@ const ROLE_HINTS = [
   { icon: Truck, label: 'Exporters', hint: 'Traceability & logistics' },
 ]
 
-function BrandMark({ size = 'md' }: { size?: 'md' | 'lg' }) {
-  const box = size === 'lg' ? 'h-12 w-12' : 'h-11 w-11'
-  const icon = size === 'lg' ? 'h-7 w-7' : 'h-6 w-6'
-  return (
-    <div
-      className={`flex ${box} items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/25`}
-    >
-      <Fish className={`${icon} text-primary-foreground`} />
-    </div>
-  )
-}
-
 function LoginForm() {
+  const brand = usePlatformBrand()
   const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get('from') || '/dashboard'
@@ -138,10 +128,10 @@ function LoginForm() {
     <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1fr_420px]">
       <div className="hidden flex-col justify-center lg:flex">
         <div className="mb-8 flex items-center gap-3">
-          <BrandMark />
+          <BrandMark brand={brand} />
           <div>
-            <p className="text-xl font-semibold tracking-tight text-foreground">{APP_NAME}</p>
-            <p className="text-sm text-muted-foreground">{APP_TAGLINE}</p>
+            <p className="text-xl font-semibold tracking-tight text-foreground">{brand.appName}</p>
+            <p className="text-sm text-muted-foreground">{brand.tagline}</p>
           </div>
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -167,10 +157,10 @@ function LoginForm() {
       <Card className="border-border bg-card shadow-sm">
         <CardHeader className="space-y-4 pb-0 text-center lg:text-left">
           <div className="flex flex-col items-center gap-3 lg:hidden">
-            <BrandMark size="lg" />
+            <BrandMark size="lg" brand={brand} />
             <div>
-              <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
-              <CardDescription>{APP_TAGLINE}</CardDescription>
+              <CardTitle className="text-2xl">{brand.appName}</CardTitle>
+              <CardDescription>{brand.tagline}</CardDescription>
             </div>
           </div>
           <div className="space-y-1">

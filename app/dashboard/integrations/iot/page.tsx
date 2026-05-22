@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +24,8 @@ interface IotEvent {
 }
 
 export default function IntegrationsIotPage() {
+  const meta = useDashboardPageMeta()
+
   const [events, setEvents] = useState<IotEvent[]>([])
   const [loading, setLoading] = useState(true)
   const base =
@@ -77,19 +81,7 @@ export default function IntegrationsIotPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Radio className="h-8 w-8" />
-            IoT & sensors
-          </h1>
-          <p className="text-muted-foreground">
-            Machine ingest for cold chain, GPS, and scales — see{' '}
-            <code className="text-xs">docs/HARDWARE_IOT.md</code>
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={fetchEvents}>
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -103,8 +95,7 @@ export default function IntegrationsIotPage() {
               Devices
             </Link>
           </Button>
-        </div>
-      </div>
+        </div></>}>
 
       <div className="grid gap-4 md:grid-cols-3">
         {endpoints.map((ep) => {
@@ -168,6 +159,7 @@ export default function IntegrationsIotPage() {
           },
         ]}
       />
-    </div>
+    </DashboardPageLayout>
   )
 }
+

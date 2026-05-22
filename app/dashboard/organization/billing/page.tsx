@@ -62,6 +62,17 @@ function UsageBar({
 export default function OrganizationBillingPage() {
   const [loading, setLoading] = useState(true)
   const [openingPortal, setOpeningPortal] = useState(false)
+  const [upgrading, setUpgrading] = useState<string | null>(null)
+  const [invoices, setInvoices] = useState<
+    Array<{
+      id: string
+      number: string | null
+      status: string
+      amountDue: number
+      currency: string
+      hostedInvoiceUrl: string | null
+    }>
+  >([])
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [tenantName, setTenantName] = useState('')
   const [plan, setPlan] = useState('')
@@ -83,7 +94,55 @@ export default function OrganizationBillingPage() {
       })
       .catch(() => toast.error('Failed to load billing information'))
       .finally(() => setLoading(false))
+
+    authFetchJson<{
+      success: boolean
+      data?: {
+        invoices: Array<{
+          id: string
+          number: string | null
+          status: string
+          amountDue: number
+          currency: string
+          hostedInvoiceUrl: string | null
+        }>
+      }
+    }>('/api/v2/tenant/billing/invoices')
+      .then((inv) => {
+        if (inv.success && inv.data?.invoices) setInvoices(inv.data.invoices)
+      })
+      .catch(() => {})
   }, [])
+
+  const upgradePlan = async (targetPlan: 'starter' | 'professional' | 'enterprise') => {
+    setUpgrading(targetPlan)
+    try {
+      const returnUrl = `${window.location.origin}/dashboard/organization/billing`
+      const res = await authFetchJson<{
+        success: boolean
+        data?: { url: string; stub?: boolean }
+        error?: string
+      }>('/api/v2/tenant/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: targetPlan,
+          successUrl: `${returnUrl}?checkout=success`,
+          cancelUrl: `${returnUrl}?checkout=cancel`,
+        }),
+      })
+      if (!res.success || !res.data?.url) {
+        toast.error(res.error || 'Could not start checkout')
+        return
+      }
+      if (res.data.stub) toast.info('Stripe prices not configured — stub checkout')
+      window.location.href = res.data.url
+    } catch {
+      toast.error('Checkout failed')
+    } finally {
+      setUpgrading(null)
+    }
+  }
 
   const openPortal = async () => {
     setOpeningPortal(true)
@@ -231,8 +290,51 @@ export default function OrganizationBillingPage() {
               Manage subscription in Stripe
             </Button>
           </div>
+          <div className="mt-6 pt-6 border-t">
+            <p className="text-sm font-medium mb-2">Upgrade plan (Stripe Checkout)</p>
+            <div className="flex flex-wrap gap-2">
+              {(['starter', 'professional', 'enterprise'] as const).map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={plan === p ? 'default' : 'outline'}
+                  disabled={upgrading !== null || plan === p}
+                  onClick={() => upgradePlan(p)}
+                >
+                  {upgrading === p ? <Loader2 className="h-3 w-3 animate-spin" /> : p}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Set STRIPE_PRICE_STARTER, STRIPE_PRICE_PROFESSIONAL, STRIPE_PRICE_ENTERPRISE in .env
+            </p>
+          </div>
         </CardContent>
       </Card>
+
+      {invoices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Stripe invoices</CardTitle>
+            <CardDescription>Billing history from your Stripe customer</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {invoices.map((inv) => (
+              <div key={inv.id} className="flex justify-between items-center text-sm border-b py-2">
+                <span className="font-mono">{inv.number || inv.id.slice(0, 12)}</span>
+                <span>
+                  {inv.currency} {inv.amountDue.toLocaleString()} · {inv.status}
+                </span>
+                {inv.hostedInvoiceUrl && (
+                  <a href={inv.hostedInvoiceUrl} className="text-primary text-xs" target="_blank" rel="noreferrer">
+                    View
+                  </a>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </DashboardPageLayout>
   )
 }

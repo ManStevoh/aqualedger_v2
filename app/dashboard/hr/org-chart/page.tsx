@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { authFetchJson } from '@/lib/api'
@@ -31,6 +33,8 @@ function OrgTree({ nodes }: { nodes: OrgNode[] }) {
 }
 
 export default function OrgChartPage() {
+  const meta = useDashboardPageMeta()
+
   const [tree, setTree] = useState<OrgNode[]>([])
 
   useEffect(() => {
@@ -42,12 +46,8 @@ export default function OrgChartPage() {
   }, [])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Building2 className="h-8 w-8" />Org Chart</h1>
-        <p className="text-muted-foreground">Departments and reporting structure</p>
-      </div>
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>Organization</CardTitle></CardHeader>
         <CardContent>
           {tree.length > 0 ? <OrgTree nodes={tree} /> : (
@@ -55,6 +55,7 @@ export default function OrgChartPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

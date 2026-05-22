@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { AdminHubNav } from '@/components/dashboard/admin-hub-nav'
 import { authFetchJson } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
@@ -47,7 +48,7 @@ function UsageBar({
   over: boolean
 }) {
   return (
-    <div className="space-y-1 min-w-[140px]">
+    <div className="space-y-1 w-full sm:min-w-[8rem]">
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
         <span className={over ? 'text-destructive font-medium' : ''}>
@@ -143,7 +144,8 @@ export default function PlatformBillingPage() {
             <p className="text-center text-muted-foreground py-8">No tenants found</p>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <DataTableShell>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tenant</TableHead>
@@ -208,6 +210,7 @@ export default function PlatformBillingPage() {
                   ))}
                 </TableBody>
               </Table>
+              </DataTableShell>
             </div>
           )}
         </CardContent>

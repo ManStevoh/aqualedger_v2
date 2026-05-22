@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +19,8 @@ interface Period {
 }
 
 export default function FiscalPeriodsPage() {
+  const meta = useDashboardPageMeta()
+
   const [periods, setPeriods] = useState<Period[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -47,16 +51,8 @@ export default function FiscalPeriodsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <CalendarClock className="h-8 w-8" />
-          Fiscal Periods
-        </h1>
-        <p className="text-muted-foreground">Period close controls — blocks posting when closed</p>
-      </div>
-
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>Periods</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {loading && <p className="text-muted-foreground">Loading…</p>}
@@ -83,6 +79,7 @@ export default function FiscalPeriodsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

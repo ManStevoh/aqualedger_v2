@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,6 +40,8 @@ interface ScheduledReport {
 }
 
 export default function ScheduledReportsPage() {
+  const meta = useDashboardPageMeta()
+
   const [reports, setReports] = useState<ScheduledReport[]>([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
@@ -150,19 +154,11 @@ export default function ScheduledReportsPage() {
   const activeCount = reports.filter((r) => r.active).length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Scheduled Reports</h1>
-          <p className="text-muted-foreground">Automated KPI and traceability exports</p>
-        </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           Schedule Report
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
+        </Button></>}>
+<div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total schedules" value={reports.length} icon={<CalendarClock className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Active" value={activeCount} icon={<Mail className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Paused" value={reports.length - activeCount} icon={<CalendarClock className="h-4 w-4 text-muted-foreground" />} loading={loading} />
@@ -288,6 +284,7 @@ export default function ScheduledReportsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

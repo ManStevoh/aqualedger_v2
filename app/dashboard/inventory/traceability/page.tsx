@@ -1,3 +1,5 @@
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
@@ -33,6 +35,8 @@ interface TraceabilityLot {
 }
 
 export default function TraceabilityPage() {
+  const meta = useDashboardPageMeta()
+
   const [lots, setLots] = useState<TraceabilityLot[]>([])
   const [loading, setLoading] = useState(true)
   const [showDialog, setShowDialog] = useState(false)
@@ -100,15 +104,8 @@ export default function TraceabilityPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Traceability</h1>
-        <p className="text-muted-foreground">
-          EU fisheries / GS1 lot codes — boat to buyer chain of custody
-        </p>
-      </div>
-
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5" />
@@ -189,6 +186,7 @@ export default function TraceabilityPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

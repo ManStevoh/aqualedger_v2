@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,6 +23,8 @@ interface ModuleFlag {
 }
 
 export default function PlatformModulesAdminPage() {
+  const meta = useDashboardPageMeta()
+
   const { currentRole, setEnabledModuleIds } = useAppStore()
   const [flags, setFlags] = useState<ModuleFlag[]>([])
   const [draft, setDraft] = useState<Record<string, boolean>>({})
@@ -109,21 +113,11 @@ export default function PlatformModulesAdminPage() {
   const totalCount = ERP_MODULES.filter((m) => m.id !== 'platform').length
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Platform modules</h1>
-          <p className="text-muted-foreground">
-            Enable or disable ERP modules for every tenant. Disabled modules are hidden in navigation and blocked via API.
-          </p>
-        </div>
-        <Button className="gap-2" onClick={save} disabled={saving || loading}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={save} disabled={saving || loading}>
           <Save className="h-4 w-4" />
           {saving ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
-
-      <AdminHubNav />
+        </Button></>}>
+<AdminHubNav />
 
       <Card>
         <CardHeader>
@@ -171,6 +165,7 @@ export default function PlatformModulesAdminPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

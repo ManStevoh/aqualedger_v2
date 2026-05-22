@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,6 +51,8 @@ function formatKes(n: number) {
 }
 
 export default function PlatformAnalyticsPage() {
+  const meta = useDashboardPageMeta()
+
   const { currentRole } = useAppStore()
   const [data, setData] = useState<PlatformAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,16 +88,8 @@ export default function PlatformAnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <BarChart3 className="h-7 w-7" />
-          Platform analytics
-        </h1>
-        <p className="text-muted-foreground">Revenue, adoption, and tenant performance (30-day window)</p>
-      </div>
-
-      <AdminHubNav />
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<AdminHubNav />
 
       {loading ? (
         <div className="flex justify-center py-12 text-muted-foreground gap-2">
@@ -194,6 +190,7 @@ export default function PlatformAnalyticsPage() {
           </Card>
         </>
       ) : null}
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -55,6 +55,7 @@ export const PERMISSIONS = {
   'commerce.coupons.read': 'View coupons',
   'commerce.coupons.write': 'Manage coupons',
   'commerce.vendors.read': 'View marketplace vendors',
+  'commerce.vendors.write': 'Invite vendors and grant seller portal access',
   'commerce.reviews.read': 'View marketplace reviews',
   'commerce.reviews.write': 'Submit marketplace reviews',
   'commerce.loyalty.read': 'View loyalty accounts',
@@ -201,7 +202,7 @@ const PLATFORM_PERMISSIONS: Permission[] = [
   'platform.settings.write',
 ]
 
-const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
+export const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
   tenant_owner: [...ALL_MODULE_PERMISSIONS, 'tenant.audit.read'],
   branch_manager: [
     'tenant.settings.read', 'tenant.audit.read',
@@ -225,13 +226,14 @@ const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
     'commerce.listings.read', 'commerce.listings.write',
     'commerce.orders.read', 'commerce.orders.write',
     'commerce.coupons.read', 'commerce.coupons.write',
-    'commerce.vendors.read',
+    'commerce.vendors.read', 'commerce.vendors.write',
     'commerce.reviews.read', 'commerce.reviews.write',
     'commerce.loyalty.read', 'commerce.loyalty.write',
     'commerce.cart.read', 'commerce.cart.write',
     'commerce.wishlist.read', 'commerce.wishlist.write',
     'commerce.checkout.write',
     'commerce.payouts.read', 'commerce.payouts.write',
+    'commerce.vendors.read', 'commerce.vendors.write',
     'commerce.storefront.read', 'commerce.storefront.write',
     'commerce.contracts.read', 'commerce.contracts.write',
     'inventory.stock.read', 'inventory.stock.write',
@@ -306,9 +308,11 @@ const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
     'commerce.catalog.read', 'commerce.listings.read', 'commerce.listings.write',
     'commerce.orders.read',
     'commerce.payouts.read',
+    'commerce.reviews.read', 'commerce.reviews.write',
     'commerce.storefront.read', 'commerce.storefront.write',
     'accounting.wallet.read',
     'notifications.read',
+    'auth.sessions.read', 'auth.sessions.write',
   ],
   delivery_staff: [
     'logistics.deliveries.read', 'logistics.deliveries.write',
@@ -325,6 +329,7 @@ const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
     'commerce.checkout.write',
     'commerce.orders.read', 'commerce.orders.write',
     'notifications.read',
+    'auth.sessions.read', 'auth.sessions.write',
   ],
   hr_officer: [
     'hr.employees.read', 'hr.employees.write',
@@ -368,9 +373,13 @@ export function hasPermission(
   memberRole: TenantMemberRole,
   permission: Permission,
   legacyRole?: string,
+  tenantRolePermissions?: Permission[] | null,
 ): boolean {
   if (permission.startsWith('platform.')) {
     return legacyRole === 'super_admin' && PLATFORM_PERMISSIONS.includes(permission)
+  }
+  if (tenantRolePermissions != null) {
+    return tenantRolePermissions.includes(permission)
   }
   return ROLE_PERMISSIONS[memberRole]?.includes(permission) ?? false
 }
@@ -379,8 +388,9 @@ export function assertPermission(
   memberRole: TenantMemberRole,
   permission: Permission,
   legacyRole?: string,
+  tenantRolePermissions?: Permission[] | null,
 ): void {
-  if (!hasPermission(memberRole, permission, legacyRole)) {
+  if (!hasPermission(memberRole, permission, legacyRole, tenantRolePermissions)) {
     throw new Error('Forbidden')
   }
 }

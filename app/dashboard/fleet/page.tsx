@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Ship, Anchor, Users, Fuel, Wrench, MapPin, AlertTriangle, Plus, MoreHorizontal } from 'lucide-react'
@@ -16,25 +17,21 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  SelectValue } from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { DataTable } from '@/components/dashboard/data-table'
 import { ExportCsvButton } from '@/components/dashboard/export-csv-button'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
@@ -307,8 +304,7 @@ export default function FleetPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
+    <DashboardPageLayout
         title={meta.title}
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
@@ -318,7 +314,7 @@ export default function FleetPage() {
             Add Boat
           </Button>
         }
-      />
+      >
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
@@ -777,9 +773,10 @@ export default function FleetPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 
 interface BoatCardProps {
   boat: Boat

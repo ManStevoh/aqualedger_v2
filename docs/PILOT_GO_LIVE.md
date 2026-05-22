@@ -6,7 +6,7 @@ Use this after [`DEPLOYMENT.md`](DEPLOYMENT.md) infrastructure is up.
 
 | Step | Action |
 |------|--------|
-| 1 | `npm run predeploy` and `npm run smoke` on production URL |
+| 1 | `npm run hardening` (or `npm run predeploy` + `npm run smoke`) on production URL |
 | 2 | `npm run env:check -- --strict` |
 | 3 | Super admin login → **Admin → Settings** — disable maintenance, confirm announcement |
 | 4 | **Admin → Modules** — enable only modules the pilot needs (fishing, commerce, cold chain, …) |
@@ -25,9 +25,11 @@ Use this after [`DEPLOYMENT.md`](DEPLOYMENT.md) infrastructure is up.
 | Step | Action |
 |------|--------|
 | 1 | **Commerce → Storefront** — theme, products, publish |
-| 2 | Open `/store/{slug}` and guest-add-to-cart test |
-| 3 | `npm run mpesa:check` — sandbox STK from onboarding go-live step |
-| 4 | Confirm callback URL reachable: `{APP_URL}/api/payments/mpesa/callback` |
+| 2 | Open `/store/{slug}` and guest-add-to-cart test (M-Pesa STK, Stripe, COD) |
+| 3 | **Commerce → Cart** — tenant checkout with M-Pesa STK or pay on delivery |
+| 4 | **CRM → Leads pipeline** — Kanban drag stages; confirm `PATCH /api/v2/crm/leads/[id]` |
+| 5 | `npm run mpesa:check` — sandbox STK from onboarding go-live step |
+| 6 | Confirm callback URL reachable: `{APP_URL}/api/payments/mpesa/callback` |
 
 ## Day 3 — Operations
 

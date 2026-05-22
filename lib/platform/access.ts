@@ -9,10 +9,13 @@ import {
   legacyRoleToMemberRole,
   type Permission,
 } from './permissions'
+import { getTenantRolePermissions } from './tenant-role-permissions'
 
 export interface AuthContext extends JWTPayload {
   tenantId: string
   memberRole: TenantMemberRole
+  /** Tenant-customized portal permissions (vendor/customer); null = use built-in role map */
+  rolePermissions: Permission[] | null
 }
 
 export async function getTenantMemberRole(
@@ -37,12 +40,13 @@ export async function getAuthContext(): Promise<AuthContext> {
     tenantIdHeader,
   })
   const memberRole = await getTenantMemberRole(auth.userId, tenantId, auth.role)
-  return { ...auth, tenantId, memberRole }
+  const rolePermissions = await getTenantRolePermissions(tenantId, memberRole)
+  return { ...auth, tenantId, memberRole, rolePermissions }
 }
 
 export async function requirePermission(permission: Permission): Promise<AuthContext> {
   const ctx = await getAuthContext()
-  if (!hasPermission(ctx.memberRole, permission, ctx.role)) {
+  if (!hasPermission(ctx.memberRole, permission, ctx.role, ctx.rolePermissions)) {
     throw new Error('Forbidden')
   }
   return ctx

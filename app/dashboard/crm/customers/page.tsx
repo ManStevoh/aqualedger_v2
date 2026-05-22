@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import {
   Dialog,
   DialogContent,
@@ -32,8 +33,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Users, Loader2, Download, Clock, Phone, Mail, MessageSquare } from 'lucide-react'
+import { Plus, Users, Loader2, Download, Clock, Phone, Mail, MessageSquare, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  PortalInviteDialog,
+  portalDefaultsFromCustomer,
+} from '@/components/dashboard/portal-invite-dialog'
 
 interface Customer {
   id: string
@@ -83,6 +88,8 @@ export default function CustomersPage() {
   const [activityType, setActivityType] = useState('call')
   const [activitySubject, setActivitySubject] = useState('')
   const [activityBody, setActivityBody] = useState('')
+  const [portalInviteOpen, setPortalInviteOpen] = useState(false)
+  const [portalInviteCustomer, setPortalInviteCustomer] = useState<Customer | null>(null)
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
@@ -247,11 +254,27 @@ export default function CustomersPage() {
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
 
+  const openPortalInvite = (customer?: Customer) => {
+    setPortalInviteCustomer(customer ?? null)
+    setPortalInviteOpen(true)
+  }
+
   return (
     <DashboardPageLayout
       title="Customers"
-      description="Manage customer relationships, activities, and GDPR exports"
+      description="Manage customer relationships, activities, and buyer portal access"
     >
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+          <Plus className="h-4 w-4" />
+          Add customer
+        </Button>
+        <Button className="gap-2" variant="outline" onClick={() => openPortalInvite()}>
+          <LogIn className="h-4 w-4" />
+          Invite client portal
+        </Button>
+      </div>
+
       <Tabs defaultValue="directory">
         <TabsList>
           <TabsTrigger value="directory">Directory</TabsTrigger>
@@ -285,6 +308,7 @@ export default function CustomersPage() {
                   </Button>
                 </div>
               ) : (
+                <DataTableShell label="CRM customers">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -321,7 +345,21 @@ export default function CustomersPage() {
                             {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1"
+                            disabled={!c.email}
+                            title={c.email ? 'Grant buyer portal login' : 'Add email first'}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openPortalInvite(c)
+                            }}
+                          >
+                            <LogIn className="h-4 w-4" />
+                            Portal
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -340,6 +378,7 @@ export default function CustomersPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               )}
             </CardContent>
           </Card>
@@ -462,6 +501,16 @@ export default function CustomersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PortalInviteDialog
+        kind="customer"
+        open={portalInviteOpen}
+        onOpenChange={setPortalInviteOpen}
+        onSuccess={fetchCustomers}
+        defaults={
+          portalInviteCustomer ? portalDefaultsFromCustomer(portalInviteCustomer) : undefined
+        }
+      />
 
       <Dialog open={activityDialog} onOpenChange={setActivityDialog}>
         <DialogContent className="sm:max-w-md">

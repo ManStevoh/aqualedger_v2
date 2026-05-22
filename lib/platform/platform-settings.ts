@@ -3,20 +3,27 @@ import { query, queryOne, execute } from '@/lib/db'
 export type MaintenanceSetting = { enabled: boolean; message: string }
 export type SignupSetting = { locked: boolean }
 export type AnnouncementSetting = { enabled: boolean; title: string; body: string }
+export type PlatformBrandingSetting = {
+  logo_url: string
+  primary_color: string
+  app_name: string
+}
 
 export type PlatformSettings = {
   maintenance: MaintenanceSetting
   signup: SignupSetting
   announcement: AnnouncementSetting
+  branding: PlatformBrandingSetting
 }
 
-const SETTING_KEYS = ['maintenance', 'signup', 'announcement'] as const
+const SETTING_KEYS = ['maintenance', 'signup', 'announcement', 'branding'] as const
 export type PlatformSettingKey = (typeof SETTING_KEYS)[number]
 
 const DEFAULTS: PlatformSettings = {
   maintenance: { enabled: false, message: '' },
   signup: { locked: false },
   announcement: { enabled: false, title: '', body: '' },
+  branding: { logo_url: '', primary_color: '', app_name: '' },
 }
 
 let maintenanceCache: { value: MaintenanceSetting; expiresAt: number } | null = null
@@ -37,7 +44,7 @@ function parseJson<T>(raw: unknown, fallback: T): T {
 
 export async function getSettings(): Promise<PlatformSettings> {
   const rows = await query<{ setting_key: string; setting_value: unknown }>(
-    `SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN (?, ?, ?)`,
+    `SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN (?, ?, ?, ?)`,
     [...SETTING_KEYS],
   )
   const map = new Map(rows.map((r) => [r.setting_key, r.setting_value]))
@@ -45,6 +52,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     maintenance: parseJson(map.get('maintenance'), DEFAULTS.maintenance),
     signup: parseJson(map.get('signup'), DEFAULTS.signup),
     announcement: parseJson(map.get('announcement'), DEFAULTS.announcement),
+    branding: parseJson(map.get('branding'), DEFAULTS.branding),
   }
 }
 
@@ -114,6 +122,9 @@ export interface PlatformSettingsUi {
   announcementEnabled: boolean
   announcementTitle: string
   announcementBody: string
+  brandingLogoUrl: string
+  brandingPrimaryColor: string
+  brandingAppName: string
 }
 
 export function settingsToUi(settings: PlatformSettings): PlatformSettingsUi {
@@ -124,6 +135,9 @@ export function settingsToUi(settings: PlatformSettings): PlatformSettingsUi {
     announcementEnabled: settings.announcement.enabled,
     announcementTitle: settings.announcement.title,
     announcementBody: settings.announcement.body,
+    brandingLogoUrl: settings.branding.logo_url ?? '',
+    brandingPrimaryColor: settings.branding.primary_color ?? '',
+    brandingAppName: settings.branding.app_name ?? '',
   }
 }
 
@@ -159,6 +173,22 @@ export async function saveAllUiSettings(
         enabled: ui.announcementEnabled ?? current.announcement.enabled,
         title: ui.announcementTitle ?? current.announcement.title,
         body: ui.announcementBody ?? current.announcement.body,
+      },
+      updatedBy,
+    )
+  }
+  if (
+    ui.brandingLogoUrl !== undefined ||
+    ui.brandingPrimaryColor !== undefined ||
+    ui.brandingAppName !== undefined
+  ) {
+    const current = await getSettings()
+    await updateSetting(
+      'branding',
+      {
+        logo_url: ui.brandingLogoUrl ?? current.branding.logo_url,
+        primary_color: ui.brandingPrimaryColor ?? current.branding.primary_color,
+        app_name: ui.brandingAppName ?? current.branding.app_name,
       },
       updatedBy,
     )

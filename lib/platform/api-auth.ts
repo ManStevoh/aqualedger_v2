@@ -2,12 +2,14 @@ import type { NextRequest } from 'next/server'
 import { requireAuth, type JWTPayload } from '@/lib/auth'
 import { getTenantMemberRole } from './access'
 import { hasPermission, legacyRoleToMemberRole, type Permission } from './permissions'
+import { getTenantRolePermissions } from './tenant-role-permissions'
 import { resolveUserTenantId } from '@/lib/modules/tenant/service'
 import { forbidden, unauthorized } from '@/lib/api-handler'
 
 export interface ApiAuthContext extends JWTPayload {
   tenantId: string
   memberRole: ReturnType<typeof legacyRoleToMemberRole>
+  rolePermissions: Permission[] | null
 }
 
 /** Permission-guarded auth for legacy routes migrating off requireRole */
@@ -17,12 +19,13 @@ export async function withApiPermission(
   const auth = await requireAuth()
   const tenantId = await resolveUserTenantId(auth.userId)
   const memberRole = await getTenantMemberRole(auth.userId, tenantId, auth.role)
+  const rolePermissions = await getTenantRolePermissions(tenantId, memberRole)
 
-  if (!hasPermission(memberRole, permission, auth.role)) {
+  if (!hasPermission(memberRole, permission, auth.role, rolePermissions)) {
     throw forbidden()
   }
 
-  return { ...auth, tenantId, memberRole }
+  return { ...auth, tenantId, memberRole, rolePermissions }
 }
 
 /** Allow if the caller has any of the listed permissions */
@@ -32,12 +35,13 @@ export async function withApiPermissionAny(
   const auth = await requireAuth()
   const tenantId = await resolveUserTenantId(auth.userId)
   const memberRole = await getTenantMemberRole(auth.userId, tenantId, auth.role)
+  const rolePermissions = await getTenantRolePermissions(tenantId, memberRole)
 
-  if (!permissions.some((p) => hasPermission(memberRole, p, auth.role))) {
+  if (!permissions.some((p) => hasPermission(memberRole, p, auth.role, rolePermissions))) {
     throw forbidden()
   }
 
-  return { ...auth, tenantId, memberRole }
+  return { ...auth, tenantId, memberRole, rolePermissions }
 }
 
 export function getQueryInt(

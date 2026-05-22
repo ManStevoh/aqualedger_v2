@@ -69,6 +69,8 @@ export const taxCodeCreateSchema = z.object({
 
 export const apInvoiceCreateSchema = z.object({
   supplierId: z.string().uuid().optional().nullable(),
+  purchaseOrderId: z.string().uuid().optional().nullable(),
+  grnId: z.string().uuid().optional().nullable(),
   invoiceNumber: z.string().min(1).max(50),
   invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),

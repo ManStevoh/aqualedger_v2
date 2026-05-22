@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
 import { FileSpreadsheet, Plus, Package } from 'lucide-react'
@@ -40,6 +43,8 @@ interface Contract {
 }
 
 export default function SalesContractsPage() {
+  const meta = useDashboardPageMeta()
+
   const [contracts, setContracts] = useState<Contract[]>([])
   const [summary, setSummary] = useState({ active: 0, draft: 0, openKg: 0, openValueKes: 0 })
   const [loading, setLoading] = useState(true)
@@ -126,19 +131,11 @@ export default function SalesContractsPage() {
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Forward sales contracts</h1>
-          <p className="text-muted-foreground">Pre-sell harvest to hotels, exporters, and wholesalers</p>
-        </div>
-        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4" />
           New contract
-        </Button>
-      </div>
-
-      <StatCardGrid>
+        </Button></>}>
+<StatCardGrid>
         <StatCard title="Active" value={summary.active} icon={<FileSpreadsheet className="h-4 w-4" />} loading={loading} />
         <StatCard title="Draft" value={summary.draft} loading={loading} />
         <StatCard title="Open volume (kg)" value={summary.openKg.toLocaleString()} icon={<Package className="h-4 w-4" />} loading={loading} />
@@ -148,7 +145,8 @@ export default function SalesContractsPage() {
       <Card>
         <CardHeader><CardTitle>Contracts</CardTitle></CardHeader>
         <CardContent>
-          <Table>
+          <DataTableShell>
+                <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Number</TableHead>
@@ -185,6 +183,7 @@ export default function SalesContractsPage() {
               })}
             </TableBody>
           </Table>
+              </DataTableShell>
         </CardContent>
       </Card>
 
@@ -220,6 +219,7 @@ export default function SalesContractsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

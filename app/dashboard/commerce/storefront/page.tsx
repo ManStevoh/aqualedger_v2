@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +47,8 @@ interface StorefrontSettings {
 }
 
 export default function StorefrontCustomizerPage() {
+  const meta = useDashboardPageMeta()
+
   const [themes, setThemes] = useState<ThemeOption[]>([])
   const [settings, setSettings] = useState<StorefrontSettings | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -152,19 +156,7 @@ export default function StorefrontCustomizerPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Palette className="h-7 w-7" />
-            Storefront themes
-          </h1>
-          <p className="text-muted-foreground mt-1 max-w-2xl">
-            Choose from 14 globally compliant UI presets (WCAG 2.2 AA+, GDPR cookie slot, mobile-first).
-            See <code className="text-xs">docs/ECOMMERCE_GLOBAL_STANDARDS.md</code> for the full feature checklist.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex flex-wrap gap-2">
           {previewUrl && (
             <Button variant="outline" asChild>
               <Link href={previewUrl} target="_blank" rel="noopener noreferrer">
@@ -177,8 +169,7 @@ export default function StorefrontCustomizerPage() {
             <Save className="h-4 w-4 mr-2" />
             Save settings
           </Button>
-        </div>
-      </div>
+        </div></>}>
 
       <Card>
         <CardHeader>
@@ -306,6 +297,7 @@ export default function StorefrontCustomizerPage() {
           Active theme: <strong>{selectedThemeId}</strong> · Tenant: {settings.tenant_id}
         </p>
       )}
-    </div>
+    </DashboardPageLayout>
   )
 }
+

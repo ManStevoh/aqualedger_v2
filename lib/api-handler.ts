@@ -70,8 +70,16 @@ export function handleApiError(error: unknown, route?: string): NextResponse {
   }
 
   logger.error('API error', { route, error: message })
+
+  const isDbError =
+    /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ER_ACCESS_DENIED|ER_BAD_DB_ERROR|connect/i.test(message)
+  const clientMessage =
+    process.env.NODE_ENV !== 'production' && isDbError
+      ? 'Database unavailable. Start MySQL (port 3306) and check DB_HOST, DB_USER, DB_PASSWORD, DB_NAME in .env.'
+      : 'Internal server error'
+
   return NextResponse.json(
-    { success: false, error: 'Internal server error', code: 'INTERNAL_ERROR' },
+    { success: false, error: clientMessage, code: isDbError ? 'DATABASE_UNAVAILABLE' : 'INTERNAL_ERROR' },
     { status: 500 },
   )
 }
@@ -87,6 +95,7 @@ const MAINTENANCE_EXEMPT_V2 = new Set([
   '/api/v2/platform/impersonate',
   '/api/v2/platform/recaptcha',
   '/api/v2/platform/exports/process',
+  '/api/v2/platform/reports/run-scheduled',
 ])
 
 async function assertV2PlatformGuards(request: NextRequest): Promise<void> {

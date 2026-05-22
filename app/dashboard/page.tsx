@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -10,12 +12,10 @@ import {
   Ship,
   ShoppingCart,
   Snowflake,
-  Sparkles,
-} from 'lucide-react'
+  Sparkles } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { SetupChecklist } from '@/components/dashboard/setup-checklist'
 import { WidgetCustomizer } from '@/components/dashboard/widget-customizer'
 import { KpiStrip } from '@/components/dashboard/kpi-strip'
@@ -111,6 +111,11 @@ type OnboardingStatus = {
 
 export default function DashboardPage() {
   const { currentRole, currentUser, enabledModuleIds, modulesLoaded } = useAppStore()
+  const meta = useDashboardPageMeta({
+    title: `${APP_NAME} Command Center`,
+    description: `Welcome back${currentUser?.name ? `, ${currentUser.name}` : ''}. ${APP_TAGLINE}`,
+    breadcrumbs: [{ label: 'Dashboard', href: '/dashboard' }, { label: 'Command Center' }],
+  })
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
   const { data: summary, isLoading: kpisLoading } = useExecutiveSummary()
   const { data: notificationsData, isLoading: activityLoading } = useNotifications(
@@ -189,26 +194,21 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="space-y-8">
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-background p-6 shadow-sm lg:p-8">
-        <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative">
-          <ModulePageHeader
-            title={`${APP_NAME} Command Center`}
-            description={`Welcome back${currentUser?.name ? `, ${currentUser.name}` : ''}. ${APP_TAGLINE}`}
-            breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Command Center' }]}
-            actions={
-              <div className="flex items-center gap-2 pointer-events-auto">
-                <WidgetCustomizer />
-                <Badge variant="secondary" className="font-normal">
-                  {roleLabels[currentRole]}
-                </Badge>
-              </div>
-            }
-          />
+    <DashboardPageLayout
+      title={meta.title}
+      description={meta.description}
+      breadcrumbs={meta.breadcrumbs}
+      hideWorkspaceNav
+      className="space-y-8"
+      actions={
+        <div className="flex items-center gap-2">
+          <WidgetCustomizer />
+          <Badge variant="secondary" className="font-normal">
+            {roleLabels[currentRole]}
+          </Badge>
         </div>
-      </div>
-
+      }
+    >
       {showSetupChecklist && (
         <SetupChecklist
           completedSteps={onboardingStatus.completedCount}
@@ -377,6 +377,6 @@ export default function DashboardPage() {
           )}
         </section>
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }

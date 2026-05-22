@@ -45,6 +45,7 @@ import {
   Palette,
   TrendingUp,
   Store,
+  ShoppingBag,
   Globe,
   HeartPulse,
   CreditCard,
@@ -112,6 +113,7 @@ export const ERP_MODULES: ErpModule[] = [
       { title: 'Custom domains', href: '/dashboard/organization/domains', permission: 'tenant.settings.write', icon: Globe },
       { title: 'Tenant KPIs', href: '/dashboard/organization?tab=analytics', permission: 'tenant.settings.read', icon: BarChart3 },
       { title: 'Team', href: '/dashboard/team', permission: 'tenant.members.manage', icon: Users },
+      { title: 'Portal roles', href: '/dashboard/settings/roles', permission: 'tenant.members.manage', icon: Shield },
       { title: 'Users', href: '/dashboard/users', permission: 'platform.tenants.manage', icon: Users },
       { title: 'Settings', href: '/dashboard/settings', permission: 'tenant.settings.read', icon: Settings },
       { title: 'Workflows', href: '/dashboard/settings/workflows', permission: 'workflows.read', icon: Route },
@@ -160,9 +162,11 @@ export const ERP_MODULES: ErpModule[] = [
       { title: 'Catalog', href: '/dashboard/catalog', permission: 'commerce.catalog.read', icon: Package },
       { title: 'Coupons', href: '/dashboard/commerce/coupons', permission: 'commerce.coupons.read', icon: Ticket },
       { title: 'Marketplace', href: '/dashboard/marketplace', permission: 'commerce.listings.read', icon: ShoppingCart },
+      { title: 'Vendors', href: '/dashboard/commerce/vendors', permission: 'commerce.vendors.read', icon: Store },
       { title: 'Cart', href: '/dashboard/commerce/cart', permission: 'commerce.cart.read', icon: ShoppingCart },
       { title: 'Wishlist', href: '/dashboard/commerce/wishlist', permission: 'commerce.wishlist.read', icon: Heart },
       { title: 'Reviews', href: '/dashboard/commerce/reviews', permission: 'commerce.reviews.read', icon: Star },
+      { title: 'Abandoned carts', href: '/dashboard/commerce/abandoned-carts', permission: 'commerce.cart.read', icon: ShoppingBag },
       { title: 'Orders', href: '/dashboard/orders', permission: 'commerce.orders.read', icon: ClipboardList },
       { title: 'Sales', href: '/dashboard/commerce/sales', permission: 'commerce.orders.read', icon: TrendingUp },
       { title: 'Payouts', href: '/dashboard/commerce/payouts', permission: 'commerce.payouts.read', icon: Wallet },
@@ -228,7 +232,7 @@ export const ERP_MODULES: ErpModule[] = [
       { title: 'Customers', href: '/dashboard/crm/customers', permission: 'crm.customers.read', icon: Users },
       { title: 'Segments', href: '/dashboard/crm/segments', permission: 'crm.customers.read', icon: Users },
       { title: 'Sales forecast', href: '/dashboard/crm/forecast', permission: 'crm.customers.read', icon: BarChart3 },
-      { title: 'Leads', href: '/dashboard/crm/leads', permission: 'crm.leads.read', icon: UserCircle },
+      { title: 'Leads pipeline', href: '/dashboard/crm/leads', permission: 'crm.leads.read', icon: UserCircle },
       { title: 'Campaigns', href: '/dashboard/crm/campaigns', permission: 'crm.customers.read', icon: Bell },
       { title: 'Credit', href: '/dashboard/credit-score', permission: 'crm.customers.read', icon: Calculator },
     ],
@@ -243,6 +247,7 @@ export const ERP_MODULES: ErpModule[] = [
     nav: [
       { title: 'Wallet', href: '/dashboard/wallet', permission: 'accounting.wallet.read', icon: Calculator },
       { title: 'Expenses', href: '/dashboard/expenses', permission: 'accounting.expenses.read', icon: Calculator },
+      { title: 'Invoices', href: '/dashboard/accounting/invoices', permission: 'accounting.ledger.read', icon: FileText },
       { title: 'General Ledger', href: '/dashboard/accounting/ledger', permission: 'accounting.ledger.read', icon: Calculator },
       { title: 'Reports', href: '/dashboard/accounting/reports', permission: 'accounting.reports.read', icon: BarChart3 },
       { title: 'Bank Reconciliation', href: '/dashboard/accounting/bank-reconciliation', permission: 'accounting.ledger.read', icon: Scale },
@@ -380,6 +385,7 @@ export function getNavForRole(
   memberRole: TenantMemberRole,
   legacyRole?: string,
   enabledModuleIds?: Iterable<string>,
+  tenantRolePermissions?: import('./permissions').Permission[] | null,
 ) {
   const enabled =
     enabledModuleIds != null ? new Set(enabledModuleIds) : null
@@ -388,7 +394,9 @@ export function getNavForRole(
     .filter((mod) => !enabled || enabled.has(mod.id))
     .map((mod) => ({
       ...mod,
-      nav: mod.nav.filter((item) => hasPermission(memberRole, item.permission, legacyRole)),
+      nav: mod.nav.filter((item) =>
+        hasPermission(memberRole, item.permission, legacyRole, tenantRolePermissions),
+      ),
     }))
     .filter((mod) => mod.nav.length > 0)
 }

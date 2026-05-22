@@ -6,12 +6,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StatCard } from '@/components/dashboard/stat-card'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
+import { StatCardGrid } from '@/components/dashboard/stat-card'
 import { TablePagination, paginateItems } from '@/components/dashboard/table-pagination'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { EmptyState } from '@/components/dashboard/empty-state'
-import { WorkspaceNav, COMMERCE_WORKSPACE_NAV } from '@/components/dashboard/workspace-nav'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import {
   ShoppingCart,
@@ -166,24 +166,20 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <WorkspaceNav items={COMMERCE_WORKSPACE_NAV} />
-
-      <ModulePageHeader
-        title={meta.title}
-        description={meta.description}
-        breadcrumbs={meta.breadcrumbs}
-        actions={
-          <Tabs value={orderRole} onValueChange={(v) => setOrderRole(v as 'buyer' | 'seller')}>
-            <TabsList>
-              <TabsTrigger value="buyer">As buyer</TabsTrigger>
-              <TabsTrigger value="seller">As seller</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        }
-      />
-
-      <div className="grid gap-4 md:grid-cols-4">
+    <DashboardPageLayout
+      title={meta.title}
+      description={meta.description}
+      breadcrumbs={meta.breadcrumbs}
+      actions={
+        <Tabs value={orderRole} onValueChange={(v) => setOrderRole(v as 'buyer' | 'seller')}>
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="buyer" className="min-h-11">As buyer</TabsTrigger>
+            <TabsTrigger value="seller" className="min-h-11">As seller</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      }
+    >
+      <StatCardGrid>
         <StatCard
           title="Total Orders"
           value={isLoading ? '…' : totalOrders}
@@ -204,7 +200,7 @@ export default function OrdersPage() {
           value={isLoading ? '…' : `KES ${totalRevenue.toLocaleString()}`}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
-      </div>
+      </StatCardGrid>
 
       <ListPageToolbar
         searchValue={searchTerm}
@@ -253,7 +249,7 @@ export default function OrdersPage() {
             {paginatedOrders.map((order: FishOrder) => (
               <Card key={order.id}>
                 <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3 flex-wrap">
                         <StatusBadge status={order.status} />
@@ -277,7 +273,7 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid flex-1 grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                       <div>
                         <div className="text-muted-foreground">Buyer</div>
                         <div className="font-medium">{order.buyerName}</div>
@@ -308,7 +304,7 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 min-w-[140px]">
+                    <div className="flex w-full flex-col gap-2 sm:min-w-[8rem] sm:w-auto">
                       <Button size="sm" variant="outline" asChild>
                         <Link href={`/dashboard/orders/${order.id}`}>View order</Link>
                       </Button>
@@ -327,6 +323,6 @@ export default function OrdersPage() {
           </>
         )}
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }

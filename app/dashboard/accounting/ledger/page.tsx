@@ -23,12 +23,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatCard } from '@/components/dashboard/stat-card'
-import { BookOpen, Plus, Scale, Receipt, FileText, Percent } from 'lucide-react'
+import { BookOpen, Plus, Scale, Receipt, FileText, Percent, Loader2, Send, Printer } from 'lucide-react'
+import Link from 'next/link'
 import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
-import { ACCOUNTING_WORKSPACE_NAV, WorkspaceNav } from '@/components/dashboard/workspace-nav'
+import { StatCardGrid } from '@/components/dashboard/stat-card'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface GlAccount {
@@ -77,6 +79,7 @@ interface ApInvoice {
   total_amount: number
   status: string
   currency: string
+  gl_journal_id?: string | null
 }
 
 interface ArInvoice {
@@ -87,6 +90,7 @@ interface ArInvoice {
   total_amount: number
   status: string
   currency: string
+  gl_journal_id?: string | null
 }
 
 export default function LedgerPage() {
@@ -125,6 +129,28 @@ export default function LedgerPage() {
   const [apStatusFilter, setApStatusFilter] = useState<string>('all')
   const [arStatusFilter, setArStatusFilter] = useState<string>('all')
   const [seedingCoa, setSeedingCoa] = useState(false)
+  const [postingId, setPostingId] = useState<string | null>(null)
+
+  const printInvoice = (kind: 'ap' | 'ar', id: string) => {
+    window.open(`/api/v2/accounting/${kind}/${id}/document`, '_blank')
+  }
+
+  const postInvoice = async (kind: 'ap' | 'ar', id: string) => {
+    setPostingId(id)
+    try {
+      const res = await authFetchJson<{ success: boolean; error?: string }>(
+        `/api/v2/accounting/${kind}/${id}/post`,
+        { method: 'POST' },
+      )
+      if (!res.success) throw new Error(res.error || 'Post failed')
+      toast.success('Invoice posted to general ledger')
+      await fetchAll()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Post failed')
+    } finally {
+      setPostingId(null)
+    }
+  }
 
   const seedDefaultChart = async () => {
     setSeedingCoa(true)
@@ -368,19 +394,17 @@ export default function LedgerPage() {
     new Intl.NumberFormat('en-KE', { style: 'currency', currency }).format(n)
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
-        title={meta.title}
-        description={meta.description}
-        breadcrumbs={meta.breadcrumbs}
-        actions={
-          <Button className="gap-2" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Post Entry
-          </Button>
-        }
-      />
-      <WorkspaceNav items={ACCOUNTING_WORKSPACE_NAV} />
+    <DashboardPageLayout
+      title={meta.title}
+      description={meta.description}
+      breadcrumbs={meta.breadcrumbs}
+      actions={
+        <Button className="gap-2" onClick={() => setAddOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Post Entry
+        </Button>
+      }
+    >
 
       {!loading && accounts.length < 28 && (
         <Card className="border-dashed">
@@ -400,7 +424,7 @@ export default function LedgerPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <StatCardGrid>
         <StatCard
           title="GL Accounts"
           value={accounts.length}
@@ -419,10 +443,10 @@ export default function LedgerPage() {
           icon={<Scale className="h-4 w-4 text-muted-foreground" />}
           loading={loading}
         />
-      </div>
+      </StatCardGrid>
 
       <Tabs defaultValue="ledger">
-        <TabsList className="flex-wrap">
+        <TabsList className="flex h-auto w-full flex-wrap gap-1 sm:inline-flex sm:w-auto">
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="ap">Accounts Payable</TabsTrigger>
           <TabsTrigger value="ar">Accounts Receivable</TabsTrigger>
@@ -434,7 +458,7 @@ export default function LedgerPage() {
             filters={
               <>
                 <Select value={accountTypeFilter} onValueChange={setAccountTypeFilter}>
-                  <SelectTrigger className="w-[140px]"><SelectValue placeholder="Account type" /></SelectTrigger>
+                  <SelectTrigger className="filter-control"><SelectValue placeholder="Account type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All types</SelectItem>
                     <SelectItem value="asset">Asset</SelectItem>
@@ -445,15 +469,15 @@ export default function LedgerPage() {
                   </SelectContent>
                 </Select>
                 <Select value={entryStatusFilter} onValueChange={setEntryStatusFilter}>
-                  <SelectTrigger className="w-[140px]"><SelectValue placeholder="Entry status" /></SelectTrigger>
+                  <SelectTrigger className="filter-control"><SelectValue placeholder="Entry status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="posted">Posted</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input type="date" className="w-[160px]" value={fromDate} onChange={(e) => setFromDate(e.target.value)} placeholder="From" />
-                <Input type="date" className="w-[160px]" value={toDate} onChange={(e) => setToDate(e.target.value)} placeholder="To" />
+                <Input type="date" className="filter-control" value={fromDate} onChange={(e) => setFromDate(e.target.value)} placeholder="From" />
+                <Input type="date" className="filter-control" value={toDate} onChange={(e) => setToDate(e.target.value)} placeholder="To" />
               </>
             }
           />
@@ -535,7 +559,7 @@ export default function LedgerPage() {
           <ListPageToolbar
             filters={
               <Select value={apStatusFilter} onValueChange={setApStatusFilter}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectTrigger className="filter-control"><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
@@ -546,10 +570,15 @@ export default function LedgerPage() {
               </Select>
             }
             actions={
-              <Button size="sm" className="gap-2" onClick={() => setApOpen(true)}>
-                <Plus className="h-4 w-4" />
-                New AP Invoice
-              </Button>
+              <>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/dashboard/accounting/invoices">Invoices hub</Link>
+                </Button>
+                <Button size="sm" className="gap-2" onClick={() => setApOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  New AP Invoice
+                </Button>
+              </>
             }
           />
           <Card>
@@ -561,6 +590,7 @@ export default function LedgerPage() {
               <CardDescription>Supplier invoices (AP)</CardDescription>
             </CardHeader>
             <CardContent>
+              <DataTableShell label="Accounts payable">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
@@ -571,6 +601,7 @@ export default function LedgerPage() {
                     <th className="text-right py-2 px-3">Total</th>
                     <th className="text-left py-2 px-3">Currency</th>
                     <th className="text-left py-2 px-3">Status</th>
+                    <th className="text-right py-2 px-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -582,14 +613,42 @@ export default function LedgerPage() {
                       <td className="py-2 px-3 text-right">{fmt(Number(inv.subtotal ?? inv.total_amount), inv.currency)}</td>
                       <td className="py-2 px-3 text-right">{fmt(Number(inv.total_amount), inv.currency)}</td>
                       <td className="py-2 px-3">{inv.currency}</td>
-                      <td className="py-2 px-3"><Badge variant="outline">{inv.status}</Badge></td>
+                      <td className="py-2 px-3">
+                        <Badge variant="outline">{inv.status}</Badge>
+                        {inv.gl_journal_id && (
+                          <Badge variant="secondary" className="ml-1 text-xs">GL</Badge>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => printInvoice('ap', inv.id)} title="Print">
+                            <Printer className="h-3 w-3" />
+                          </Button>
+                          {!inv.gl_journal_id && inv.status === 'draft' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={postingId === inv.id}
+                              onClick={() => postInvoice('ap', inv.id)}
+                            >
+                              {postingId === inv.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Send className="h-3 w-3 mr-1" />
+                              )}
+                              Post GL
+                            </Button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {apInvoices.length === 0 && !loading && (
-                    <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">No AP invoices yet</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">No AP invoices yet</td></tr>
                   )}
                 </tbody>
               </table>
+              </DataTableShell>
             </CardContent>
           </Card>
         </TabsContent>
@@ -598,7 +657,7 @@ export default function LedgerPage() {
           <ListPageToolbar
             filters={
               <Select value={arStatusFilter} onValueChange={setArStatusFilter}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectTrigger className="filter-control"><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
@@ -610,10 +669,15 @@ export default function LedgerPage() {
               </Select>
             }
             actions={
-              <Button size="sm" className="gap-2" onClick={() => setArOpen(true)}>
-                <Plus className="h-4 w-4" />
-                New AR Invoice
-              </Button>
+              <>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/dashboard/accounting/invoices">Invoices hub</Link>
+                </Button>
+                <Button size="sm" className="gap-2" onClick={() => setArOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  New AR Invoice
+                </Button>
+              </>
             }
           />
           <Card>
@@ -625,6 +689,7 @@ export default function LedgerPage() {
               <CardDescription>Customer invoices (AR)</CardDescription>
             </CardHeader>
             <CardContent>
+              <DataTableShell label="Accounts receivable">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
@@ -634,6 +699,7 @@ export default function LedgerPage() {
                     <th className="text-right py-2 px-3">Total</th>
                     <th className="text-left py-2 px-3">Currency</th>
                     <th className="text-left py-2 px-3">Status</th>
+                    <th className="text-right py-2 px-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -644,14 +710,42 @@ export default function LedgerPage() {
                       <td className="py-2 px-3">{inv.due_date || '—'}</td>
                       <td className="py-2 px-3 text-right">{fmt(Number(inv.total_amount), inv.currency)}</td>
                       <td className="py-2 px-3">{inv.currency}</td>
-                      <td className="py-2 px-3"><Badge variant="outline">{inv.status}</Badge></td>
+                      <td className="py-2 px-3">
+                        <Badge variant="outline">{inv.status}</Badge>
+                        {inv.gl_journal_id && (
+                          <Badge variant="secondary" className="ml-1 text-xs">GL</Badge>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => printInvoice('ar', inv.id)} title="Print">
+                            <Printer className="h-3 w-3" />
+                          </Button>
+                          {!inv.gl_journal_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={postingId === inv.id}
+                              onClick={() => postInvoice('ar', inv.id)}
+                            >
+                              {postingId === inv.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Send className="h-3 w-3 mr-1" />
+                              )}
+                              Post GL
+                            </Button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {arInvoices.length === 0 && !loading && (
-                    <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No AR invoices yet</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">No AR invoices yet</td></tr>
                   )}
                 </tbody>
               </table>
+              </DataTableShell>
             </CardContent>
           </Card>
         </TabsContent>
@@ -845,6 +939,6 @@ export default function LedgerPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

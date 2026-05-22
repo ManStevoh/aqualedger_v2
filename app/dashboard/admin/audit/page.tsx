@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +38,8 @@ interface TenantOption {
 }
 
 export default function AuditLogsPage() {
+  const meta = useDashboardPageMeta()
+
   const { currentRole } = useAppStore()
   const isSuperAdmin = currentRole === 'super_admin'
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -68,16 +72,8 @@ export default function AuditLogsPage() {
     log.tenant_name || log.tenant_slug || log.tenant_id?.slice(0, 8) || '—'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Shield className="h-7 w-7" />
-          Audit trail
-        </h1>
-        <p className="text-muted-foreground">OWASP-compliant activity log · GDPR accountability</p>
-      </div>
-
-      {isSuperAdmin && <AdminHubNav />}
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+{isSuperAdmin && <AdminHubNav />}
 
       <div className="flex flex-wrap gap-3">
         <Input
@@ -88,7 +84,7 @@ export default function AuditLogsPage() {
         />
         {isSuperAdmin && (
           <Select value={tenantFilter} onValueChange={setTenantFilter}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="filter-control">
               <SelectValue placeholder="All tenants" />
             </SelectTrigger>
             <SelectContent>
@@ -137,6 +133,7 @@ export default function AuditLogsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,11 +34,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { AdminHubNav } from '@/components/dashboard/admin-hub-nav'
 import { authFetchJson } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
 import type { TenantPlan, TenantStatus } from '@/lib/tenant'
-import { Building2, Shield, Loader2, Plus, Download, Trash2, SlidersHorizontal } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Building2, Shield, Loader2, Plus, Download, Trash2, SlidersHorizontal, LayoutGrid } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PlatformTenant {
@@ -60,6 +64,15 @@ interface TenantFeatureFlag {
   enabled: boolean
 }
 
+interface TenantModuleFlag {
+  moduleId: string
+  label: string
+  description: string
+  platformEnabled: boolean
+  hasOverride: boolean
+  enabled: boolean
+}
+
 function formatKes(n: number) {
   return new Intl.NumberFormat('en-KE', {
     style: 'currency',
@@ -75,6 +88,8 @@ function statusBadgeVariant(status: TenantStatus) {
 }
 
 export default function PlatformTenantsPage() {
+  const meta = useDashboardPageMeta()
+
   const { currentRole } = useAppStore()
   const [tenants, setTenants] = useState<PlatformTenant[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,6 +109,12 @@ export default function PlatformTenantsPage() {
   const [flagsDraft, setFlagsDraft] = useState<Record<string, boolean>>({})
   const [flagsLoading, setFlagsLoading] = useState(false)
   const [flagsSaving, setFlagsSaving] = useState(false)
+  const [accessTarget, setAccessTarget] = useState<PlatformTenant | null>(null)
+  const [accessTab, setAccessTab] = useState<'modules' | 'flags'>('modules')
+  const [modulesList, setModulesList] = useState<TenantModuleFlag[]>([])
+  const [modulesDraft, setModulesDraft] = useState<Record<string, boolean>>({})
+  const [modulesLoading, setModulesLoading] = useState(false)
+  const [modulesSaving, setModulesSaving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -201,36 +222,62 @@ export default function PlatformTenantsPage() {
     setPurgeSlugInput('')
   }
 
-  const openFlagsDialog = async (tenant: PlatformTenant) => {
+  const openAccessDialog = async (tenant: PlatformTenant, tab: 'modules' | 'flags' = 'modules') => {
+    setAccessTarget(tenant)
+    setAccessTab(tab)
     setFlagsTarget(tenant)
     setFlagsDraft({})
+    setModulesDraft({})
     setFlagsLoading(true)
+    setModulesLoading(true)
     try {
-      const res = await authFetchJson<{
-        success: boolean
-        data?: { flags: TenantFeatureFlag[] }
-        error?: string
-      }>(`/api/v2/platform/tenants/${tenant.id}/flags`)
-      if (!res.success) {
-        toast.error(res.error || 'Failed to load feature flags')
+      const [modRes, flagRes] = await Promise.all([
+        authFetchJson<{
+          success: boolean
+          data?: { modules: TenantModuleFlag[] }
+          error?: string
+        }>(`/api/v2/platform/tenants/${tenant.id}/modules`),
+        authFetchJson<{
+          success: boolean
+          data?: { flags: TenantFeatureFlag[] }
+          error?: string
+        }>(`/api/v2/platform/tenants/${tenant.id}/flags`),
+      ])
+      if (!modRes.success) {
+        toast.error(modRes.error || 'Failed to load module flags')
+        setAccessTarget(null)
         setFlagsTarget(null)
         return
       }
-      const list = res.data?.flags ?? []
+      if (!flagRes.success) {
+        toast.error(flagRes.error || 'Failed to load feature flags')
+        setAccessTarget(null)
+        setFlagsTarget(null)
+        return
+      }
+      const mods = modRes.data?.modules ?? []
+      setModulesList(mods)
+      setModulesDraft(Object.fromEntries(mods.map((m) => [m.moduleId, m.enabled])))
+      const list = flagRes.data?.flags ?? []
       setFlagsList(list)
       setFlagsDraft(Object.fromEntries(list.map((f) => [f.flagKey, f.enabled])))
     } catch {
       toast.error('Network error')
+      setAccessTarget(null)
       setFlagsTarget(null)
     } finally {
       setFlagsLoading(false)
+      setModulesLoading(false)
     }
   }
 
-  const closeFlagsDialog = () => {
+  const closeAccessDialog = () => {
+    setAccessTarget(null)
     setFlagsTarget(null)
     setFlagsList([])
     setFlagsDraft({})
+    setModulesList([])
+    setModulesDraft({})
   }
 
   const saveFlags = async () => {
@@ -254,11 +301,40 @@ export default function PlatformTenantsPage() {
         return
       }
       toast.success(`Feature flags updated for ${flagsTarget.slug}`)
-      closeFlagsDialog()
+      closeAccessDialog()
     } catch {
       toast.error('Network error')
     } finally {
       setFlagsSaving(false)
+    }
+  }
+
+  const saveModules = async () => {
+    if (!accessTarget) return
+    setModulesSaving(true)
+    try {
+      const modules = modulesList.map((m) => ({
+        moduleId: m.moduleId,
+        enabled: modulesDraft[m.moduleId] ?? m.enabled,
+      }))
+      const res = await authFetchJson<{ success: boolean; error?: string }>(
+        `/api/v2/platform/tenants/${accessTarget.id}/modules`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modules }),
+        },
+      )
+      if (!res.success) {
+        toast.error(res.error || 'Save failed')
+        return
+      }
+      toast.success(`Module access updated for ${accessTarget.slug}`)
+      closeAccessDialog()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setModulesSaving(false)
     }
   }
 
@@ -305,16 +381,7 @@ export default function PlatformTenantsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-7 w-7" />
-            Tenants
-          </h1>
-          <p className="text-muted-foreground">Provision, manage plans, and export tenant data</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -374,7 +441,7 @@ export default function PlatformTenantsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </>}>
 
       <AdminHubNav />
 
@@ -412,46 +479,109 @@ export default function PlatformTenantsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={flagsTarget !== null} onOpenChange={(open) => !open && closeFlagsDialog()}>
-        <DialogContent>
+      <Dialog open={accessTarget !== null} onOpenChange={(open) => !open && closeAccessDialog()}>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Feature flags</DialogTitle>
+            <DialogTitle>Organization access</DialogTitle>
             <DialogDescription>
-              Per-tenant overrides for {flagsTarget?.name} ({flagsTarget?.slug}). Disabled flags hide
-              mapped modules even when enabled platform-wide.
+              Per-tenant module toggles for {accessTarget?.name} ({accessTarget?.slug}). Starts from
+              platform defaults in Admin → Modules; overrides stored in tenant_module_flags.
             </DialogDescription>
           </DialogHeader>
-          {flagsLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground py-6 justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading flags…
-            </div>
-          ) : (
-            <div className="space-y-4 py-2">
-              {flagsList.map((flag) => (
-                <div key={flag.flagKey} className="flex items-center justify-between gap-4 rounded-lg border p-3">
-                  <div>
-                    <p className="font-medium">{flag.label}</p>
-                    <p className="text-sm text-muted-foreground">{flag.description}</p>
-                    <p className="text-xs text-muted-foreground font-mono mt-1">{flag.flagKey}</p>
-                  </div>
-                  <Switch
-                    checked={flagsDraft[flag.flagKey] ?? flag.enabled}
-                    onCheckedChange={(checked) =>
-                      setFlagsDraft((prev) => ({ ...prev, [flag.flagKey]: checked }))
-                    }
-                  />
+          <Tabs value={accessTab} onValueChange={(v) => setAccessTab(v as 'modules' | 'flags')} className="flex-1 min-h-0">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="modules">ERP modules</TabsTrigger>
+              <TabsTrigger value="flags">Feature shortcuts</TabsTrigger>
+            </TabsList>
+            <TabsContent value="modules" className="mt-3 overflow-y-auto max-h-[50vh] pr-1">
+              {modulesLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground py-6 justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading modules…
                 </div>
-              ))}
-            </div>
-          )}
+              ) : (
+                <div className="space-y-3 py-1">
+                  {modulesList.map((mod) => {
+                    const blocked = !mod.platformEnabled
+                    const checked = modulesDraft[mod.moduleId] ?? mod.enabled
+                    return (
+                      <div
+                        key={mod.moduleId}
+                        className="flex items-center justify-between gap-4 rounded-lg border p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">{mod.label}</p>
+                          <p className="text-sm text-muted-foreground">{mod.description}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {mod.moduleId}
+                            </Badge>
+                            <Badge variant={mod.platformEnabled ? 'secondary' : 'destructive'} className="text-xs">
+                              Platform {mod.platformEnabled ? 'on' : 'off'}
+                            </Badge>
+                            {mod.hasOverride && (
+                              <Badge variant="default" className="text-xs">
+                                Override
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Switch
+                          disabled={blocked}
+                          checked={blocked ? false : checked}
+                          onCheckedChange={(on) =>
+                            setModulesDraft((prev) => ({ ...prev, [mod.moduleId]: on }))
+                          }
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="flags" className="mt-3 overflow-y-auto max-h-[50vh] pr-1">
+              {flagsLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground py-6 justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading flags…
+                </div>
+              ) : (
+                <div className="space-y-3 py-1">
+                  <p className="text-xs text-muted-foreground">
+                    Legacy shortcuts (marketplace, AI, analytics). Prefer ERP modules tab for full control.
+                  </p>
+                  {flagsList.map((flag) => (
+                    <div key={flag.flagKey} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                      <div>
+                        <p className="font-medium">{flag.label}</p>
+                        <p className="text-sm text-muted-foreground">{flag.description}</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">{flag.flagKey}</p>
+                      </div>
+                      <Switch
+                        checked={flagsDraft[flag.flagKey] ?? flag.enabled}
+                        onCheckedChange={(checked) =>
+                          setFlagsDraft((prev) => ({ ...prev, [flag.flagKey]: checked }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
-            <Button variant="outline" onClick={closeFlagsDialog} disabled={flagsSaving}>
+            <Button variant="outline" onClick={closeAccessDialog} disabled={flagsSaving || modulesSaving}>
               Cancel
             </Button>
-            <Button disabled={flagsSaving || flagsLoading} onClick={saveFlags}>
-              {flagsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save flags'}
-            </Button>
+            {accessTab === 'modules' ? (
+              <Button disabled={modulesSaving || modulesLoading} onClick={saveModules}>
+                {modulesSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save modules'}
+              </Button>
+            ) : (
+              <Button disabled={flagsSaving || flagsLoading} onClick={saveFlags}>
+                {flagsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save flags'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -471,7 +601,8 @@ export default function PlatformTenantsPage() {
             <p className="text-center text-muted-foreground py-8">No tenants — provision your first organization</p>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <DataTableShell>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Slug</TableHead>
@@ -498,7 +629,7 @@ export default function PlatformTenantsPage() {
                             disabled={busy}
                             onValueChange={(plan) => patchTenant(tenant.id, { plan: plan as TenantPlan })}
                           >
-                            <SelectTrigger className="w-[140px]" size="sm">
+                            <SelectTrigger className="filter-control" size="sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -522,8 +653,16 @@ export default function PlatformTenantsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openFlagsDialog(tenant)}
-                            title="Feature flags"
+                            onClick={() => openAccessDialog(tenant, 'modules')}
+                            title="Module access"
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAccessDialog(tenant, 'flags')}
+                            title="Feature shortcuts"
                           >
                             <SlidersHorizontal className="h-4 w-4" />
                           </Button>
@@ -565,10 +704,12 @@ export default function PlatformTenantsPage() {
                   })}
                 </TableBody>
               </Table>
+              </DataTableShell>
             </div>
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

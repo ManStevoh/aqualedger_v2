@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,6 +36,8 @@ interface BMU {
 }
 
 export default function BMUPage() {
+  const meta = useDashboardPageMeta()
+
   const [bmus, setBMUs] = useState<BMU[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -116,19 +120,11 @@ export default function BMUPage() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Beach Management Units</h1>
-          <p className="text-muted-foreground">Manage and monitor all BMUs</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="w-4 h-4" />
           Add BMU
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
+        </Button></>}>
+<div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active BMUs"
           value={activeBMUs}
@@ -283,6 +279,7 @@ export default function BMUPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

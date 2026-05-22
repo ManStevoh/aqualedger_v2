@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,9 +11,10 @@ import { DataTable } from '@/components/dashboard/data-table'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
 import { urlInputPlaceholder } from '@/lib/config/urls'
+import { BrandPreview } from '@/components/branding/brand-preview'
+import { useBrand } from '@/components/branding/brand-provider'
 import { Building2, Globe, MapPin, Save } from 'lucide-react'
 import { toast } from 'sonner'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface Tenant {
@@ -51,6 +53,7 @@ export default function OrganizationPage() {
   const meta = useDashboardPageMeta({
     description: 'Tenant profile, subscription, and tax settings',
   })
+  const { refresh: refreshBrand } = useBrand()
   const [tenant, setTenant] = useState<Tenant | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [branches, setBranches] = useState<Branch[]>([])
@@ -116,6 +119,7 @@ export default function OrganizationPage() {
       }
       toast.success('Tenant settings updated')
       loadTenant()
+      await refreshBrand()
     } catch {
       toast.error('Network error')
     } finally {
@@ -126,14 +130,12 @@ export default function OrganizationPage() {
   const activeBranches = branches.filter((b) => b.status === 'active').length
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
+    <DashboardPageLayout
         title={meta.title}
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
-      />
-
-      <StatCardGrid>
+      >
+<StatCardGrid>
         <StatCard
           title="Plan"
           value={subscription?.label ?? tenant?.plan ?? '—'}
@@ -206,7 +208,10 @@ export default function OrganizationPage() {
       <Card>
         <CardHeader>
           <CardTitle>Tax & branding</CardTitle>
-          <CardDescription>PATCH /api/v2/tenant — stored in settings JSON</CardDescription>
+          <CardDescription>
+            Logo and primary color apply to your ERP dashboard sidebar and accents. Public storefront branding is
+            configured separately under Commerce → Storefront.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -227,6 +232,11 @@ export default function OrganizationPage() {
               <Input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />
             </div>
           </div>
+          <BrandPreview
+            appName={tenant?.name ?? ''}
+            logoUrl={logoUrl}
+            primaryColor={primaryColor}
+          />
           <Button className="gap-2" onClick={handleSaveSettings} disabled={saving}>
             <Save className="h-4 w-4" />
             {saving ? 'Saving…' : 'Save settings'}
@@ -264,7 +274,8 @@ export default function OrganizationPage() {
           },
         ]}
       />
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 

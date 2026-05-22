@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,8 @@ import { toast } from 'sonner'
 import { UserCircle, Plus } from 'lucide-react'
 
 export default function RecruitmentPage() {
+  const meta = useDashboardPageMeta()
+
   const [jobs, setJobs] = useState<{ id: string; title: string; status: string; applicant_count?: number }[]>([])
   const [applicants, setApplicants] = useState<{ id: string; full_name: string; job_title?: string; stage: string }[]>([])
   const [title, setTitle] = useState('')
@@ -41,13 +45,8 @@ export default function RecruitmentPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><UserCircle className="h-8 w-8" />Recruitment</h1>
-        <p className="text-muted-foreground">Open roles and applicant pipeline</p>
-      </div>
-
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>Post job</CardTitle></CardHeader>
         <CardContent className="flex gap-2">
           <div className="flex-1"><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
@@ -79,6 +78,7 @@ export default function RecruitmentPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

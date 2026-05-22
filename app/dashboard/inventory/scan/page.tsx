@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +12,8 @@ import { ScanLine, Camera, CameraOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function InventoryScanPage() {
+  const meta = useDashboardPageMeta({ title: 'Barcode / QR scan' })
+
   const [barcode, setBarcode] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(false)
@@ -98,12 +102,8 @@ export default function InventoryScanPage() {
   useEffect(() => () => stopCamera(), [stopCamera])
 
   return (
-    <div className="p-6 max-w-lg mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <ScanLine className="h-7 w-7" />
-        <h1 className="text-2xl font-bold">Barcode / QR scan</h1>
-      </div>
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} className="max-w-lg mx-auto">
+<Card>
         <CardHeader>
           <CardTitle>Scan inventory</CardTitle>
           <CardDescription>
@@ -152,6 +152,7 @@ export default function InventoryScanPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

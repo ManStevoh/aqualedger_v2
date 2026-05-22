@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +11,8 @@ import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
 
 export default function CooperativeSharesPage() {
+  const meta = useDashboardPageMeta({ title: 'Cooperative revenue sharing', description: 'Distribute catch revenue to members by landed kg' })
+
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7))
   const [shares, setShares] = useState<Record<string, unknown>[]>([])
 
@@ -32,10 +36,8 @@ export default function CooperativeSharesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Cooperative revenue sharing</h1>
-      <p className="text-muted-foreground">Distribute catch revenue to members by landed kg</p>
-      <div className="flex gap-4 items-end">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<div className="flex gap-4 items-end">
         <div><Label>Period (YYYY-MM)</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} /></div>
         <Button onClick={calculate}>Calculate shares</Button>
         <Button variant="outline" onClick={load}>Refresh</Button>
@@ -51,6 +53,7 @@ export default function CooperativeSharesPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,30 +14,27 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  TableRow } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, ClipboardList, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
 import { EmptyState } from '@/components/dashboard/empty-state'
-import { PROCUREMENT_WORKSPACE_NAV, WorkspaceNav } from '@/components/dashboard/workspace-nav'
+import { PROCUREMENT_WORKSPACE_NAV } from '@/components/dashboard/workspace-nav'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface SupplierOption {
@@ -351,15 +349,12 @@ function ProcurementOrdersContent() {
   const receivableOrders = orders.filter((o) => o.status !== 'received' && o.status !== 'cancelled')
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
+    <DashboardPageLayout
         title={meta.title}
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
-      />
-      <WorkspaceNav items={PROCUREMENT_WORKSPACE_NAV} />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      >
+<Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="grn">GRN</TabsTrigger>
@@ -401,6 +396,7 @@ function ProcurementOrdersContent() {
                   onAction={() => setShowOrderDialog(true)}
                 />
               ) : (
+                <DataTableShell>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -427,6 +423,7 @@ function ProcurementOrdersContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               )}
             </CardContent>
           </Card>
@@ -456,6 +453,7 @@ function ProcurementOrdersContent() {
                   onAction={() => setShowGrnDialog(true)}
                 />
               ) : (
+                <DataTableShell>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -478,6 +476,7 @@ function ProcurementOrdersContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               )}
             </CardContent>
           </Card>
@@ -487,7 +486,7 @@ function ProcurementOrdersContent() {
           <ListPageToolbar
             filters={
               <Select value={prStatusFilter} onValueChange={setPrStatusFilter}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectTrigger className="filter-control"><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
@@ -518,6 +517,7 @@ function ProcurementOrdersContent() {
                   onAction={() => setShowPrDialog(true)}
                 />
               ) : (
+                <DataTableShell>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -569,6 +569,7 @@ function ProcurementOrdersContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               )}
             </CardContent>
           </Card>
@@ -597,6 +598,7 @@ function ProcurementOrdersContent() {
                   onAction={() => setShowRfqDialog(true)}
                 />
               ) : (
+                <DataTableShell>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -621,6 +623,7 @@ function ProcurementOrdersContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               )}
             </CardContent>
           </Card>
@@ -745,9 +748,10 @@ function ProcurementOrdersContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 
 export default function PurchaseOrdersPage() {
   return (

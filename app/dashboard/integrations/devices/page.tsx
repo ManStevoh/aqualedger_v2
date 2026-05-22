@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -51,6 +53,8 @@ const DEVICE_TYPES = [
 ]
 
 export default function IotDevicesPage() {
+  const meta = useDashboardPageMeta({ title: 'Device registry', description: 'Register probes, scales, GPS units — each gets a unique ingest key' })
+
   const [devices, setDevices] = useState<IotDevice[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -119,24 +123,7 @@ export default function IotDevicesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <Link
-            href="/dashboard/integrations/iot"
-            className="text-sm text-muted-foreground flex items-center gap-1 mb-2 hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            IoT hub
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Cpu className="h-8 w-8" />
-            Device registry
-          </h1>
-          <p className="text-muted-foreground">
-            Register probes, scales, GPS units — each gets a unique ingest key
-          </p>
-        </div>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={fetchDevices}>
             <RefreshCw className="h-4 w-4" />
@@ -147,7 +134,7 @@ export default function IotDevicesPage() {
             Register device
           </Button>
         </div>
-      </div>
+      }>
 
       <DataTable
         title="Registered devices"
@@ -234,6 +221,7 @@ export default function IotDevicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

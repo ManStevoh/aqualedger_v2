@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,7 +28,14 @@ import { StatCard } from '@/components/dashboard/stat-card'
 import { TrendingUp, ShoppingCart, DollarSign, Filter, Plus, CheckCircle2, Star, MessageSquare } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAppStore } from '@/lib/store'
-import { useFishListings, createListing, placeOrder, useFishSpecies, authFetchJson } from '@/lib/api'
+import {
+  useFishListings,
+  createListing,
+  placeOrder,
+  useFishSpecies,
+  authFetchJson,
+  type MarketplaceListFilters,
+} from '@/lib/api'
 import type { FishListing } from '@/lib/types'
 import { toast } from 'sonner'
 
@@ -49,9 +58,18 @@ function StarDisplay({ rating }: { rating: number }) {
   )
 }
 
+
 export default function MarketplacePage() {
+  const meta = useDashboardPageMeta()
+
   const { currentUser } = useAppStore()
   const [searchTerm, setSearchTerm] = useState('')
+  const [showFilterDialog, setShowFilterDialog] = useState(false)
+  const [filterGrade, setFilterGrade] = useState('')
+  const [filterSpeciesId, setFilterSpeciesId] = useState('')
+  const [filterMinPrice, setFilterMinPrice] = useState('')
+  const [filterMaxPrice, setFilterMaxPrice] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState<MarketplaceListFilters>({})
   const [showListDialog, setShowListDialog] = useState(false)
   const [showBuyDialog, setShowBuyDialog] = useState(false)
   const [showReviewDialog, setShowReviewDialog] = useState(false)
@@ -71,7 +89,10 @@ export default function MarketplacePage() {
   const [buyQty, setBuyQty] = useState('')
   const [buyAddress, setBuyAddress] = useState('')
 
-  const { data: listingsData, isLoading, mutate } = useFishListings('available', '200')
+  const { data: listingsData, isLoading, mutate } = useFishListings('available', '200', {
+    ...appliedFilters,
+    search: searchTerm.trim() || appliedFilters.search,
+  })
   const { data: speciesList = [] } = useFishSpecies()
 
   const items = listingsData?.data?.items || []
@@ -125,14 +146,35 @@ export default function MarketplacePage() {
       }))
   }, [items])
 
-  const filteredItems = items.filter(
-    (item) =>
-      !searchTerm.trim() ||
-      item.fishType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sellerName.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredItems = items
+
+  const applyFilters = () => {
+    setAppliedFilters({
+      grade: filterGrade || undefined,
+      speciesId: filterSpeciesId || undefined,
+      minPrice: filterMinPrice || undefined,
+      maxPrice: filterMaxPrice || undefined,
+    })
+    setShowFilterDialog(false)
+  }
+
+  const clearFilters = () => {
+    setFilterGrade('')
+    setFilterSpeciesId('')
+    setFilterMinPrice('')
+    setFilterMaxPrice('')
+    setAppliedFilters({})
+    setShowFilterDialog(false)
+  }
+
+  const hasActiveFilters = Boolean(
+    appliedFilters.grade ||
+      appliedFilters.speciesId ||
+      appliedFilters.minPrice ||
+      appliedFilters.maxPrice,
   )
 
-  const totalListings = items.length
+  const totalListings = listingsData?.data?.total ?? items.length
   const soldItems = items.filter((i) => i.status === 'sold').length
   const totalValue = items.reduce((sum, item) => sum + item.availableQuantity * item.pricePerKg, 0)
   const avgPrice = totalListings > 0 ? totalValue / totalListings : 0
@@ -269,13 +311,7 @@ export default function MarketplacePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Fish Marketplace</h1>
-          <p className="text-muted-foreground">Buy and sell fish — listings from the database</p>
-        </div>
-        <Button
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button
           className="gap-2"
           onClick={() => setShowListDialog(true)}
           disabled={
@@ -285,10 +321,8 @@ export default function MarketplacePage() {
         >
           <Plus className="w-4 h-4" />
           List catch
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
+        </Button></>}>
+<div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active listings"
           value={totalListings}
@@ -369,9 +403,14 @@ export default function MarketplacePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="gap-2" type="button">
+            <Button
+              variant={hasActiveFilters ? 'default' : 'outline'}
+              className="gap-2"
+              type="button"
+              onClick={() => setShowFilterDialog(true)}
+            >
               <Filter className="w-4 h-4" />
-              Filter
+              Filter{hasActiveFilters ? ' · on' : ''}
             </Button>
           </div>
         </CardHeader>
@@ -585,6 +624,75 @@ export default function MarketplacePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Filter listings</DialogTitle>
+            <DialogDescription>Narrow by grade, species, and price per kg (KES).</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Grade</Label>
+              <Select value={filterGrade || 'all'} onValueChange={(v) => setFilterGrade(v === 'all' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Any grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Any grade</SelectItem>
+                  <SelectItem value="A">Grade A (Premium)</SelectItem>
+                  <SelectItem value="B">Grade B (Export)</SelectItem>
+                  <SelectItem value="C">Grade C (Local)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Species</Label>
+              <Select value={filterSpeciesId || 'all'} onValueChange={(v) => setFilterSpeciesId(v === 'all' ? '' : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Any species" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Any species</SelectItem>
+                  {speciesList.map((sp) => (
+                    <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Min price (KES/kg)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={filterMinPrice}
+                  onChange={(e) => setFilterMinPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max price (KES/kg)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Any"
+                  value={filterMaxPrice}
+                  onChange={(e) => setFilterMaxPrice(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" type="button" onClick={clearFilters}>
+              Clear all
+            </Button>
+            <Button type="button" onClick={applyFilters}>
+              Apply filters
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DashboardPageLayout>
   )
 }

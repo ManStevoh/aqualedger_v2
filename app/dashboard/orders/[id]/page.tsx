@@ -9,7 +9,9 @@ import { ObjectPageShell } from '@/components/dashboard/object-page-shell'
 import { COMMERCE_WORKSPACE_NAV } from '@/components/dashboard/workspace-nav'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { authFetchJson, updateOrderStatus } from '@/lib/api'
-import { Loader2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Loader2, FileText, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
 
 type OrderDetail = {
@@ -42,6 +44,9 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [invoicing, setInvoicing] = useState(false)
+  const [mpesaPhone, setMpesaPhone] = useState('')
+  const [paying, setPaying] = useState(false)
 
   const loadOrder = useCallback(
     (opts?: { silent?: boolean }) => {
@@ -84,6 +89,85 @@ export default function OrderDetailPage() {
       loadOrder({ silent: true })
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const pollPayment = useCallback(async (intentId: string, attempts = 0): Promise<boolean> => {
+    if (attempts > 30) return false
+    const res = await authFetchJson<{
+      success: boolean
+      data?: { intent?: { status: string } }
+    }>(`/api/v2/payments/mpesa?id=${encodeURIComponent(intentId)}`)
+    if (res.success && res.data?.intent?.status === 'completed') return true
+    if (res.data?.intent?.status === 'failed') return false
+    await new Promise((r) => setTimeout(r, 2500))
+    return pollPayment(intentId, attempts + 1)
+  }, [])
+
+  const payWithMpesa = async () => {
+    if (!order || !mpesaPhone.trim()) {
+      toast.error('Enter M-Pesa phone (2547XXXXXXXX)')
+      return
+    }
+    setPaying(true)
+    try {
+      const res = await authFetchJson<{
+        success: boolean
+        error?: string
+        data?: { paymentIntentId: string; paymentSimulated?: boolean }
+      }>(`/api/v2/orders/${order.id}/pay/mpesa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: mpesaPhone.trim() }),
+      })
+      if (!res.success) {
+        toast.error(res.error || 'STK failed')
+        return
+      }
+      const intentId = res.data?.paymentIntentId
+      if (!intentId) {
+        toast.success('Payment initiated')
+        loadOrder({ silent: true })
+        return
+      }
+      toast.message('Approve M-Pesa on your phone')
+      const paid = await pollPayment(intentId)
+      if (paid) {
+        toast.success(res.data?.paymentSimulated ? 'Paid (sandbox)' : 'Payment received')
+        loadOrder({ silent: true })
+      } else {
+        toast.error('Payment not confirmed yet — try again or check your phone')
+      }
+    } catch {
+      toast.error('Payment failed')
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  const createInvoice = async () => {
+    if (!order) return
+    setInvoicing(true)
+    try {
+      const res = await authFetchJson<{
+        success: boolean
+        error?: string
+        data?: { invoice: { id: string; invoice_number: string } }
+      }>('/api/v2/accounting/ar/from-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id, postToGl: true }),
+      })
+      if (!res.success) {
+        toast.error(res.error || 'Could not create invoice')
+        return
+      }
+      toast.success(`Invoice ${res.data?.invoice.invoice_number} created`)
+      window.location.href = '/dashboard/accounting/invoices'
+    } catch {
+      toast.error('Invoice failed')
+    } finally {
+      setInvoicing(false)
     }
   }
 
@@ -138,13 +222,32 @@ export default function OrderDetailPage() {
 
   const title = order.order_number || `Order ${order.id.slice(0, 8)}`
 
+  const invoiceActions =
+    order.status !== 'cancelled' ? (
+      <Button
+        size="sm"
+        variant="secondary"
+        className="gap-2"
+        disabled={invoicing}
+        onClick={createInvoice}
+      >
+        {invoicing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+        Create invoice
+      </Button>
+    ) : null
+
   return (
     <ObjectPageShell
       title={title}
       subtitle={`${order.buyer_name ?? 'Buyer'} → ${order.seller_name ?? 'Seller'}`}
       status={order.status}
       backHref="/dashboard/orders"
-      actions={statusActions(order)}
+      actions={
+        <>
+          {invoiceActions}
+          {statusActions(order)}
+        </>
+      }
       workspaceNav={COMMERCE_WORKSPACE_NAV}
       breadcrumbs={[
         { label: 'Commerce', href: '/dashboard/commerce/cart' },
@@ -161,7 +264,7 @@ export default function OrderDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Payment</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardContent className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
                     <StatusBadge status={order.payment_status} />
@@ -170,6 +273,30 @@ export default function OrderDetailPage() {
                     <span>Total</span>
                     <span>KES {Number(order.total).toLocaleString()}</span>
                   </div>
+                  {order.payment_status !== 'paid' && order.status !== 'cancelled' && (
+                    <div className="pt-2 border-t space-y-2">
+                      <Label htmlFor="order-mpesa">M-Pesa phone</Label>
+                      <Input
+                        id="order-mpesa"
+                        value={mpesaPhone}
+                        onChange={(e) => setMpesaPhone(e.target.value)}
+                        placeholder="2547XXXXXXXX"
+                      />
+                      <Button
+                        size="sm"
+                        className="w-full gap-2"
+                        disabled={paying}
+                        onClick={payWithMpesa}
+                      >
+                        {paying ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Smartphone className="h-4 w-4" />
+                        )}
+                        Pay with M-Pesa
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               <Card>

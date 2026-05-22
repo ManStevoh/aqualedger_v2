@@ -17,7 +17,7 @@ export const GET = apiHandler(async () => {
 }, 'v2/platform/settings')
 
 const legacyPatchSchema = z.object({
-  key: z.enum(['maintenance', 'signup', 'announcement']),
+  key: z.enum(['maintenance', 'signup', 'announcement', 'branding']),
   value: z.record(z.unknown()),
 })
 
@@ -28,6 +28,9 @@ const uiPatchSchema = z.object({
   announcementEnabled: z.boolean().optional(),
   announcementTitle: z.string().optional(),
   announcementBody: z.string().optional(),
+  brandingLogoUrl: z.string().max(500).optional(),
+  brandingPrimaryColor: z.string().max(20).optional(),
+  brandingAppName: z.string().max(120).optional(),
 })
 
 export const PATCH = apiHandler(async (request: NextRequest) => {

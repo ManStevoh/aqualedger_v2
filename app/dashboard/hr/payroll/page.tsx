@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +42,8 @@ interface PayrollRun {
 }
 
 export default function PayrollPage() {
+  const meta = useDashboardPageMeta()
+
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -145,19 +149,11 @@ export default function PayrollPage() {
   const totalNet = payrollRuns.reduce((sum, p) => sum + Number(p.total_net), 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Payroll</h1>
-          <p className="text-muted-foreground">Create runs, approve, pay, and post to GL (PAYE/NHIF estimates)</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New payroll run
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
+        </Button></>}>
+<div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total Runs" value={payrollRuns.length} icon={<FileText className="h-4 w-4" />} loading={loading} />
         <StatCard title="Draft" value={draft} icon={<Calendar className="h-4 w-4" />} loading={loading} />
         <StatCard title="Total Net" value={`KES ${totalNet.toLocaleString()}`} icon={<DollarSign className="h-4 w-4" />} loading={loading} />
@@ -258,6 +254,7 @@ export default function PayrollPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

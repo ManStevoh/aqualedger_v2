@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,8 @@ import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
 
 export default function OrderReturnsPage() {
+  const meta = useDashboardPageMeta({ title: 'Returns & refunds' })
+
   const [returns, setReturns] = useState<Record<string, unknown>[]>([])
   const [orderId, setOrderId] = useState('')
   const [reason, setReason] = useState('quality')
@@ -51,9 +55,8 @@ export default function OrderReturnsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Returns & refunds</h1>
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader><CardTitle>New return</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div><Label>Order ID</Label><Input value={orderId} onChange={(e) => setOrderId(e.target.value)} /></div>
@@ -96,6 +99,7 @@ export default function OrderReturnsPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

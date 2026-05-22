@@ -1,5 +1,8 @@
 import { queryOne, execute } from '@/lib/db'
+import { conflict, notFound } from '@/lib/api-handler'
 import { logger } from '@/lib/logger'
+import { tenantWhere } from '@/lib/tenant'
+import { initiateStkPush } from '@/lib/modules/integrations/mpesa'
 
 function parseMetadata(raw: string | Record<string, unknown> | null): Record<string, unknown> {
   if (!raw) return {}
@@ -42,4 +45,54 @@ export async function completeOrderFromMpesaIntent(
   )
 
   logger.info('Order paid via M-Pesa', { orderId: intent.order_id, paymentIntentId })
+}
+
+export async function initiateMpesaPaymentForOrder(
+  tenantId: string,
+  orderId: string,
+  phoneNumber: string,
+  userId?: string,
+) {
+  const order = await queryOne<{
+    id: string
+    order_number: string
+    total: number
+    payment_status: string
+    buyer_id: string
+  }>(
+    `SELECT id, order_number, total, payment_status, buyer_id FROM orders
+     WHERE id = ? AND ${tenantWhere()}`,
+    [orderId, tenantId],
+  )
+  if (!order) throw notFound('Order not found')
+  if (userId && order.buyer_id !== userId) {
+    throw conflict('Only the buyer can pay for this order')
+  }
+  if (order.payment_status === 'paid') {
+    throw conflict('Order is already paid')
+  }
+
+  const phone = phoneNumber.trim()
+  if (!phone) throw conflict('Phone number is required')
+
+  const stk = await initiateStkPush({
+    tenantId,
+    amount: Number(order.total),
+    phoneNumber: phone,
+    orderId: order.id,
+    description: `Order ${order.order_number}`,
+    metadata: {
+      purpose: 'order_checkout',
+      order_number: order.order_number,
+      buyer_id: order.buyer_id,
+    },
+  })
+
+  return {
+    orderId: order.id,
+    orderNumber: order.order_number,
+    paymentIntentId: stk.paymentIntentId,
+    paymentPending: !stk.simulated,
+    paymentSimulated: stk.simulated,
+  }
 }

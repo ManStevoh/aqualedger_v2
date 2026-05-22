@@ -160,7 +160,28 @@
   .safe-area-pb {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
+  .safe-area-pt {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+  .safe-area-x {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  /** WCAG 2.2 target size (44×44 CSS px) for primary tap targets on touch devices */
+  .touch-target {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+  @media (min-width: 1024px) {
+    .touch-target {
+      min-height: 0;
+      min-width: 0;
+    }
+  }
   .focus-ring-premium {
     @apply focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  .filter-control {
+    @apply w-full min-w-0 sm:w-auto sm:min-w-[8rem] sm:max-w-[11rem];
   }
 }

@@ -6,6 +6,10 @@ import {
   TENANT_FLAG_TO_MODULE,
   type TenantFeatureFlagKey,
 } from '@/lib/modules/platform/tenant-feature-flags'
+import {
+  getTenantModuleOverrides,
+  mergeTenantEnabledModuleIds,
+} from '@/lib/modules/platform/tenant-module-flags'
 
 export { resolveModuleFromApiPath, resolveModuleFromDashboardPath }
 
@@ -49,25 +53,27 @@ async function loadPlatformEnabledModuleIds(): Promise<Set<string>> {
 }
 
 /**
- * Platform module flags merged with per-tenant feature flag overrides.
- * Tenant flags (marketplace, ai, advanced_analytics) can disable mapped modules
- * even when enabled platform-wide. Used by GET /api/v2/tenant/modules and
- * auth-provider navigation and API enforcement when x-tenant-id is set.
+ * Platform defaults merged with tenant_module_flags overrides and legacy
+ * tenant_feature_flags (marketplace → commerce, ai, advanced_analytics → analytics).
  */
 export async function getEnabledModuleIdsForTenant(tenantId: string): Promise<Set<string>> {
   const platformIds = await getEnabledModuleIds()
-  const rows = await query<{ flag_key: string; enabled: number }>(
-    `SELECT flag_key, enabled FROM tenant_feature_flags WHERE tenant_id = ?`,
-    [tenantId],
-  )
+  const [overrides, featureRows] = await Promise.all([
+    getTenantModuleOverrides(tenantId),
+    query<{ flag_key: string; enabled: number }>(
+      `SELECT flag_key, enabled FROM tenant_feature_flags WHERE tenant_id = ?`,
+      [tenantId],
+    ),
+  ])
 
-  const ids = new Set(platformIds)
-  for (const row of rows) {
+  const featureDisables: string[] = []
+  for (const row of featureRows) {
     if (row.enabled) continue
     const moduleId = TENANT_FLAG_TO_MODULE[row.flag_key as TenantFeatureFlagKey]
-    if (moduleId) ids.delete(moduleId)
+    if (moduleId) featureDisables.push(moduleId)
   }
-  return ids
+
+  return mergeTenantEnabledModuleIds(platformIds, overrides, featureDisables)
 }
 
 export async function isModuleEnabled(moduleId: string): Promise<boolean> {

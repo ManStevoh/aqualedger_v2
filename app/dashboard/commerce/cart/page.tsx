@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,8 +11,10 @@ import { DataTable } from '@/components/dashboard/data-table'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authFetchJson } from '@/lib/api'
-import { ShoppingCart, Trash2, CreditCard } from 'lucide-react'
+import { ShoppingCart, Trash2, Smartphone, Banknote } from 'lucide-react'
 import { toast } from 'sonner'
+
+type PaymentMethod = 'mpesa' | 'cod' | 'paystack'
 
 interface CartItem {
   id: string
@@ -32,12 +36,28 @@ interface CartData {
 }
 
 export default function CommerceCartPage() {
+  const meta = useDashboardPageMeta()
+
   const [cart, setCart] = useState<CartData | null>(null)
   const [loading, setLoading] = useState(true)
   const [couponCode, setCouponCode] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [checkingOut, setCheckingOut] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+
+  const pollPayment = useCallback(async (intentId: string, attempts = 0): Promise<boolean> => {
+    if (attempts > 30) return false
+    const res = await authFetchJson<{
+      success: boolean
+      data?: { intent?: { status: string } }
+    }>(`/api/v2/payments/mpesa?id=${encodeURIComponent(intentId)}`)
+    if (res.success && res.data?.intent?.status === 'completed') return true
+    if (res.data?.intent?.status === 'failed') return false
+    await new Promise((r) => setTimeout(r, 2500))
+    return pollPayment(intentId, attempts + 1)
+  }, [])
 
   const fetchCart = useCallback(async () => {
     setLoading(true)
@@ -87,11 +107,25 @@ export default function CommerceCartPage() {
       toast.error('Your cart is empty')
       return
     }
+    if (paymentMethod === 'mpesa' && !phoneNumber.trim()) {
+      toast.error('Enter M-Pesa phone (2547XXXXXXXX)')
+      return
+    }
     setCheckingOut(true)
     try {
       const res = await authFetchJson<{
         success: boolean
-        data?: { checkout: { orderNumber: string; total: number } }
+        data?: {
+          checkout: {
+            orderNumber: string
+            orderId: string
+            total: number
+            paymentIntentId?: string
+            paymentPending?: boolean
+            paymentSimulated?: boolean
+            checkoutUrl?: string
+          }
+        }
         error?: string
       }>('/api/v2/commerce/checkout', {
         method: 'POST',
@@ -100,20 +134,43 @@ export default function CommerceCartPage() {
           cartId: cart.cart.id,
           couponCode: couponCode.trim() || null,
           deliveryAddress: deliveryAddress.trim() || null,
+          paymentMethod,
+          phoneNumber: paymentMethod === 'mpesa' ? phoneNumber.trim() : undefined,
         }),
       })
       if (!res.success) {
         toast.error(res.error || 'Checkout failed')
         return
       }
-      const orderNumber = res.data?.checkout.orderNumber
-      const total = res.data?.checkout.total
+      const checkout = res.data?.checkout
+      if (!checkout) {
+        toast.error('Checkout failed')
+        return
+      }
+
+      if (checkout.paymentIntentId && paymentMethod === 'mpesa') {
+        toast.message('Approve M-Pesa on your phone', {
+          description: 'Waiting for payment confirmation…',
+        })
+        const paid = await pollPayment(checkout.paymentIntentId)
+        if (!paid) {
+          toast.error('Payment not confirmed yet. Open the order to retry or check status.')
+          window.location.href = `/dashboard/orders/${checkout.orderId}`
+          return
+        }
+      }
+
       toast.success(
-        orderNumber
-          ? `Order ${orderNumber} placed — KES ${Number(total).toLocaleString()}`
-          : 'Order placed',
+        checkout.paymentSimulated
+          ? `Order ${checkout.orderNumber} paid (sandbox)`
+          : `Order ${checkout.orderNumber} placed — KES ${Number(checkout.total).toLocaleString()}`,
       )
       setCouponCode('')
+      setPhoneNumber('')
+      if (checkout.orderId) {
+        window.location.href = `/dashboard/orders/${checkout.orderId}`
+        return
+      }
       await fetchCart()
     } catch {
       toast.error('Network error')
@@ -126,18 +183,7 @@ export default function CommerceCartPage() {
     row.listing_title || row.product_name || row.listing_id || row.product_id || 'Item'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Shopping cart</h1>
-        <p className="text-muted-foreground">
-          Review items and complete checkout. Add listings from{' '}
-          <Link href="/dashboard/marketplace" className="text-primary underline-offset-4 hover:underline">
-            Marketplace
-          </Link>
-          .
-        </p>
-      </div>
-
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -196,7 +242,7 @@ export default function CommerceCartPage() {
         <Card>
           <CardHeader>
             <CardTitle>Checkout</CardTitle>
-            <CardDescription>Apply a coupon and confirm your order</CardDescription>
+            <CardDescription>M-Pesa STK or pay on delivery</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border bg-muted/40 p-4 space-y-2">
@@ -215,6 +261,51 @@ export default function CommerceCartPage() {
                 <span>Calculated at checkout</span>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Payment</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
+                  className="gap-2 text-xs"
+                  onClick={() => setPaymentMethod('mpesa')}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  M-Pesa
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'paystack' ? 'default' : 'outline'}
+                  className="gap-2 text-xs"
+                  onClick={() => setPaymentMethod('paystack')}
+                >
+                  Paystack
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'cod' ? 'default' : 'outline'}
+                  className="gap-2 text-xs"
+                  onClick={() => setPaymentMethod('cod')}
+                >
+                  <Banknote className="h-4 w-4" />
+                  COD
+                </Button>
+              </div>
+            </div>
+
+            {paymentMethod === 'mpesa' && (
+              <div className="space-y-2">
+                <Label htmlFor="mpesa-phone">M-Pesa phone</Label>
+                <Input
+                  id="mpesa-phone"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="2547XXXXXXXX"
+                />
+                <p className="text-xs text-muted-foreground">STK push to your phone after placing the order</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="coupon">Coupon code</Label>
@@ -241,12 +332,15 @@ export default function CommerceCartPage() {
               disabled={checkingOut || loading || !cart?.items.length}
               onClick={handleCheckout}
             >
-              <CreditCard className="h-4 w-4" />
-              {checkingOut ? 'Processing…' : 'Checkout'}
+              <Smartphone className="h-4 w-4" />
+              {checkingOut ? 'Processing…' : paymentMethod === 'mpesa' ? 'Pay with M-Pesa' : 'Place order'}
+            </Button>
+            <Button variant="link" className="w-full p-0 h-auto" asChild>
+              <Link href="/dashboard/orders">View orders</Link>
             </Button>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }

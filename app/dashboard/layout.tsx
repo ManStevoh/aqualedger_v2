@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/components/auth-provider'
+import { TenantBrandProvider } from '@/components/branding/brand-provider'
 import { DashboardChrome } from '@/components/dashboard/dashboard-chrome'
 import { DashboardModuleServerGate } from '@/components/dashboard/dashboard-module-server-gate'
 
@@ -10,7 +11,9 @@ export default function DashboardLayout({
   return (
     <DashboardModuleServerGate>
       <AuthProvider>
-        <DashboardChrome>{children}</DashboardChrome>
+        <TenantBrandProvider>
+          <DashboardChrome>{children}</DashboardChrome>
+        </TenantBrandProvider>
       </AuthProvider>
     </DashboardModuleServerGate>
   )

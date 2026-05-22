@@ -32,16 +32,16 @@ export function ListPageToolbar({
         className,
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 w-full flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         {showSearch && (
-          <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+          <div className="relative w-full min-w-0 flex-1 sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="h-9 rounded-lg bg-background pl-9"
+              className="h-11 rounded-lg bg-background pl-9 text-base sm:h-9 sm:text-sm"
             />
           </div>
         )}

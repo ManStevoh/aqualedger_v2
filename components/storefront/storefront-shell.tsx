@@ -114,9 +114,13 @@ export function StorefrontShell({
           </nav>
 
           <div className="flex items-center gap-2">
-            <button type="button" className="rounded-[var(--sf-radius)] p-2 hover:bg-[var(--sf-surface-alt)]" aria-label="Search">
+            <Link
+              href={`${storeBasePath}#store-search`}
+              className="rounded-[var(--sf-radius)] p-2 hover:bg-[var(--sf-surface-alt)]"
+              aria-label="Search products"
+            >
               <Search className="h-5 w-5" />
-            </button>
+            </Link>
             <Link
               href={`${storeBasePath}/cart`}
               className="rounded-[var(--sf-radius)] p-2 hover:bg-[var(--sf-surface-alt)]"
@@ -201,14 +205,17 @@ export function StorefrontShell({
                   className={`overflow-hidden bg-[var(--sf-surface)] ${cardClass}`}
                   style={{ borderRadius: 'var(--sf-radius)' }}
                 >
-                  <div className="aspect-[4/3] bg-[var(--sf-surface-alt)] flex items-center justify-center">
+                  <Link
+                    href={`${storeBasePath}/product/${p.id}`}
+                    className="block aspect-[4/3] bg-[var(--sf-surface-alt)] flex items-center justify-center hover:opacity-95"
+                  >
                     {p.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
                     ) : (
                       <Fish className="h-12 w-12 text-[var(--sf-text-muted)] opacity-40" aria-hidden />
                     )}
-                  </div>
+                  </Link>
                   <div className="p-4">
                     <div className="flex flex-wrap gap-1 mb-2">
                       {p.grade && (
@@ -220,7 +227,9 @@ export function StorefrontShell({
                         </span>
                       )}
                     </div>
-                    <h3 className="font-semibold">{p.name}</h3>
+                    <Link href={`${storeBasePath}/product/${p.id}`} className="font-semibold hover:text-[var(--sf-primary)]">
+                      {p.name}
+                    </Link>
                     <p className="mt-2 text-lg font-bold text-[var(--sf-primary)]">
                       KES {p.price.toLocaleString()}
                       <span className="text-sm font-normal text-[var(--sf-text-muted)]"> /{p.unit || 'kg'}</span>

@@ -137,7 +137,7 @@ export default function HRAttendancePage() {
       </StatCardGrid>
 
       <Select value={filterEmployee} onValueChange={setFilterEmployee}>
-        <SelectTrigger className="w-[220px]">
+        <SelectTrigger className="filter-control">
           <SelectValue placeholder="All employees" />
         </SelectTrigger>
         <SelectContent>

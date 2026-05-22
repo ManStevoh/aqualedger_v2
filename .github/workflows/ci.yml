@@ -26,6 +26,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Form schema tests
+        run: npm run test:forms
+
       - name: Build
         env:
           JWT_SECRET: ci-test-jwt-secret-minimum-32-chars-long

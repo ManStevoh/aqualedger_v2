@@ -24,9 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { StatCard } from '@/components/dashboard/stat-card'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
-import { WorkspaceNav, COMMERCE_WORKSPACE_NAV } from '@/components/dashboard/workspace-nav'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
+import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { authFetchJson } from '@/lib/api'
@@ -113,42 +113,44 @@ export default function SalesTrackingPage() {
   const s = report?.summary
 
   return (
-    <div className="space-y-6">
-      <WorkspaceNav items={COMMERCE_WORKSPACE_NAV} />
-
-      <ModulePageHeader
-        title={meta.title}
-        description={meta.description}
-        breadcrumbs={meta.breadcrumbs}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {canViewTenant && (
-              <Tabs value={scope} onValueChange={(v) => setScope(v as 'tenant' | 'mine')}>
-                <TabsList>
-                  <TabsTrigger value="tenant">All sales</TabsTrigger>
-                  <TabsTrigger value="mine">My sales</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-            <Tabs value={period} onValueChange={setPeriod}>
-              <TabsList>
-                <TabsTrigger value="7">7d</TabsTrigger>
-                <TabsTrigger value="30">30d</TabsTrigger>
-                <TabsTrigger value="90">90d</TabsTrigger>
-                <TabsTrigger value="365">1y</TabsTrigger>
+    <DashboardPageLayout
+      title={meta.title}
+      description={meta.description}
+      breadcrumbs={meta.breadcrumbs}
+      actions={
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          {canViewTenant && (
+            <Tabs value={scope} onValueChange={(v) => setScope(v as 'tenant' | 'mine')}>
+              <TabsList className="flex-wrap h-auto w-full sm:w-auto">
+                <TabsTrigger value="tenant" className="min-h-11 flex-1 sm:flex-none">
+                  All sales
+                </TabsTrigger>
+                <TabsTrigger value="mine" className="min-h-11 flex-1 sm:flex-none">
+                  My sales
+                </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button variant="outline" size="sm" asChild>
+          )}
+          <Tabs value={period} onValueChange={setPeriod}>
+            <TabsList className="flex-wrap h-auto w-full sm:w-auto">
+              <TabsTrigger value="7" className="min-h-11">7d</TabsTrigger>
+              <TabsTrigger value="30" className="min-h-11">30d</TabsTrigger>
+              <TabsTrigger value="90" className="min-h-11">90d</TabsTrigger>
+              <TabsTrigger value="365" className="min-h-11">1y</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="min-h-11 flex-1 sm:flex-none" asChild>
               <Link href="/dashboard/orders">Orders</Link>
             </Button>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="min-h-11 flex-1 sm:flex-none" asChild>
               <Link href="/dashboard/commerce/contracts">Contracts</Link>
             </Button>
           </div>
-        }
-      />
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        </div>
+      }
+    >
+      <StatCardGrid className="md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Gross sales"
           value={loading ? '…' : kes(s?.grossSales ?? 0)}
@@ -177,7 +179,7 @@ export default function SalesTrackingPage() {
           }
           icon={<FileSpreadsheet className="h-4 w-4 text-muted-foreground" />}
         />
-      </div>
+      </StatCardGrid>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -290,6 +292,7 @@ export default function SalesTrackingPage() {
           ) : !report?.recentOrders.length ? (
             <p className="text-sm text-muted-foreground">No orders in this period.</p>
           ) : (
+            <DataTableShell label="Recent sales orders">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -322,9 +325,10 @@ export default function SalesTrackingPage() {
                 ))}
               </TableBody>
             </Table>
+            </DataTableShell>
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,28 +13,25 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  TableRow } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, UserCircle, Loader2, LayoutGrid, List } from 'lucide-react'
 import { toast } from 'sonner'
 import { LeadKanban } from '@/components/crm/lead-kanban'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
@@ -203,8 +201,7 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
+    <DashboardPageLayout
         title={meta.title}
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
@@ -214,7 +211,7 @@ export default function LeadsPage() {
             Add Lead
           </Button>
         }
-      />
+      >
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
         {PIPELINE_STAGES.map((s) => (
@@ -335,6 +332,7 @@ export default function LeadsPage() {
                   onAction={searchQuery.trim() ? undefined : () => setShowDialog(true)}
                 />
               ) : (
+                <DataTableShell label="CRM leads">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -375,6 +373,7 @@ export default function LeadsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               )}
             </CardContent>
           </Card>
@@ -442,6 +441,7 @@ export default function LeadsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Anchor, Ship, Clock, Fish, DollarSign, Fuel, Plus, Play, Square, Eye } from 'lucide-react'
@@ -37,6 +39,8 @@ const statusColors: Record<string, string> = {
 }
 
 function TripsPageContent() {
+  const meta = useDashboardPageMeta()
+
   const searchParams = useSearchParams()
   const [showNewTripDialog, setShowNewTripDialog] = useState(false)
   const [viewTrip, setViewTrip] = useState<FishingTrip | null>(null)
@@ -111,21 +115,11 @@ function TripsPageContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fishing Trips</h1>
-          <p className="text-muted-foreground">
-            Manage and track fishing operations
-          </p>
-        </div>
-        <Button onClick={() => setShowNewTripDialog(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button onClick={() => setShowNewTripDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Trip
-        </Button>
-      </div>
-
-      <StatCardGrid>
+        </Button></>}>
+<StatCardGrid>
         <StatCard
           title="Ongoing Trips"
           value={ongoingTrips}
@@ -280,9 +274,10 @@ function TripsPageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 
 interface TripsListProps {
   trips: FishingTrip[]

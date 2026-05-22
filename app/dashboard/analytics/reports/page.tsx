@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,6 +59,8 @@ interface DeliveryRow {
 }
 
 export default function ReportsHubPage() {
+  const meta = useDashboardPageMeta()
+
   const [catalog, setCatalog] = useState<ReportDef[]>([])
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -203,18 +207,7 @@ export default function ReportsHubPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-7 w-7" />
-            Reports & delivery
-          </h1>
-          <p className="text-muted-foreground mt-1 max-w-2xl">
-            ISO 8601 periods · UTF-8 CSV (Excel) · HTML email · HMAC webhooks · GDPR share links · IFRS financials · EU traceability
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href="/dashboard/communications">Settings</Link>
           </Button>
@@ -231,8 +224,7 @@ export default function ReportsHubPage() {
             <Send className="h-4 w-4 mr-2" />
             Send report
           </Button>
-        </div>
-      </div>
+        </div></>}>
 
       {lastShareUrl && (
         <Card className="border-sky-200 bg-sky-50/50 dark:bg-sky-950/20">
@@ -410,6 +402,7 @@ export default function ReportsHubPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

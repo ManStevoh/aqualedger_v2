@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Fish, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -12,19 +12,34 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { BrandMark } from '@/components/branding/brand-mark'
+import { useBrand } from '@/components/branding/brand-provider'
 import { useAppStore } from '@/lib/store'
-import { APP_NAME } from '@/lib/constants'
 import { getNavForRole } from '@/lib/platform/modules'
 import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
 
 export function DashboardSidebar() {
   const pathname = usePathname()
-  const { currentRole, sidebarOpen, setSidebarOpen, navSearchQuery, enabledModuleIds, modulesLoaded } =
-    useAppStore()
+  const brand = useBrand()
+  const {
+    currentRole,
+    memberRole,
+    rolePermissions,
+    sidebarOpen,
+    setSidebarOpen,
+    navSearchQuery,
+    enabledModuleIds,
+    modulesLoaded,
+  } = useAppStore()
 
   const modules = useMemo(() => {
-    const memberRole = legacyRoleToMemberRole(currentRole)
-    const all = getNavForRole(memberRole, currentRole, modulesLoaded ? enabledModuleIds : ['platform'])
+    const resolvedRole = memberRole ?? legacyRoleToMemberRole(currentRole)
+    const all = getNavForRole(
+      resolvedRole,
+      currentRole,
+      modulesLoaded ? enabledModuleIds : ['platform'],
+      rolePermissions,
+    )
     const q = navSearchQuery.trim().toLowerCase()
     if (!q) return all
 
@@ -39,7 +54,7 @@ export function DashboardSidebar() {
         ),
       }))
       .filter((mod) => mod.nav.length > 0)
-  }, [currentRole, navSearchQuery, enabledModuleIds, modulesLoaded])
+  }, [currentRole, memberRole, rolePermissions, navSearchQuery, enabledModuleIds, modulesLoaded])
 
   const [openModules, setOpenModules] = useState<Record<string, boolean>>({})
 
@@ -78,12 +93,10 @@ export function DashboardSidebar() {
       >
         <div className="flex h-[4.25rem] shrink-0 items-center justify-between border-b border-sidebar-border/60 px-4">
           <Link href="/dashboard" className="group flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/25 transition-transform group-hover:scale-[1.02]">
-              <Fish className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <BrandMark className="transition-transform group-hover:scale-[1.02]" />
             <div className="min-w-0">
               <span className="block truncate text-[15px] font-bold tracking-tight text-sidebar-foreground">
-                {APP_NAME}
+                {brand.appName}
               </span>
               <span className="block text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/45">
                 Enterprise

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { requireAuth, getUserById } from '@/lib/auth'
 import { queryOne } from '@/lib/db'
+import { getTenantMemberRole } from '@/lib/platform/access'
+import { getTenantRolePermissions } from '@/lib/platform/tenant-role-permissions'
+import { resolveUserTenantId } from '@/lib/modules/tenant/service'
+import type { TenantMemberRole } from '@/lib/tenant'
 
 function parseNotificationPreferences(raw: unknown): Record<string, unknown> | null {
   if (raw == null) return null
@@ -44,6 +48,18 @@ export async function GET() {
       }
     }
 
+    let tenantId: string | null = null
+    let memberRole: TenantMemberRole | null = null
+    let permissions: string[] | null = null
+    try {
+      tenantId = await resolveUserTenantId(user.id)
+      memberRole = await getTenantMemberRole(user.id, tenantId, user.role)
+      const perms = await getTenantRolePermissions(tenantId, memberRole)
+      permissions = perms
+    } catch {
+      /* non-blocking */
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -62,6 +78,9 @@ export async function GET() {
           notificationPreferences,
         },
         impersonation,
+        tenantId,
+        memberRole,
+        permissions,
       },
     })
   } catch (error) {

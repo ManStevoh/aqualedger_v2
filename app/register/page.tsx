@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/client-api'
-import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
+import { BrandMark } from '@/components/branding/brand-mark'
+import { usePlatformBrand } from '@/components/branding/platform-brand-provider'
 import { useRecaptcha } from '@/components/security/use-recaptcha'
 import { RecaptchaNotice } from '@/components/security/recaptcha-notice'
 import {
@@ -65,6 +66,7 @@ const BUSINESS_TYPES: {
 ]
 
 export default function RegisterPage() {
+  const brand = usePlatformBrand()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [businessType, setBusinessType] = useState<BusinessType>('fisherman')
@@ -238,12 +240,10 @@ export default function RegisterPage() {
       <Card className="relative w-full max-w-lg border-border bg-card shadow-sm">
         <CardHeader className="space-y-4 pb-0 text-center">
           <div className="mx-auto flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/25">
-              <Fish className="h-7 w-7 text-primary-foreground" />
-            </div>
+            <BrandMark size="lg" brand={brand} />
             <div>
-              <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
-              <CardDescription>{APP_TAGLINE}</CardDescription>
+              <CardTitle className="text-2xl">{brand.appName}</CardTitle>
+              <CardDescription>{brand.tagline}</CardDescription>
             </div>
           </div>
 

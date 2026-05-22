@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import { notFound } from 'next/navigation'
 import { loadPublicStorefront } from '@/lib/modules/commerce/storefront-public'
+import { TraceabilityVerifier } from '@/components/storefront/traceability-verifier'
 import { Shield, Fish, ArrowLeft } from 'lucide-react'
 
 interface PageProps {
@@ -45,9 +46,9 @@ export default async function TraceabilityPage({ params }: PageProps) {
         </div>
         <p className="mt-4 text-[var(--sf-text-muted)] leading-relaxed">
           Every product sold through {storeName} can be traced from landing site to your door.
-          Scan lot codes on packaging or enter them at checkout to view vessel, landing date,
-          cold-chain readings, and export certificates where applicable.
+          Use the verifier below with your lot code or certificate hash.
         </p>
+        <TraceabilityVerifier tenantSlug={slug} storeName={storeName} />
         <ul className="mt-8 space-y-4">
           <li className="flex gap-3 rounded-[var(--sf-radius)] border border-[var(--sf-border)] bg-[var(--sf-surface)] p-4">
             <Fish className="h-6 w-6 shrink-0 text-[var(--sf-primary)]" aria-hidden />

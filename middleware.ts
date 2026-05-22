@@ -35,7 +35,10 @@ const PUBLIC_API_ROUTES = new Set([
   '/api/auth/refresh',
 ])
 
-const CRON_API_ROUTES = new Set(['/api/v2/platform/exports/process'])
+const CRON_API_ROUTES = new Set([
+  '/api/v2/platform/exports/process',
+  '/api/v2/platform/payments/reconcile',
+])
 const INTERNAL_API_PREFIX = '/api/internal/'
 
 function requiresApiAuth(pathname: string): boolean {
@@ -54,70 +57,76 @@ type TenantHeaderResult = {
   tenantSlug: string | null
 }
 
+async function resolveTenantFromHost(
+  request: NextRequest,
+  host: string | null,
+): Promise<{ tenantId: string | null; tenantSlug: string | null }> {
+  if (!host) return { tenantId: null, tenantSlug: null }
+  const hostname = host.split(':')[0].toLowerCase()
+  if (isSkippablePlatformHost(hostname)) return { tenantId: null, tenantSlug: null }
+
+  try {
+    const resolveUrl = new URL('/api/internal/resolve-host', request.url)
+    resolveUrl.searchParams.set('host', host)
+    const res = await fetch(resolveUrl, { headers: { 'x-middleware': '1' } })
+    if (res.ok) {
+      const data = (await res.json()) as {
+        tenantId?: string | null
+        tenantSlug?: string | null
+      }
+      return {
+        tenantId: data.tenantId ?? null,
+        tenantSlug: data.tenantSlug ?? null,
+      }
+    }
+  } catch {
+    /* resolve-host unavailable */
+  }
+
+  const slug = extractTenantSlugFromHost(host)
+  return { tenantId: null, tenantSlug: slug }
+}
+
 async function applyTenantHeaders(request: NextRequest): Promise<TenantHeaderResult> {
   const host = request.headers.get('host')
-  const slug = extractTenantSlugFromHost(host)
   const requestHeaders = new Headers(request.headers)
-  let tenantId: string | null = null
-  let tenantSlug: string | null = slug
-
   const { pathname } = request.nextUrl
   requestHeaders.set('x-pathname', pathname)
 
-  if (slug) {
-    requestHeaders.set('x-tenant-slug', slug)
+  const { tenantId, tenantSlug } = await resolveTenantFromHost(request, host)
+  if (tenantSlug) requestHeaders.set('x-tenant-slug', tenantSlug)
+  if (tenantId) requestHeaders.set('x-tenant-id', tenantId)
 
-    if (pathname === '/' || pathname === '') {
-      const url = request.nextUrl.clone()
-      url.pathname = `/store/${slug}`
-      return { response: NextResponse.redirect(url), tenantId: null, tenantSlug: slug }
+  const slug = tenantSlug ?? extractTenantSlugFromHost(host)
+  if (!slug) {
+    return {
+      response: NextResponse.next({ request: { headers: requestHeaders } }),
+      tenantId,
+      tenantSlug,
     }
-    const fixedStore = canonicalStorePath(pathname, slug)
-    if (fixedStore) {
-      const url = request.nextUrl.clone()
-      url.pathname = fixedStore
-      return { response: NextResponse.redirect(url), tenantId: null, tenantSlug: slug }
-    }
-  } else if (host) {
-    const hostname = host.split(':')[0].toLowerCase()
-    if (!isSkippablePlatformHost(hostname)) {
-      try {
-        const resolveUrl = new URL('/api/internal/resolve-host', request.url)
-        resolveUrl.searchParams.set('host', hostname)
-        const res = await fetch(resolveUrl, { headers: { 'x-middleware': '1' } })
-        if (res.ok) {
-          const data = (await res.json()) as { tenantId?: string | null; tenantSlug?: string | null }
-          tenantId = data.tenantId ?? null
-          tenantSlug = data.tenantSlug ?? null
-        }
-      } catch {
-        /* resolve-host unavailable */
-      }
-      if (tenantId) {
-        requestHeaders.set('x-tenant-id', tenantId)
-        if (pathname === '/' || pathname === '') {
-          if (tenantSlug) {
-            const url = request.nextUrl.clone()
-            url.pathname = `/store/${tenantSlug}`
-            return { response: NextResponse.redirect(url), tenantId, tenantSlug }
-          }
-        }
-        if (tenantSlug) {
-          const fixedStore = canonicalStorePath(pathname, tenantSlug)
-          if (fixedStore) {
-            const url = request.nextUrl.clone()
-            url.pathname = fixedStore
-            return { response: NextResponse.redirect(url), tenantId, tenantSlug }
-          }
-        }
-      }
-    }
+  }
+
+  if (pathname === '/' || pathname === '') {
+    const url = request.nextUrl.clone()
+    url.pathname = `/store/${slug}`
+    return { response: NextResponse.redirect(url), tenantId, tenantSlug: slug }
+  }
+
+  const fixedStore = canonicalStorePath(pathname, slug)
+  if (fixedStore) {
+    const url = request.nextUrl.clone()
+    url.pathname = fixedStore
+    return { response: NextResponse.redirect(url), tenantId, tenantSlug: slug }
+  }
+
+  if (pathname.startsWith('/dashboard') && tenantId) {
+    requestHeaders.set('x-tenant-context', 'subdomain')
   }
 
   return {
     response: NextResponse.next({ request: { headers: requestHeaders } }),
     tenantId,
-    tenantSlug,
+    tenantSlug: slug,
   }
 }
 
@@ -177,6 +186,7 @@ export const config = {
     '/store/:path*',
     '/api/v2/:path*',
     '/api/payments/:path*',
+    '/',
     '/api/auth/me',
     '/api/auth/logout',
     '/api/internal/:path*',

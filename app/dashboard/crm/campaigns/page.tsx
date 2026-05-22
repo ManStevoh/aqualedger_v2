@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import {
   Dialog,
   DialogContent,
@@ -137,7 +138,7 @@ export default function CampaignsPage() {
     >
       <div className="flex flex-wrap gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="filter-control">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -148,7 +149,7 @@ export default function CampaignsPage() {
           </SelectContent>
         </Select>
         <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="filter-control">
             <SelectValue placeholder="Channel" />
           </SelectTrigger>
           <SelectContent>
@@ -179,6 +180,7 @@ export default function CampaignsPage() {
           ) : campaigns.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">No campaigns yet</p>
           ) : (
+            <DataTableShell label="CRM campaigns">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -205,6 +207,7 @@ export default function CampaignsPage() {
                 ))}
               </TableBody>
             </Table>
+            </DataTableShell>
           )}
         </CardContent>
       </Card>

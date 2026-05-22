@@ -1,3 +1,5 @@
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
@@ -40,6 +42,8 @@ interface Coupon {
 }
 
 export default function CouponsPage() {
+  const meta = useDashboardPageMeta()
+
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [loading, setLoading] = useState(true)
   const [showDialog, setShowDialog] = useState(false)
@@ -116,13 +120,8 @@ export default function CouponsPage() {
       : `KES ${Number(c.discount_value).toLocaleString()}`
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Coupons</h1>
-        <p className="text-muted-foreground">Promotions and discount codes for commerce orders</p>
-      </div>
-
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs}>
+<Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Ticket className="h-5 w-5" />
@@ -228,6 +227,7 @@ export default function CouponsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

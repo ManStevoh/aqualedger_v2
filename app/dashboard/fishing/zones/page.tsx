@@ -126,7 +126,7 @@ export default function FishingZonesPage() {
         <CardContent>
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="filter-control">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>

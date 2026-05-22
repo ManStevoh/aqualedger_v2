@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -45,6 +47,8 @@ interface StorageZone {
 }
 
 function ColdchainZonesContent() {
+  const meta = useDashboardPageMeta({ title: 'Storage zones', description: 'Temperature zones per cold storage facility (ISO 22000)' })
+
   const searchParams = useSearchParams()
   const initialFacilityId = searchParams.get('facilityId') || ''
   const [facilities, setFacilities] = useState<Facility[]>([])
@@ -180,25 +184,11 @@ function ColdchainZonesContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Button variant="ghost" size="sm" className="mb-2 gap-1" asChild>
-            <Link href="/dashboard/storage">
-              <ArrowLeft className="h-4 w-4" />
-              Facilities
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold">Storage zones</h1>
-          <p className="text-muted-foreground">Temperature zones per cold storage facility (ISO 22000)</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowDialog(true)} disabled={!facilityId}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setShowDialog(true)} disabled={!facilityId}>
           <Plus className="w-4 h-4" />
           Add zone
-        </Button>
-      </div>
-
-      <Card>
+        </Button></>}>
+<Card>
         <CardHeader>
           <CardTitle>Facility</CardTitle>
         </CardHeader>
@@ -312,9 +302,10 @@ function ColdchainZonesContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+
 
 export default function ColdchainZonesPage() {
   return (

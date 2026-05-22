@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,6 +12,8 @@ import { toast } from 'sonner'
 import { Clock } from 'lucide-react'
 
 export default function ClockInPage() {
+  const meta = useDashboardPageMeta({ title: 'Clock In / Out', description: '{today} · {now}' })
+
   const [employees, setEmployees] = useState<{ id: string; full_name: string }[]>([])
   const [employeeId, setEmployeeId] = useState('')
   const today = new Date().toISOString().split('T')[0]
@@ -42,13 +46,8 @@ export default function ClockInPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-md mx-auto">
-      <div className="text-center">
-        <Clock className="h-12 w-12 mx-auto text-primary mb-2" />
-        <h1 className="text-2xl font-bold">Clock In / Out</h1>
-        <p className="text-muted-foreground">{today} · {now}</p>
-      </div>
-      <Card>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} className="max-w-md mx-auto">
+<Card>
         <CardHeader><CardTitle>Employee</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -68,6 +67,7 @@ export default function ClockInPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

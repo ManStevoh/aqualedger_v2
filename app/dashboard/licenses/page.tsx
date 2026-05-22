@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,6 +34,8 @@ import {
 import { toast } from 'sonner'
 
 export default function LicensesPage() {
+  const meta = useDashboardPageMeta()
+
   const [licenses, setLicenses] = useState<License[]>([])
   const [summary, setSummary] = useState({
     total: 0,
@@ -184,21 +188,11 @@ export default function LicensesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">License Management</h1>
-          <p className="text-muted-foreground">
-            Manage fishing, boat, and trading licenses
-          </p>
-        </div>
-        <Button onClick={() => setShowIssueDialog(true)}>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button onClick={() => setShowIssueDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Issue New License
-        </Button>
-      </div>
-
-      {/* Stats Overview */}
+        </Button></>}>
+{/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Total Licenses"
@@ -423,6 +417,7 @@ export default function LicensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

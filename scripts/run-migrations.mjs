@@ -63,6 +63,11 @@ const migrations = [
   'database/migrations/20260610_boats_tenant_fixup.sql',
   'database/migrations/20260611_wallets_tenant_backfill.sql',
   'database/migrations/20260612_suggested_features.sql',
+  'database/migrations/20260613_platform_branding.sql',
+  'database/migrations/20260614_product_catalog_vendor.sql',
+  'database/migrations/20260615_tenant_role_permissions.sql',
+  'database/migrations/20260616_tenant_module_flags.sql',
+  'database/migrations/20260617_platform_payments_pass.sql',
 ]
 
 async function main() {

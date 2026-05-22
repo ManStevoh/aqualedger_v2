@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -52,6 +54,8 @@ interface MarketplaceStats {
 }
 
 export default function CatalogPage() {
+  const meta = useDashboardPageMeta()
+
   const [species, setSpecies] = useState<FishSpecies[]>([])
   const [products, setProducts] = useState<ProductCatalogItem[]>([])
   const [stats, setStats] = useState<MarketplaceStats | null>(null)
@@ -139,18 +143,10 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Catalog</h1>
-          <p className="text-muted-foreground">GS1 product catalog, species reference, and marketplace</p>
-        </div>
-        <Button asChild variant="outline">
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button asChild variant="outline">
           <Link href="/dashboard/marketplace">View marketplace</Link>
-        </Button>
-      </div>
-
-      <StatCardGrid>
+        </Button></>}>
+<StatCardGrid>
         <StatCard
           title="Products"
           value={products.length}
@@ -282,6 +278,7 @@ export default function CatalogPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

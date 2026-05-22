@@ -108,12 +108,13 @@ export async function createProductCatalog(
   const id = generateId()
   await execute(
     `INSERT INTO product_catalog (
-      id, tenant_id, sku, name, species_id, category, unit,
+      id, tenant_id, vendor_id, sku, name, species_id, category, unit,
       base_price, tax_code, hs_code, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       tid,
+      input.vendorId ?? null,
       input.sku,
       input.name,
       input.speciesId ?? null,
@@ -159,6 +160,7 @@ export async function updateProductCatalog(
     `UPDATE product_catalog SET
       sku = COALESCE(?, sku),
       name = COALESCE(?, name),
+      vendor_id = COALESCE(?, vendor_id),
       species_id = COALESCE(?, species_id),
       category = COALESCE(?, category),
       unit = COALESCE(?, unit),
@@ -171,6 +173,7 @@ export async function updateProductCatalog(
     [
       input.sku ?? null,
       input.name ?? null,
+      input.vendorId !== undefined ? input.vendorId : null,
       input.speciesId !== undefined ? input.speciesId : null,
       input.category !== undefined ? input.category : null,
       input.unit ?? null,
@@ -288,8 +291,21 @@ export async function listMarketplaceVendors(
   )
   const total = countRow?.total || 0
 
-  const vendors = await query<MarketplaceVendorRow>(
-    `SELECT mv.* FROM marketplace_vendors mv ${where} ORDER BY mv.shop_name ASC ${pagination.clause}`,
+  const vendors = await query<
+    MarketplaceVendorRow & {
+      user_email: string | null
+      first_name: string | null
+      last_name: string | null
+    }
+  >(
+    `SELECT mv.*,
+            u.email as user_email,
+            u.first_name,
+            u.last_name
+     FROM marketplace_vendors mv
+     LEFT JOIN users u ON mv.user_id = u.id
+     ${where}
+     ORDER BY mv.shop_name ASC ${pagination.clause}`,
     params,
   )
 

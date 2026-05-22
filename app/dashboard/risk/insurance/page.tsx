@@ -30,6 +30,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
+import { ResponsiveFormGrid } from '@/components/dashboard/responsive-form-grid'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
 import { Shield, Plus } from 'lucide-react'
@@ -206,41 +208,49 @@ export default function InsurancePage() {
       </StatCardGrid>
 
       <Tabs defaultValue="policies">
-        <TabsList>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
-          <TabsTrigger value="claims">Claims</TabsTrigger>
+        <TabsList className="flex h-auto w-full flex-wrap gap-1 sm:inline-flex sm:w-auto">
+          <TabsTrigger value="policies" className="min-h-11 flex-1 sm:flex-none">
+            Policies
+          </TabsTrigger>
+          <TabsTrigger value="claims" className="min-h-11 flex-1 sm:flex-none">
+            Claims
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="policies" className="mt-4">
           <Card>
             <CardHeader><CardTitle>Policies</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Policy #</TableHead>
-                    <TableHead>Insurer</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Vessel</TableHead>
-                    <TableHead>Coverage</TableHead>
-                    <TableHead>Valid</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {policies.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-mono text-sm">{p.policy_number}</TableCell>
-                      <TableCell>{p.insurer_name}</TableCell>
-                      <TableCell>{p.policy_type}</TableCell>
-                      <TableCell>{p.boat_name || '—'}</TableCell>
-                      <TableCell>{kes(Number(p.coverage_amount))}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.start_date} → {p.end_date}
-                        <Badge className="ml-2" variant="outline">{p.status}</Badge>
-                      </TableCell>
+              <DataTableShell label="Insurance policies">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Policy #</TableHead>
+                      <TableHead>Insurer</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Vessel</TableHead>
+                      <TableHead>Coverage</TableHead>
+                      <TableHead>Valid</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {policies.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-mono text-sm">{p.policy_number}</TableCell>
+                        <TableCell>{p.insurer_name}</TableCell>
+                        <TableCell>{p.policy_type}</TableCell>
+                        <TableCell>{p.boat_name || '—'}</TableCell>
+                        <TableCell>{kes(Number(p.coverage_amount))}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          <span className="block">{p.start_date} → {p.end_date}</span>
+                          <Badge className="mt-1" variant="outline">
+                            {p.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </DataTableShell>
             </CardContent>
           </Card>
         </TabsContent>
@@ -248,53 +258,78 @@ export default function InsurancePage() {
           <Card>
             <CardHeader><CardTitle>Claims</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Claim #</TableHead>
-                    <TableHead>Policy</TableHead>
-                    <TableHead>Incident</TableHead>
-                    <TableHead>Claimed</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {claims.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono text-sm">{c.claim_number}</TableCell>
-                      <TableCell>{c.policy_number}</TableCell>
-                      <TableCell>{c.incident_date}</TableCell>
-                      <TableCell>{kes(Number(c.claimed_amount))}</TableCell>
-                      <TableCell><Badge>{c.status}</Badge></TableCell>
-                      <TableCell className="space-x-1">
-                        {c.status === 'submitted' && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => updateClaim(c.id, 'reviewing')}>Review</Button>
-                            <Button size="sm" onClick={() => updateClaim(c.id, 'approved')}>Approve</Button>
-                          </>
-                        )}
-                        {c.status === 'approved' && (
-                          <Button size="sm" onClick={() => updateClaim(c.id, 'paid')}>Mark paid</Button>
-                        )}
-                      </TableCell>
+              <DataTableShell label="Insurance claims">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Claim #</TableHead>
+                      <TableHead>Policy</TableHead>
+                      <TableHead>Incident</TableHead>
+                      <TableHead>Claimed</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {claims.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-mono text-sm">{c.claim_number}</TableCell>
+                        <TableCell>{c.policy_number}</TableCell>
+                        <TableCell>{c.incident_date}</TableCell>
+                        <TableCell>{kes(Number(c.claimed_amount))}</TableCell>
+                        <TableCell>
+                          <Badge>{c.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap">
+                            {c.status === 'submitted' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => updateClaim(c.id, 'reviewing')}
+                                >
+                                  Review
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => updateClaim(c.id, 'approved')}
+                                >
+                                  Approve
+                                </Button>
+                              </>
+                            )}
+                            {c.status === 'approved' && (
+                              <Button
+                                size="sm"
+                                className="w-full sm:w-auto"
+                                onClick={() => updateClaim(c.id, 'paid')}
+                              >
+                                Mark paid
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </DataTableShell>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
       <Dialog open={policyDialog} onOpenChange={setPolicyDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader><DialogTitle>Add insurance policy</DialogTitle></DialogHeader>
           <div className="grid gap-3 py-2">
-            <div className="grid grid-cols-2 gap-3">
+            <ResponsiveFormGrid>
               <div className="space-y-2"><Label>Policy #</Label><Input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} /></div>
               <div className="space-y-2"><Label>Insurer</Label><Input value={insurer} onChange={(e) => setInsurer(e.target.value)} /></div>
-            </div>
+            </ResponsiveFormGrid>
             <div className="space-y-2">
               <Label>Type</Label>
               <Select value={policyType} onValueChange={setPolicyType}>
@@ -308,21 +343,21 @@ export default function InsurancePage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <ResponsiveFormGrid>
               <div className="space-y-2"><Label>Premium</Label><Input type="number" value={premium} onChange={(e) => setPremium(e.target.value)} /></div>
               <div className="space-y-2"><Label>Coverage</Label><Input type="number" value={coverage} onChange={(e) => setCoverage(e.target.value)} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+            </ResponsiveFormGrid>
+            <ResponsiveFormGrid>
               <div className="space-y-2"><Label>Start</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
               <div className="space-y-2"><Label>End</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
-            </div>
+            </ResponsiveFormGrid>
           </div>
           <DialogFooter><Button onClick={createPolicy}>Save policy</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={claimDialog} onOpenChange={setClaimDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader><DialogTitle>File insurance claim</DialogTitle></DialogHeader>
           <div className="grid gap-3 py-2">
             <div className="space-y-2">

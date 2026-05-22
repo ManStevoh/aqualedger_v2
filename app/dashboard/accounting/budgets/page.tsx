@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +21,8 @@ interface Budget {
 }
 
 export default function BudgetsPage() {
+  const meta = useDashboardPageMeta()
+
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const year = new Date().getFullYear()
@@ -35,21 +39,10 @@ export default function BudgetsPage() {
   }, [year])
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Target className="h-8 w-8" />
-            Budgets
-          </h1>
-          <p className="text-muted-foreground">Fiscal year {year} budget lines by GL account</p>
-        </div>
-        <Button variant="outline" asChild>
+    <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button variant="outline" asChild>
           <Link href="/dashboard/accounting/reports">Budget vs Actual report</Link>
-        </Button>
-      </div>
-
-      <Card>
+        </Button></>}>
+<Card>
         <CardHeader><CardTitle>Budget entries</CardTitle></CardHeader>
         <CardContent>
           {loading && <p className="text-muted-foreground">Loading…</p>}
@@ -65,6 +58,7 @@ export default function BudgetsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

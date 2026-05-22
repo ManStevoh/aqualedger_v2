@@ -30,10 +30,10 @@ export function ModulePageHeader({
   className,
 }: ModulePageHeaderProps) {
   return (
-    <div className={cn('mb-8 space-y-4', className)}>
+    <div className={cn('mb-6 space-y-3 sm:mb-8 sm:space-y-4', className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <Breadcrumb>
-          <BreadcrumbList>
+        <Breadcrumb className="overflow-x-auto">
+          <BreadcrumbList className="flex-nowrap whitespace-nowrap">
             {breadcrumbs.map((crumb, index) => {
               const isLast = index === breadcrumbs.length - 1
               return (
@@ -58,9 +58,9 @@ export function ModulePageHeader({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="h-1 w-12 rounded-full bg-gradient-to-r from-primary to-primary/40" aria-hidden />
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">{title}</h1>
           {description && (
-            <p className="max-w-2xl text-base text-muted-foreground leading-relaxed">
+            <p className="max-w-2xl text-sm text-muted-foreground leading-relaxed sm:text-base">
               {description}
             </p>
           )}

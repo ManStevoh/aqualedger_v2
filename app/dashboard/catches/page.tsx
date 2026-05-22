@@ -1,11 +1,11 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
 import { Fish, DollarSign, Scale, Star, Plus, Filter, Award } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { EmptyState } from '@/components/dashboard/empty-state'
@@ -19,15 +19,13 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  SelectValue } from '@/components/ui/select'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { DataTable } from '@/components/dashboard/data-table'
 import { useCatches, useTrips, logCatch, useFishSpecies } from '@/lib/api'
@@ -39,8 +37,7 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-  Tooltip,
-} from 'recharts'
+  Tooltip } from 'recharts'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
@@ -177,8 +174,7 @@ export default function CatchesPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
+    <DashboardPageLayout
         title={meta.title}
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
@@ -188,7 +184,7 @@ export default function CatchesPage() {
             Log Catch
           </Button>
         }
-      />
+      >
 
       <StatCardGrid>
         <StatCard
@@ -289,7 +285,7 @@ export default function CatchesPage() {
       <ListPageToolbar
         filters={
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="h-9 w-[160px]">
+            <SelectTrigger className="h-9 filter-control">
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Grade filter" />
             </SelectTrigger>
@@ -462,6 +458,7 @@ export default function CatchesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

@@ -18,7 +18,8 @@ const bodySchema = z.object({
   deliveryAddress: z.string().max(2000).optional(),
   deliverySlotId: z.string().uuid().optional(),
   sessionToken: z.string().optional(),
-  paymentMethod: z.enum(['mpesa', 'cod']).default('cod'),
+  paymentMethod: z.enum(['mpesa', 'cod', 'stripe']).default('cod'),
+  couponCode: z.string().max(50).optional().nullable(),
   recaptchaToken: z.string().min(1).optional(),
 })
 
@@ -63,6 +64,7 @@ export const POST = apiHandler(async (
     guestPhone: body.guestPhone,
     deliveryAddress: body.deliveryAddress,
     deliverySlotId: body.deliverySlotId,
+    couponCode: body.couponCode,
     paymentMethod: body.paymentMethod,
   })
 

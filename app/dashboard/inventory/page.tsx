@@ -1,9 +1,9 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { InventoryBatchesPanel } from '@/components/dashboard/inventory-batches-panel'
-import { ModulePageHeader } from '@/components/dashboard/module-page-header'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 function InventoryContent() {
@@ -20,15 +20,15 @@ export default function InventoryPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <ModulePageHeader
+    <DashboardPageLayout
         title={meta.title}
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
-      />
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading inventory…</p>}>
+      >
+<Suspense fallback={<p className="text-sm text-muted-foreground">Loading inventory…</p>}>
         <InventoryContent />
       </Suspense>
-    </div>
+    </DashboardPageLayout>
   )
 }
+

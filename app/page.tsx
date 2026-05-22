@@ -6,14 +6,17 @@ import { HeroDashboardPreview } from '@/components/marketing/hero-dashboard-prev
 import { LandingNav } from '@/components/marketing/landing-nav'
 import {
   ArrowRight,
+  Bot,
   CheckCircle2,
   CloudRain,
   Fish,
   Globe2,
   Lock,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
+import { PlatformBrandProvider } from '@/components/branding/platform-brand-provider'
 import { APP_NAME, APP_TAGLINE, APP_VERSION } from '@/lib/constants'
 import { ERP_MODULES } from '@/lib/platform/modules'
 
@@ -29,6 +32,39 @@ const TRUST_ITEMS = [
   { icon: Lock, label: 'Role-based access' },
   { icon: Globe2, label: 'Built for African fisheries' },
   { icon: Fish, label: '16 integrated modules' },
+] as const
+
+const AI_CAPABILITIES = [
+  {
+    title: 'Predictive operations',
+    description:
+      'Demand, species pricing, and inventory days-of-stock from your live orders and catch data.',
+  },
+  {
+    title: 'Risk intelligence',
+    description:
+      'Wallet anomaly detection and cold-chain reviews correlated with alerts and telemetry.',
+  },
+  {
+    title: 'Executive AI briefs',
+    description:
+      'Daily prioritized actions synthesized from ERP KPIs — orders, pipeline, finance, and ops.',
+  },
+  {
+    title: 'Augmented reporting',
+    description:
+      'IFRS and operations reports with optional AI executive narrative in scheduled email delivery.',
+  },
+  {
+    title: 'Grounded copilot',
+    description:
+      'Chat answers grounded in your orders, catch, general ledger, CRM pipeline, and alerts.',
+  },
+  {
+    title: 'Automated refresh',
+    description:
+      'Cron or one-click regeneration of forecasts, risk scans, and business briefs per tenant.',
+  },
 ] as const
 
 const LANDING_MODULES = [
@@ -50,7 +86,7 @@ const LANDING_MODULES = [
   },
 ]
 
-export default function HomePage() {
+function HomePageContent() {
   return (
     <div className="min-h-screen bg-background text-foreground antialiased">
       <LandingNav />
@@ -171,6 +207,91 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* AI-powered operations — honest positioning for sales / RFP */}
+      <section
+        id="ai"
+        className="scroll-mt-20 border-b border-border px-4 py-20 sm:px-6 lg:px-8"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-wider text-primary">
+              Intelligence
+            </p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              AI-powered fisheries operations
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+              Statistical models and rule-based briefs run on your tenant data out of the box.
+              Add <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">OPENAI_API_KEY</code>{' '}
+              for natural-language executive narratives, report augmentation, and a fully grounded
+              copilot — without changing your core ERP workflows.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {AI_CAPABILITIES.map((cap) => (
+              <Card key={cap.title} className="border-border">
+                <CardHeader className="pb-2">
+                  <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-600">
+                    <Sparkles className="h-4 w-4 text-white" aria-hidden />
+                  </div>
+                  <CardTitle className="text-base">{cap.title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed">
+                    {cap.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-2">
+            <Card className="border-border bg-muted/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Bot className="h-4 w-4 text-primary" />
+                  Without an LLM API key
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                Position honestly as <strong className="text-foreground">AI-assisted analytics</strong>:
+                moving-average demand, linear price signals, z-score wallet checks, reorder urgency,
+                and rule-based daily briefs — all from live SQL on your books.
+              </CardContent>
+            </Card>
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  With OpenAI configured
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                Upgrade messaging to <strong className="text-foreground">AI-enabled vertical ERP</strong>:
+                LLM business briefs, executive report narratives, and conversational assistant
+                answers scoped to aggregated tenant metrics (no raw PII dumps).
+              </CardContent>
+            </Card>
+          </div>
+
+          <p className="mt-6 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-3 text-center text-xs text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            <strong className="text-foreground">Phase 5 (not in this pass):</strong> document RAG,
+            agent actions from chat, per-tenant AI usage billing, and custom ML models.{' '}
+            <span className="whitespace-nowrap">Guide: docs/AI_ENABLEMENT.md</span>
+          </p>
+
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Explore in product after sign-in:{' '}
+            <Link href="/dashboard/ai" className="font-medium text-primary hover:underline">
+              AI Command Center
+            </Link>
+            {' · '}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </section>
+
       {/* Industries / vision */}
       <section
         id="industries"
@@ -260,5 +381,13 @@ export default function HomePage() {
         {APP_NAME} · {APP_TAGLINE} © {new Date().getFullYear()}
       </footer>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <PlatformBrandProvider>
+      <HomePageContent />
+    </PlatformBrandProvider>
   )
 }

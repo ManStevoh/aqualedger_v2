@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { AdminHubNav } from '@/components/dashboard/admin-hub-nav'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
@@ -69,7 +70,20 @@ interface PaymentsResponse {
 }
 
 const STATUSES = ['pending', 'processing', 'succeeded', 'completed', 'failed', 'cancelled'] as const
-const PROVIDERS = ['mpesa', 'stripe', 'cash', 'bank'] as const
+const PROVIDERS = ['mpesa', 'stripe', 'paystack', 'cash', 'bank'] as const
+
+interface ReconcileSummary {
+  mpesaPending: number
+  webhooks24h: number
+  webhooksFailed: number
+  lastRun: {
+    created_at: string
+    reconciled: number
+    failed: number
+    matched: number
+    trigger_source: string
+  } | null
+}
 
 function formatKes(n: number, currency = 'KES') {
   return new Intl.NumberFormat('en-KE', {
@@ -97,7 +111,16 @@ export default function PlatformPaymentsPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [total, setTotal] = useState(0)
   const [reconciling, setReconciling] = useState(false)
+  const [monitor, setMonitor] = useState<ReconcileSummary | null>(null)
   const limit = 25
+
+  const loadMonitor = useCallback(async () => {
+    const res = await authFetchJson<{
+      success: boolean
+      data?: { summary?: ReconcileSummary }
+    }>('/api/v2/platform/payments/reconcile')
+    if (res.success && res.data?.summary) setMonitor(res.data.summary)
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -131,8 +154,11 @@ export default function PlatformPaymentsPage() {
   }, [status, provider, page])
 
   useEffect(() => {
-    if (currentRole === 'super_admin') load()
-  }, [currentRole, load])
+    if (currentRole === 'super_admin') {
+      load()
+      loadMonitor()
+    }
+  }, [currentRole, load, loadMonitor])
 
   useEffect(() => {
     setPage(1)
@@ -152,7 +178,7 @@ export default function PlatformPaymentsPage() {
       }
       const { reconciled = 0, failed = 0, matched = 0 } = res.data ?? {}
       toast.success(`Reconciled ${reconciled}: ${failed} stale failed, ${matched} orders matched`)
-      await load()
+      await Promise.all([load(), loadMonitor()])
     } catch {
       toast.error('Network error')
     } finally {
@@ -215,6 +241,32 @@ export default function PlatformPaymentsPage() {
       </StatCardGrid>
 
       <Card>
+        <CardHeader>
+          <CardTitle>Reconciliation & webhooks</CardTitle>
+          <CardDescription>
+            Automated via <code className="text-xs">npm run reconcile:payments</code> (CRON_SECRET).
+            {monitor?.lastRun
+              ? ` Last run ${String(monitor.lastRun.created_at).slice(0, 19)} (${monitor.lastRun.trigger_source}): ${monitor.lastRun.reconciled} actions.`
+              : ' No runs yet.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">M-Pesa pending</span>
+            <p className="font-semibold">{monitor?.mpesaPending ?? '—'}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Webhooks (24h)</span>
+            <p className="font-semibold">{monitor?.webhooks24h ?? '—'}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Webhook failures (24h)</span>
+            <p className="font-semibold text-destructive">{monitor?.webhooksFailed ?? '—'}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>Payment intents</CardTitle>
@@ -238,7 +290,7 @@ export default function PlatformPaymentsPage() {
               Reconcile
             </Button>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="filter-control">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -251,7 +303,7 @@ export default function PlatformPaymentsPage() {
               </SelectContent>
             </Select>
             <Select value={provider} onValueChange={setProvider}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="filter-control">
                 <SelectValue placeholder="Provider" />
               </SelectTrigger>
               <SelectContent>
@@ -276,6 +328,7 @@ export default function PlatformPaymentsPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
+                <DataTableShell>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -315,6 +368,7 @@ export default function PlatformPaymentsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </DataTableShell>
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4">
