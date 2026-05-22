@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,10 +17,9 @@ export default function CatchForecastPage() {
   }, [])
 
   return (
-    <DashboardPageLayout
-      title="Catch yield forecast"
-      description="30-day projection by zone and species from trip history"
-    >
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">Catch yield forecast</h1>
+      <p className="text-muted-foreground">30-day projection by zone and species from trip history</p>
       <div className="grid gap-4 md:grid-cols-2">
         {rows.map((r, i) => (
           <Card key={`${r.zoneId}-${r.speciesName}-${i}`}>
@@ -37,6 +35,7 @@ export default function CatchForecastPage() {
             </CardContent>
           </Card>
         ))}
-    </DashboardPageLayout>
+      </div>
+    </div>
   )
 }

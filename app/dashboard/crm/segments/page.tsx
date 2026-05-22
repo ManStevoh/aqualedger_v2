@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,11 +31,12 @@ export default function CrmSegmentsPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Customer segmentation"
-      description="Champion · Loyal · New · At risk · Lost — auto-assigned from order history"
-      actions={<Button onClick={computeRfm}>Run RFM analysis</Button>}
-    >
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Customer segmentation</h1>
+        <Button onClick={computeRfm}>Run RFM analysis</Button>
+      </div>
+      <p className="text-muted-foreground">Champion · Loyal · New · At risk · Lost — auto-assigned from order history</p>
       <div className="grid gap-4 md:grid-cols-3">
         {summary.map((s) => (
           <Card key={s.segment}>
@@ -47,6 +47,7 @@ export default function CrmSegmentsPage() {
             </CardContent>
           </Card>
         ))}
-    </DashboardPageLayout>
+      </div>
+    </div>
   )
 }

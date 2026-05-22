@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -46,11 +45,9 @@ export default function ClockInPage() {
     <div className="space-y-6 max-w-md mx-auto">
       <div className="text-center">
         <Clock className="h-12 w-12 mx-auto text-primary mb-2" />
-        <DashboardPageLayout
-      title="Clock In / Out"
-      description="{today} · {now}"
-    >
-            </div>
+        <h1 className="text-2xl font-bold">Clock In / Out</h1>
+        <p className="text-muted-foreground">{today} · {now}</p>
+      </div>
       <Card>
         <CardHeader><CardTitle>Employee</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -71,6 +68,6 @@ export default function ClockInPage() {
           </div>
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

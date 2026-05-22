@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,11 +35,10 @@ export default function DeliverySlotsPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Delivery scheduling"
-      description="Cold-chain slots for storefront checkout"
-    >
-            <Card>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">Delivery scheduling</h1>
+      <p className="text-muted-foreground">Cold-chain slots for storefront checkout</p>
+      <Card>
         <CardHeader><CardTitle>Add slot</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-4 items-end">
           <div><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
@@ -61,6 +59,7 @@ export default function DeliverySlotsPage() {
             </CardContent>
           </Card>
         ))}
-    </DashboardPageLayout>
+      </div>
+    </div>
   )
 }

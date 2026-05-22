@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -164,7 +163,17 @@ export default function CommunicationsPage() {
   }
 
   return (
-    <DashboardPageLayout title="Communications" description="Email (SMTP / Resend / SendGrid), SMS, WhatsApp — branded reports and CRM campaigns" actions={
+    <div className="space-y-8 p-6">
+      <div className="flex flex-wrap justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Mail className="h-7 w-7" />
+            Communications
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Email (SMTP / Resend / SendGrid), SMS, WhatsApp — branded reports and CRM campaigns
+          </p>
+        </div>
         <div className="flex gap-2">
           <Badge variant={emailProvider === 'stub' ? 'destructive' : 'default'}>
             Email: {emailProvider}
@@ -175,8 +184,7 @@ export default function CommunicationsPage() {
               Reports hub
             </Link>
           </Button>
-      }>
-
+        </div>
       </div>
 
       <Tabs defaultValue="settings">
@@ -360,6 +368,6 @@ export default function CommunicationsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </DashboardPageLayout>
+    </div>
   )
 }

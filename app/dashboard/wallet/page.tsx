@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, Minus, CreditCard, Smartphone, Coins } from 'lucide-react'
@@ -218,15 +217,194 @@ function WalletPageContent() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Wallet"
-      description="Manage your funds and transactions"
-    >
-      <DashboardPageLayout
-      title="Wallet"
-      description="Manage your funds and transactions"
-    >
-      <div className="space-y-2">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
+          <p className="text-muted-foreground">
+            Manage your funds and transactions
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowWithdrawDialog(true)}>
+            <ArrowUpRight className="mr-2 h-4 w-4" />
+            Withdraw
+          </Button>
+          <Button onClick={() => setShowDepositDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Deposit
+          </Button>
+        </div>
+      </div>
+
+      <StatCardGrid>
+        <StatCard
+          title="Available Balance"
+          value={`KES ${(wallet?.balance || 0).toLocaleString()}`}
+          icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
+          description="Ready for investment"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Deposits"
+          value={`KES ${(wallet?.totalDeposits || 0).toLocaleString()}`}
+          icon={<ArrowDownLeft className="h-4 w-4 text-muted-foreground" />}
+          description="All-time deposits"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Withdrawals"
+          value={`KES ${(wallet?.totalWithdrawals || 0).toLocaleString()}`}
+          icon={<ArrowUpRight className="h-4 w-4 text-muted-foreground" />}
+          description="All-time withdrawals"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Earnings"
+          value={`KES ${(wallet?.totalEarnings || 0).toLocaleString()}`}
+          icon={<Plus className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 12.5, isPositive: true }}
+          description="Dividends received"
+          loading={isLoading}
+        />
+      </StatCardGrid>
+
+      {(showFx || fxRates.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Coins className="h-5 w-5" />
+              FX rates (base KES)
+            </CardTitle>
+            <CardDescription>
+              Multi-currency reference from `currency_rates`. Wallet balance remains in KES.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {fxLoading ? (
+              <p className="text-sm text-muted-foreground">Loading rates…</p>
+            ) : fxRates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No rates configured for this tenant.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {fxRates.map((r) => (
+                  <Badge key={r.quote_currency} variant="secondary" className="text-sm py-1 px-3">
+                    1 KES ≈ {Number(r.rate).toFixed(4)} {r.quote_currency}
+                    <span className="text-muted-foreground ml-1 text-xs">
+                      ({r.effective_date})
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {wallet?.balance != null && fxRates.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Approx. balance:{' '}
+                {fxRates
+                  .slice(0, 3)
+                  .map(
+                    (r) =>
+                      `${(Number(wallet.balance) * Number(r.rate)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${r.quote_currency}`,
+                  )
+                  .join(' · ')}
+              </p>
+            )}
+            <div className="flex flex-wrap items-end gap-3 pt-2 border-t">
+              <div className="space-y-1">
+                <Label className="text-xs">Convert KES</Label>
+                <Input
+                  type="number"
+                  className="w-28"
+                  value={convertAmount}
+                  onChange={(e) => setConvertAmount(e.target.value)}
+                />
+              </div>
+              <Select value={convertTo} onValueChange={setConvertTo}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {['USD', 'EUR', 'TZS', 'GBP'].map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={runConvert}>
+                Convert
+              </Button>
+              {converted && (
+                <span className="text-sm font-medium text-primary">≈ {converted}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Transaction History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Transaction History</CardTitle>
+          <CardDescription>Your recent wallet transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="all">
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="deposits">Deposits</TabsTrigger>
+              <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+              <TabsTrigger value="dividends">Dividends</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="mt-4">
+              <TransactionList transactions={transactions} getIcon={getTransactionIcon} getColor={getTransactionColor} />
+            </TabsContent>
+            <TabsContent value="deposits" className="mt-4">
+              <TransactionList
+                transactions={transactions.filter((t: Transaction) => t.type === 'deposit')}
+                getIcon={getTransactionIcon}
+                getColor={getTransactionColor}
+              />
+            </TabsContent>
+            <TabsContent value="withdrawals" className="mt-4">
+              <TransactionList
+                transactions={transactions.filter((t: Transaction) => t.type === 'withdrawal')}
+                getIcon={getTransactionIcon}
+                getColor={getTransactionColor}
+              />
+            </TabsContent>
+            <TabsContent value="dividends" className="mt-4">
+              <TransactionList
+                transactions={transactions.filter((t: Transaction) => t.type === 'dividend')}
+                getIcon={getTransactionIcon}
+                getColor={getTransactionColor}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Deposit Dialog */}
+      <Dialog open={showDepositDialog} onOpenChange={setShowDepositDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Deposit Funds</DialogTitle>
+            <DialogDescription>
+              Add money to your {APP_NAME} wallet
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Amount (KES)</Label>
+              <Input
+                type="number"
+                placeholder="Enter amount"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger>
@@ -382,6 +560,6 @@ function TransactionList({ transactions, getIcon, getColor }: TransactionListPro
           </div>
         </div>
       ))}
-    </DashboardPageLayout>
+    </div>
   )
 }

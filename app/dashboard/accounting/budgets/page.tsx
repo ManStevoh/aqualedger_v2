@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -36,12 +35,19 @@ export default function BudgetsPage() {
   }, [year])
 
   return (
-    <DashboardPageLayout title="Budgets" description="Fiscal year {year} budget lines by GL account" actions={
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Target className="h-8 w-8" />
+            Budgets
+          </h1>
+          <p className="text-muted-foreground">Fiscal year {year} budget lines by GL account</p>
+        </div>
         <Button variant="outline" asChild>
           <Link href="/dashboard/accounting/reports">Budget vs Actual report</Link>
         </Button>
-      }
-
+      </div>
 
       <Card>
         <CardHeader><CardTitle>Budget entries</CardTitle></CardHeader>
@@ -59,6 +65,6 @@ export default function BudgetsPage() {
           )}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }
