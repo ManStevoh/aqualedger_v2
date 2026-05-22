@@ -9,7 +9,6 @@ import { DataTable } from '@/components/dashboard/data-table'
 import { authFetchJson } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Monitor, Shield, LogOut, ArrowLeft, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -156,10 +155,24 @@ export default function SecuritySessionsPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Security & sessions"
-      description="Active logins across devices. Revoke suspicious sessions; your current browser session is kept when using Revoke all others."
-      actions={
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <Button variant="ghost" size="sm" className="mb-2 -ml-2 gap-2" asChild>
+            <Link href="/dashboard/settings">
+              <ArrowLeft className="h-4 w-4" />
+              Settings
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Shield className="h-7 w-7 text-primary" />
+            Security & sessions
+          </h1>
+          <p className="text-muted-foreground">
+            Active logins across devices. Revoke suspicious sessions; your current browser session is kept when using
+            &quot;Revoke all others&quot;.
+          </p>
+        </div>
         <Button
           variant="destructive"
           className="gap-2"
@@ -169,14 +182,7 @@ export default function SecuritySessionsPage() {
           <LogOut className="h-4 w-4" />
           Revoke all others
         </Button>
-      }
-    >
-      <Button variant="ghost" size="sm" className="-ml-2 gap-2" asChild>
-        <Link href="/dashboard/settings">
-          <ArrowLeft className="h-4 w-4" />
-          Settings
-        </Link>
-      </Button>
+      </div>
 
       <Card>
         <CardHeader>
@@ -276,6 +282,6 @@ export default function SecuritySessionsPage() {
           />
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

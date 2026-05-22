@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,11 +32,10 @@ export default function CooperativeSharesPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Cooperative revenue sharing"
-      description="Distribute catch revenue to members by landed kg"
-    >
-            <div className="flex gap-4 items-end">
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">Cooperative revenue sharing</h1>
+      <p className="text-muted-foreground">Distribute catch revenue to members by landed kg</p>
+      <div className="flex gap-4 items-end">
         <div><Label>Period (YYYY-MM)</Label><Input value={period} onChange={(e) => setPeriod(e.target.value)} /></div>
         <Button onClick={calculate}>Calculate shares</Button>
         <Button variant="outline" onClick={load}>Refresh</Button>
@@ -53,6 +51,6 @@ export default function CooperativeSharesPage() {
           ))}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

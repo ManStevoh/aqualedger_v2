@@ -118,12 +118,11 @@ npm run typecheck
 npm test
 npm run db:verify
 npm run smoke
-npm run env:check
-npm run predeploy   # typecheck + test + db + env + production build
+npm run predeploy   # typecheck + test + db + production build
 npm run dev
 ```
 
-Production: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) · Pilot: [`docs/PILOT_GO_LIVE.md`](docs/PILOT_GO_LIVE.md)
+Production checklist: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 **Edge-safe routing:** Custom domains resolve via `GET /api/internal/resolve-host` (Node); dashboard modules enforced in server layout + `apiHandler`.
 

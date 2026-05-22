@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -170,6 +169,13 @@ export default function LeadsPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const stageVariant = (s: string) => {
+    if (s === 'won') return 'default'
+    if (s === 'lost') return 'destructive'
+    if (s === 'qualified') return 'secondary'
+    return 'outline'
   }
 
   const stageLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -349,7 +355,12 @@ export default function LeadsPage() {
                         <TableCell>{l.phone || '—'}</TableCell>
                         <TableCell>{l.source || '—'}</TableCell>
                         <TableCell>
-                          <StatusBadge status={l.stage} label={stageLabel(l.stage)} />
+                          <Badge
+                            variant={stageVariant(l.stage)}
+                            className={STAGE_COLORS[l.stage]?.split(' ').slice(0, 2).join(' ')}
+                          >
+                            {stageLabel(l.stage)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {new Intl.NumberFormat('en-KE', {

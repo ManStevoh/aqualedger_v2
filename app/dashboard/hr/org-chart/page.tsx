@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { authFetchJson } from '@/lib/api'
@@ -43,8 +42,11 @@ export default function OrgChartPage() {
   }, [])
 
   return (
-    <DashboardPageLayout title="Org Chart" description="Departments and reporting structure">
-
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2"><Building2 className="h-8 w-8" />Org Chart</h1>
+        <p className="text-muted-foreground">Departments and reporting structure</p>
+      </div>
       <Card>
         <CardHeader><CardTitle>Organization</CardTitle></CardHeader>
         <CardContent>
@@ -53,6 +55,6 @@ export default function OrgChartPage() {
           )}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

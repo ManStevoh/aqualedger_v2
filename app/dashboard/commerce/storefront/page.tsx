@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { authFetchJson } from '@/lib/api'
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Check, ExternalLink, Palette, Save, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 

@@ -5,13 +5,26 @@
  *
  * --strict  Fail if optional pilot vars (CRON_SECRET, NEXT_PUBLIC_APP_URL) are missing.
  */
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { loadEnv } from './lib/load-env.mjs'
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const root = path.join(__dirname, '..')
 const strict = process.argv.includes('--strict')
-loadEnv(root)
+
+function loadEnv() {
+  for (const file of ['.env', '.env.local']) {
+    const p = path.join(root, file)
+    if (!fs.existsSync(p)) continue
+    for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+      const m = line.match(/^([^#=]+)=(.*)$/)
+      if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '')
+    }
+  }
+}
+
+loadEnv()
 
 let errors = 0
 let warnings = 0
@@ -76,7 +89,7 @@ if (mpesaLive) {
     warn('MPESA_CALLBACK_URL not set')
   }
 } else {
-  warn('M-Pesa not configured — run npm run mpesa:wire then add Daraja keys (npm run mpesa:check)')
+  warn('M-Pesa not configured — STK runs in stub mode (npm run mpesa:check)')
 }
 
 if (process.env.STRIPE_SECRET_KEY) ok('Stripe configured')

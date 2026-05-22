@@ -3,12 +3,25 @@
  * Post-deploy smoke checks (no auth required for core probes).
  * Usage: node scripts/smoke-platform.mjs [--base=http://localhost:3000]
  */
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { loadEnv } from './lib/load-env.mjs'
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
-loadEnv(root)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const root = path.join(__dirname, '..')
+
+function loadEnv() {
+  for (const file of ['.env', '.env.local']) {
+    const p = path.join(root, file)
+    if (!fs.existsSync(p)) continue
+    for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+      const m = line.match(/^([^#=]+)=(.*)$/)
+      if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '')
+    }
+  }
+}
+
+loadEnv()
 
 const baseArg = process.argv.find((a) => a.startsWith('--base='))
 const base = (
@@ -57,13 +70,11 @@ if (resolveOk && resolveRes) {
 
 const cronSecret = process.env.CRON_SECRET
 if (cronSecret) {
-  const { ok, res } = await probe(
-    'Export cron GET (Vercel-style)',
-    `${base}/api/v2/platform/exports/process?limit=1`,
-    {
-      headers: { Authorization: `Bearer ${cronSecret}` },
-    },
-  )
+  const { ok, res } = await probe('Export cron (dry)', `${base}/api/v2/platform/exports/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-cron-secret': cronSecret },
+    body: JSON.stringify({ limit: 1 }),
+  })
   if (ok && res) {
     try {
       const json = await res.json()

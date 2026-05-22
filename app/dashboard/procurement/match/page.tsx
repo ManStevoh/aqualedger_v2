@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,11 +35,10 @@ export default function ThreeWayMatchPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Procurement 3-way match"
-      description="Purchase order · Goods receipt · Supplier invoice"
-    >
-            <Card>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">Procurement 3-way match</h1>
+      <p className="text-muted-foreground">Purchase order · Goods receipt · Supplier invoice</p>
+      <Card>
         <CardHeader><CardTitle>Run match</CardTitle></CardHeader>
         <CardContent className="flex gap-4 items-end">
           <div className="flex-1"><Label>PO ID</Label><Input value={poId} onChange={(e) => setPoId(e.target.value)} /></div>
@@ -59,6 +57,6 @@ export default function ThreeWayMatchPage() {
           ))}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

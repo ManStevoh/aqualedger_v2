@@ -132,11 +132,7 @@ Manual:
 - [ ] Guest checkout + M-Pesa STK (sandbox phone)
 - [ ] Impersonate user (admin) and exit banner
 
-## 9. Vercel
-
-See [`docs/VERCEL_DEPLOY.md`](VERCEL_DEPLOY.md) for env vars, `vercel.json` cron, and MySQL hosting.
-
-## 10. Docker / VM notes
+## 9. Vercel / Docker notes
 
 - Set all env vars in the hosting dashboard; never commit `.env`.
 - `storage/exports/` must be writable for GDPR jobs (use persistent volume or object storage migration for multi-instance).

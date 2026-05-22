@@ -1,14 +1,30 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import jwt from 'jsonwebtoken'
+import type { JWTPayload } from '@/lib/auth'
 import {
   canonicalStorePath,
   extractTenantSlugFromHost,
   isSkippablePlatformHost,
 } from '@/lib/platform/tenant-host'
 
-/** Edge middleware only checks cookie presence; JWT is verified in Node route handlers. */
-function hasSessionCookie(request: NextRequest): boolean {
-  return Boolean(request.cookies.get('access_token')?.value)
+function getMiddlewareJwtSecret(): string | null {
+  const secret = process.env.JWT_SECRET
+  if (secret && secret.length >= 32) return secret
+  if (process.env.NODE_ENV !== 'production') {
+    return secret || 'dev-only-jwt-secret-not-for-production'
+  }
+  return null
+}
+
+function verifyToken(token: string): JWTPayload | null {
+  const secret = getMiddlewareJwtSecret()
+  if (!secret) return null
+  try {
+    return jwt.verify(token, secret) as JWTPayload
+  } catch {
+    return null
+  }
 }
 
 const PUBLIC_API_ROUTES = new Set([
@@ -112,7 +128,9 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl
-  const hasValidAccess = hasSessionCookie(request)
+  const accessToken = request.cookies.get('access_token')?.value
+  const payload = accessToken ? verifyToken(accessToken) : null
+  const hasValidAccess = Boolean(payload)
 
   if (requiresApiAuth(pathname) && !hasValidAccess) {
     return NextResponse.json(
@@ -126,7 +144,7 @@ export async function middleware(request: NextRequest) {
       const login = new URL('/login', request.url)
       login.searchParams.set('from', pathname)
       const response = NextResponse.redirect(login)
-      if (hasValidAccess) {
+      if (accessToken) {
         response.cookies.delete('access_token')
         response.cookies.delete('refresh_token')
       }

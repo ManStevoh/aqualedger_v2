@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -218,12 +217,20 @@ export default function PlatformSettingsPage() {
   }
 
   return (
-    <DashboardPageLayout title="Platform settings" description="Maintenance mode, signup lock, and announcements" actions={
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Settings className="h-7 w-7" />
+            Platform settings
+          </h1>
+          <p className="text-muted-foreground">Maintenance mode, signup lock, and announcements</p>
+        </div>
         <Button className="gap-2" onClick={save} disabled={saving || loading}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Saving…' : 'Save changes'}
         </Button>
-      }>
+      </div>
 
       <AdminHubNav />
 
@@ -447,6 +454,6 @@ export default function PlatformSettingsPage() {
           </Card>
         </div>
       )}
-    </DashboardPageLayout>
+    </div>
   )
 }

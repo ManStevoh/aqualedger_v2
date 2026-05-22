@@ -99,13 +99,12 @@ async function assertV2PlatformGuards(request: NextRequest): Promise<void> {
   if (!token) return
 
   const jwt = await import('jsonwebtoken')
-  const { getJwtSecret } = await import('@/lib/jwt-config')
-  let resolved: string
-  try {
-    resolved = getJwtSecret()
-  } catch {
-    return
-  }
+  const secret = process.env.JWT_SECRET
+  const devFallback =
+    process.env.NODE_ENV !== 'production' ? 'dev-only-jwt-secret-not-for-production' : null
+  const resolved =
+    secret && secret.length >= 32 ? secret : devFallback
+  if (!resolved) return
 
   try {
     const payload = jwt.verify(token, resolved) as {
@@ -140,13 +139,10 @@ export function apiHandler(handler: RouteHandler, route?: string): RouteHandler 
         let tenantId = hdrs.get('x-tenant-id')
         if (!tenantId) {
           const token = request.cookies.get('access_token')?.value
-          const { getJwtSecret } = await import('@/lib/jwt-config')
-          let resolved: string | null = null
-          try {
-            resolved = getJwtSecret()
-          } catch {
-            resolved = null
-          }
+          const secret = process.env.JWT_SECRET
+          const devFallback =
+            process.env.NODE_ENV !== 'production' ? 'dev-only-jwt-secret-not-for-production' : null
+          const resolved = secret && secret.length >= 32 ? secret : devFallback
           if (token && resolved) {
             try {
               const jwt = await import('jsonwebtoken')

@@ -1,9 +1,9 @@
 'use client'
 
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Bell, Building2, Menu, Search } from 'lucide-react'
+import { Bell, Menu, Search } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -22,8 +22,6 @@ import { apiFetch } from '@/lib/client-api'
 import { useNotifications } from '@/lib/api'
 import { getNavForRole } from '@/lib/platform/modules'
 import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
-import { resolvePageContext } from '@/lib/platform/page-context'
-import { useTenantContext } from '@/lib/hooks/use-tenant-context'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/types'
 
@@ -38,11 +36,8 @@ const roleLabels: Record<UserRole, string> = {
 
 export function DashboardHeader() {
   const router = useRouter()
-  const pathname = usePathname() ?? '/dashboard'
   const searchRef = useRef<HTMLDivElement>(null)
   const [searchFocused, setSearchFocused] = useState(false)
-  const pageContext = useMemo(() => resolvePageContext(pathname), [pathname])
-  const tenant = useTenantContext()
   const {
     currentUser,
     currentRole,
@@ -133,12 +128,8 @@ export function DashboardHeader() {
       </Button>
 
       <div className="hidden min-w-0 md:block">
-        <p className="truncate text-sm font-semibold tracking-tight">{pageContext.title}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {pageContext.moduleLabel
-            ? `${pageContext.moduleLabel}${pageContext.subtitle ? ` · ${pageContext.subtitle}` : ''}`
-            : (pageContext.subtitle ?? 'Operations')}
-        </p>
+        <p className="text-sm font-semibold tracking-tight">Command Center</p>
+        <p className="text-xs text-muted-foreground">Real-time operations</p>
       </div>
 
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:justify-center lg:gap-3">
@@ -146,7 +137,7 @@ export function DashboardHeader() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search modules… (⌘K)"
+            placeholder="Search modules, pages…"
             value={navSearchQuery}
             onChange={(e) => setNavSearchQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
@@ -193,16 +184,6 @@ export function DashboardHeader() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {tenant.name && !tenant.loading && (
-          <Badge
-            variant="outline"
-            className="hidden max-w-[140px] truncate rounded-lg font-normal lg:inline-flex"
-          >
-            <Building2 className="mr-1 h-3 w-3 shrink-0" />
-            {tenant.name}
-          </Badge>
-        )}
-
         <Badge variant="secondary" className="hidden rounded-lg font-medium sm:inline-flex">
           {roleLabels[currentRole]}
         </Badge>
@@ -233,32 +214,18 @@ export function DashboardHeader() {
                 <p className="max-w-[120px] truncate text-sm font-medium leading-none">
                   {currentUser?.name || 'Account'}
                 </p>
-                <p className="mt-0.5 max-w-[120px] truncate text-xs text-muted-foreground">
-                  {tenant.name || roleLabels[currentRole]}
-                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{roleLabels[currentRole]}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-xl">
-            <DropdownMenuLabel>
-              {tenant.name ? (
-                <span className="block truncate font-normal text-muted-foreground">
-                  {tenant.name}
-                  {tenant.plan ? ` · ${tenant.plan}` : ''}
-                </span>
-              ) : (
-                'My account'
-              )}
-            </DropdownMenuLabel>
+            <DropdownMenuLabel>My account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push('/dashboard/settings/security')}>
               Security
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/dashboard/organization')}>
-              Organization
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -1,11 +1,9 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/dashboard/status-badge'
 import { StatCard } from '@/components/dashboard/stat-card'
 import Link from 'next/link'
 import { Warehouse, Thermometer, AlertTriangle, TrendingUp, Plus, Layers } from 'lucide-react'
@@ -134,11 +132,40 @@ export default function StoragePage() {
     utilization: Math.round((f.currentStock / f.capacity) * 100),
   }))
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'operational':
+        return 'bg-green-100 text-green-800'
+      case 'maintenance':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'offline':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   return (
-    <DashboardPageLayout
-      title="Storage Facilities"
-      description="Monitor cold storage and inventory"
-    >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Storage Facilities</h1>
+          <p className="text-muted-foreground">Monitor cold storage and inventory</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/dashboard/coldchain/zones">
+              <Layers className="w-4 h-4" />
+              Manage zones
+            </Link>
+          </Button>
+          <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+            <Plus className="w-4 h-4" />
+            Add Facility
+          </Button>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Operational Facilities"
@@ -199,7 +226,9 @@ export default function StoragePage() {
                 <div key={facility.id} className="p-3 bg-muted rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-medium">{facility.name}</p>
-                    <StatusBadge status={facility.status} />
+                    <Badge variant={facility.status === 'operational' ? 'default' : 'secondary'}>
+                      {facility.status}
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-1">
@@ -251,7 +280,9 @@ export default function StoragePage() {
                       <td className="py-3 px-4">{facility.temperature}°C</td>
                       <td className="py-3 px-4">{facility.humidity}%</td>
                       <td className="py-3 px-4">
-                        <StatusBadge status={facility.status} />
+                        <Badge className={getStatusColor(facility.status)}>
+                          {facility.status.charAt(0).toUpperCase() + facility.status.slice(1)}
+                        </Badge>
                       </td>
                       <td className="py-3 px-4">
                         <Button variant="ghost" size="sm" asChild>
@@ -317,6 +348,6 @@ export default function StoragePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

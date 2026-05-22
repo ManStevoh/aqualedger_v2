@@ -1,10 +1,9 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/dashboard/status-badge'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -127,6 +126,27 @@ export default function UsersPage() {
     return icons[role] || <Users className="h-4 w-4" />
   }
 
+  const getRoleBadgeColor = (role: string) => {
+    const colors: Record<string, string> = {
+      super_admin: 'bg-purple-100 text-purple-800',
+      investor: 'bg-green-100 text-green-800',
+      boat_owner: 'bg-blue-100 text-blue-800',
+      fisherman: 'bg-cyan-100 text-cyan-800',
+      fish_buyer: 'bg-orange-100 text-orange-800',
+      bmu_official: 'bg-yellow-100 text-yellow-800'
+    }
+    return colors[role] || 'bg-muted'
+  }
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      active: 'bg-green-100 text-green-800',
+      inactive: 'bg-gray-100 text-gray-800',
+      suspended: 'bg-red-100 text-red-800'
+    }
+    return colors[status] || 'bg-muted'
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -182,10 +202,20 @@ export default function UsersPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="User Management"
-      description="Manage all users across the platform"
-    >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+          <p className="text-muted-foreground">
+            Manage all users across the platform
+          </p>
+        </div>
+        <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add User
+        </Button>
+      </div>
+
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
@@ -279,15 +309,19 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="flex items-center gap-1">
-                          {getRoleIcon(user.role)}
-                          <StatusBadge status={user.role} label={user.role.replace('_', ' ')} />
-                        </span>
+                        <Badge className={getRoleBadgeColor(user.role)}>
+                          <span className="flex items-center gap-1">
+                            {getRoleIcon(user.role)}
+                            {user.role.replace('_', ' ')}
+                          </span>
+                        </Badge>
                       </td>
                       <td className="py-3 px-4">{user.region || '-'}</td>
                       <td className="py-3 px-4">{user.phone}</td>
                       <td className="py-3 px-4">
-                        <StatusBadge status={user.status} />
+                        <Badge className={getStatusColor(user.status)}>
+                          {user.status}
+                        </Badge>
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -407,6 +441,6 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -202,10 +201,39 @@ export default function AccountingReportsPage() {
   )
 
   return (
-    <DashboardPageLayout
-      title="Financial Reports"
-      description="IFRS-style reports derived from general ledger data"
-    >
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Financial Reports</h1>
+        <p className="text-muted-foreground">IFRS-style reports derived from general ledger data</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="GL Accounts"
+          value={summary?.accountCount ?? 0}
+          icon={<BookOpen className="h-4 w-4 text-muted-foreground" />}
+          loading={loading}
+        />
+        <StatCard
+          title="Posted Entries"
+          value={summary?.entryCount ?? 0}
+          icon={<Scale className="h-4 w-4 text-muted-foreground" />}
+          loading={loading}
+        />
+        <StatCard
+          title="Total Revenue"
+          value={`KES ${(summary?.revenue ?? 0).toLocaleString()}`}
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+          loading={loading}
+        />
+        <StatCard
+          title="Net Income"
+          value={`KES ${(summary?.netIncome ?? 0).toLocaleString()}`}
+          icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
+          loading={loading}
+        />
+      </div>
+
       {fxSnippet && (
         <Card>
           <CardHeader className="pb-2">
@@ -586,6 +614,6 @@ export default function AccountingReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </DashboardPageLayout>
+    </div>
   )
 }

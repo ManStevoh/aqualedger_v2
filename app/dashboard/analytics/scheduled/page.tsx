@@ -1,13 +1,11 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/dashboard/status-badge'
 import {
   Dialog,
   DialogContent,
@@ -152,10 +150,18 @@ export default function ScheduledReportsPage() {
   const activeCount = reports.filter((r) => r.active).length
 
   return (
-    <DashboardPageLayout
-      title="Scheduled Reports"
-      description="Automated KPI and traceability exports"
-    >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Scheduled Reports</h1>
+          <p className="text-muted-foreground">Automated KPI and traceability exports</p>
+        </div>
+        <Button className="gap-2" onClick={() => setAddOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Schedule Report
+        </Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total schedules" value={reports.length} icon={<CalendarClock className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Active" value={activeCount} icon={<Mail className="h-4 w-4 text-muted-foreground" />} loading={loading} />
@@ -180,10 +186,9 @@ export default function ScheduledReportsPage() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{report.report_type}</p>
                       <Badge variant="outline">{report.frequency}</Badge>
-                      <StatusBadge
-                        status={report.active ? 'active' : 'inactive'}
-                        label={report.active ? 'Active' : 'Paused'}
-                      />
+                      <Badge className={report.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        {report.active ? 'Active' : 'Paused'}
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
                       {emails.join(', ') || 'No recipients'}
@@ -283,6 +288,6 @@ export default function ScheduledReportsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

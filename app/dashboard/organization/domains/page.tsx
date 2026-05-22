@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -67,10 +66,8 @@ export default function CustomDomainsPage() {
   const isVerified = (d: DomainRow) => d.verified === true || d.verified === 1
 
   return (
-    <DashboardPageLayout
-      title="Custom domains"
-      description="Map a branded hostname to your tenant storefront with DNS verification"
-    >
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">Custom domains</h1>
       <Card>
         <CardHeader><CardTitle>Add domain</CardTitle></CardHeader>
         <CardContent className="flex gap-4 items-end">
@@ -126,6 +123,6 @@ export default function CustomDomainsPage() {
           ))}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

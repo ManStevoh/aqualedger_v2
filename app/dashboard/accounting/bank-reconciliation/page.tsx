@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -65,8 +64,14 @@ export default function BankReconciliationPage() {
   }
 
   return (
-    <DashboardPageLayout title="Bank Reconciliation" description="Match bank statements to ledger cash accounts">
-
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Scale className="h-8 w-8" />
+          Bank Reconciliation
+        </h1>
+        <p className="text-muted-foreground">Match bank statements to ledger cash accounts</p>
+      </div>
 
       <Card>
         <CardHeader><CardTitle>New statement</CardTitle></CardHeader>
@@ -92,6 +97,6 @@ export default function BankReconciliationPage() {
           {!loading && items.length === 0 && <p className="text-muted-foreground py-4">No reconciliations yet</p>}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

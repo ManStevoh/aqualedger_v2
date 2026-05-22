@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -212,12 +211,20 @@ function PlatformUsersContent() {
   }
 
   return (
-    <DashboardPageLayout title="Platform users" description="Cross-tenant directory with support impersonation" actions={
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Users className="h-7 w-7" />
+            Platform users
+          </h1>
+          <p className="text-muted-foreground">Cross-tenant directory with support impersonation</p>
+        </div>
         <Button className="gap-2" onClick={() => setInviteOpen(true)}>
           <UserPlus className="h-4 w-4" />
           Invite user
         </Button>
-      }>
+      </div>
 
       <AdminHubNav />
 
@@ -397,7 +404,7 @@ function PlatformUsersContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }
 

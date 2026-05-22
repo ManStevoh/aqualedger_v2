@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -129,15 +128,47 @@ export default function CatchQuotasPage() {
     new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 }).format(n)
 
   return (
-    <DashboardPageLayout
-      title="Catch quotas"
-      description="Regulatory allocations vs logged landings — avoid overfishing penalties"
-    >
-      <DashboardPageLayout
-      title="Catch quotas"
-      description="Regulatory allocations vs logged landings — avoid overfishing penalties"
-    >
-      <CardDescription>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Catch quotas</h1>
+          <p className="text-muted-foreground">
+            Regulatory allocations vs logged landings — avoid overfishing penalties
+          </p>
+        </div>
+        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Register quota
+        </Button>
+      </div>
+
+      <StatCardGrid>
+        <StatCard title="Active quotas" value={summary.active} icon={<Scale className="h-4 w-4" />} loading={loading} />
+        <StatCard title="At risk (≥85%)" value={summary.atRisk} icon={<AlertTriangle className="h-4 w-4" />} loading={loading} />
+        <StatCard title="Over limit" value={summary.overLimit} icon={<AlertTriangle className="h-4 w-4 text-destructive" />} loading={loading} />
+        <StatCard title="Used / quota (kg)" value={`${fmt(summary.totalUsedKg)} / ${fmt(summary.totalQuotaKg)}`} loading={loading} />
+      </StatCardGrid>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {loading ? (
+          <p className="text-muted-foreground col-span-2">Loading…</p>
+        ) : quotas.length === 0 ? (
+          <Card className="col-span-2">
+            <CardContent className="py-12 text-center text-muted-foreground">
+              No quotas — register your EEZ or species allocations
+            </CardContent>
+          </Card>
+        ) : (
+          quotas.map((q) => (
+            <Card key={q.id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-lg">{q.name}</CardTitle>
+                  <Badge variant={q.utilization_pct >= 100 ? 'destructive' : q.utilization_pct >= 85 ? 'secondary' : 'outline'}>
+                    {q.utilization_pct}%
+                  </Badge>
+                </div>
+                <CardDescription>
                   {q.species_name || 'All species'}
                   {q.fishing_zone ? ` · ${q.fishing_zone}` : ''}
                   <br />
@@ -224,6 +255,6 @@ export default function CatchQuotasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

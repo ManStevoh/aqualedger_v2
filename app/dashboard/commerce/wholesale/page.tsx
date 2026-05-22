@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -52,10 +51,8 @@ export default function WholesalePricingPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="B2B wholesale pricing"
-      description="Volume tiers by customer segment and minimum order quantity"
-    >
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold">B2B wholesale pricing</h1>
       <Card>
         <CardHeader><CardTitle>Add / update tier</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -98,6 +95,6 @@ export default function WholesalePricingPage() {
           ))}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

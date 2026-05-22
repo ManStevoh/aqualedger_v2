@@ -2,73 +2,65 @@
 
 **Maritime commerce & fisheries ERP** — multi-tenant SaaS for fishing operations, cold chain, marketplace, and finance.
 
-> See [docs/PLATFORM_VISION.md](docs/PLATFORM_VISION.md) for the enterprise blueprint and [docs/MIGRATION_ROADMAP.md](docs/MIGRATION_ROADMAP.md) for Phase 5 (microservices, Flutter, etc.).
+> Evolved from AquaLedger (fisheries operating system). See [docs/PLATFORM_VISION.md](docs/PLATFORM_VISION.md) for the full enterprise blueprint.
 
 ## What it is today
 
 | Layer | Stack |
 |-------|--------|
-| Frontend | Next.js 16, React 19, Tailwind 4 |
+| Frontend | Next.js 16, React 19, Tailwind 4, shadcn/ui |
 | API | REST `/api/v2/*` (MySQL-backed) |
-| Database | MySQL `aquaerp_operating` |
-| Auth | JWT, MFA (TOTP), Google OAuth, super-admin platform control |
+| Database | MySQL `aqualedger32` |
+| Auth | JWT + refresh tokens, RBAC |
 
-**MVP scope:** Full monolith ERP (120+ API routes, 60+ dashboard pages). Not a separate NestJS/Kafka deployment yet.
+**Not yet:** NestJS microservices, PostgreSQL, Flutter apps, full double-entry GL — see [docs/MIGRATION_ROADMAP.md](docs/MIGRATION_ROADMAP.md).
 
 ## Quick start
 
 ```bash
-cp .env.example .env
-# Edit DB_* and JWT_SECRET (32+ chars)
+cp .env.example .env.local
+# Set DB_NAME=aqualedger32, JWT_SECRET (32+ chars), DB_PASSWORD
 
-node scripts/setup-fresh-database.mjs
-# Or existing DB: node scripts/run-migrations.mjs
+mysql -u root -p aqualedger32 < database/schema.sql
+mysql -u root -p aqualedger32 < database/migrations/20260516_audit_logs.sql
+mysql -u root -p aqualedger32 < database/migrations/20260520_multi_tenant_foundation.sql
 
 npm install
-npm run setup:cron
 npm run dev
 ```
 
-Open http://localhost:3000 — sign in and use `/dashboard`.
+Open http://localhost:3000
 
-## Verify & deploy
-
-```bash
-npm run db:verify
-npm run typecheck
-npm test
-npm run smoke
-npm run env:check
-npm run predeploy          # full production gate
-```
+## Documentation
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production env, build, cron, routing |
-| [docs/PILOT_GO_LIVE.md](docs/PILOT_GO_LIVE.md) | 7-day pilot tenant checklist |
-| [SYSTEM_STATUS.md](SYSTEM_STATUS.md) | Feature status & platform admin |
-| [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md) | Migrations & schema |
-| [docs/MPESA_SANDBOX.md](docs/MPESA_SANDBOX.md) | Daraja STK setup |
+| [docs/PLATFORM_VISION.md](docs/PLATFORM_VISION.md) | Mission, modules, differentiation |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical phases, multi-tenant model |
+| [docs/MIGRATION_ROADMAP.md](docs/MIGRATION_ROADMAP.md) | Week-by-week transformation plan |
+| [docs/MODULE_MAP.md](docs/MODULE_MAP.md) | Current features → ERP modules |
+| [docs/ROLES.md](docs/ROLES.md) | Role model evolution |
+| [SYSTEM_STATUS.md](SYSTEM_STATUS.md) | API list & operational status |
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Development server |
-| `npm run predeploy` | typecheck + test + db:verify + build |
-| `npm run smoke` | Health & cron probes |
-| `npm run env:check` | JWT, DB, URL, integrations readiness |
-| `npm run setup:cron` | Generate `CRON_SECRET` in `.env` |
-| `npm run exports:process` | Process GDPR export queue |
-| `npm run mpesa:check` | M-Pesa Daraja credential test |
-
-## Environment (minimum)
-
-```env
-DB_NAME=aquaerp_operating
-JWT_SECRET=<min 32 characters>
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-CRON_SECRET=<from npm run setup:cron>
+```bash
+npm run dev          # Development server
+npm run build        # Production build
+npm run typecheck    # TypeScript
+npm test             # Vitest unit tests
 ```
 
-Subdomain tenants: `PLATFORM_HOST=localhost` (dev) or your apex domain (prod).
+## Environment
+
+```env
+DB_NAME=aqualedger32
+JWT_SECRET=<min 32 characters>
+NEXT_PUBLIC_APP_NAME=AquaERP
+NEXT_PUBLIC_APP_TAGLINE=Maritime commerce & fisheries ERP
+DEFAULT_TENANT_ID=tenant-default-0001
+```
+
+## License
+
+Private — enterprise fisheries platform.

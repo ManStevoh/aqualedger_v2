@@ -20,7 +20,6 @@ import { Sparkles, TrendingUp, RefreshCw, ShieldAlert, DollarSign, Send, Message
 import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/dashboard/data-table'
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 
 interface ForecastPoint {
   date: string
@@ -286,14 +285,21 @@ export default function AiInsightsPage() {
       : 0
 
   return (
-    <DashboardPageLayout
-      title="Insights & forecasts"
-      description="Predictive models, executive briefs, and data-grounded assistant"
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={aiEnabled ? 'default' : 'secondary'}>
-            {aiEnabled ? `LLM: ${aiModel}` : 'Rules + statistics (set OPENAI_API_KEY for LLM)'}
-          </Badge>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Sparkles className="h-8 w-8" />
+            AI Command Center
+          </h1>
+          <p className="text-muted-foreground">
+            Predictive models, executive briefs, and data-grounded assistant —{' '}
+            <Badge variant={aiEnabled ? 'default' : 'secondary'}>
+              {aiEnabled ? `LLM: ${aiModel}` : 'Rules + statistics (set OPENAI_API_KEY for LLM)'}
+            </Badge>
+          </p>
+        </div>
+        <div className="flex gap-2">
           <Button
             variant="outline"
             className="gap-2"
@@ -311,8 +317,8 @@ export default function AiInsightsPage() {
             {automationBusy ? 'Running…' : 'Run full AI automation'}
           </Button>
         </div>
-      }
-    >
+      </div>
+
       <Card id="brief">
         <CardHeader>
           <CardTitle>AI Business Brief</CardTitle>
@@ -627,6 +633,6 @@ export default function AiInsightsPage() {
           },
         ]}
       />
-    </DashboardPageLayout>
+    </div>
   )
 }

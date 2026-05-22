@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -231,10 +230,18 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Integrations"
-      description="Connections and outbound webhook endpoints"
-    >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
+          <p className="text-muted-foreground">Connections and outbound webhook endpoints</p>
+        </div>
+        <Button variant="outline" className="gap-2" onClick={fetchAll}>
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -470,6 +477,6 @@ export default function IntegrationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

@@ -5,12 +5,25 @@
  *
  * Usage: node scripts/process-exports.mjs [--limit=10]
  */
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { loadEnv } from './lib/load-env.mjs'
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
-loadEnv(root)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const root = path.join(__dirname, '..')
+
+function loadEnv() {
+  for (const file of ['.env', '.env.local']) {
+    const p = path.join(root, file)
+    if (!fs.existsSync(p)) continue
+    for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+      const m = line.match(/^([^#=]+)=(.*)$/)
+      if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '')
+    }
+  }
+}
+
+loadEnv()
 
 const limitArg = process.argv.find((a) => a.startsWith('--limit='))
 const limit = limitArg ? Number(limitArg.split('=')[1]) : 10
@@ -28,10 +41,13 @@ if (!secret) {
 
 const url = `${baseUrl.replace(/\/$/, '')}/api/v2/platform/exports/process`
 
-const cronUrl = `${url}?limit=${limit}`
-const res = await fetch(cronUrl, {
-  method: 'GET',
-  headers: { Authorization: `Bearer ${secret}` },
+const res = await fetch(url, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-cron-secret': secret,
+  },
+  body: JSON.stringify({ limit }),
 })
 
 const json = await res.json().catch(() => ({}))

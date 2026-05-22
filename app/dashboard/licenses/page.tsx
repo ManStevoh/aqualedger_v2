@@ -1,11 +1,9 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -112,6 +110,16 @@ export default function LicensesPage() {
     }
   }
 
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      valid: 'bg-green-100 text-green-800',
+      expired: 'bg-red-100 text-red-800',
+      suspended: 'bg-orange-100 text-orange-800',
+      revoked: 'bg-red-100 text-red-800'
+    }
+    return colors[status] || 'bg-muted'
+  }
+
   const getStatusIcon = (status: string) => {
     if (status === 'valid') return <CheckCircle2 className="h-4 w-4 text-green-600" />
     if (status === 'expired') return <AlertCircle className="h-4 w-4 text-red-600" />
@@ -176,10 +184,20 @@ export default function LicensesPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="License Management"
-      description="Manage fishing, boat, and trading licenses"
-    >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">License Management</h1>
+          <p className="text-muted-foreground">
+            Manage fishing, boat, and trading licenses
+          </p>
+        </div>
+        <Button onClick={() => setShowIssueDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Issue New License
+        </Button>
+      </div>
+
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
@@ -289,16 +307,20 @@ export default function LicensesPage() {
                           <div className="flex items-center gap-2">
                             <span>{license.expiryDate}</span>
                             {license.status === 'valid' && daysLeft <= 30 && (
-                              <StatusBadge status="warning" label={`${daysLeft}d left`} />
+                              <Badge variant="outline" className="text-orange-600 border-orange-200">
+                                {daysLeft}d left
+                              </Badge>
                             )}
                           </div>
                         </td>
                         <td className="py-3 px-4">KES {license.fee.toLocaleString()}</td>
                         <td className="py-3 px-4">
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(license.status)}
-                            <StatusBadge status={license.status} />
-                          </span>
+                          <Badge className={getStatusColor(license.status)}>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(license.status)}
+                              {license.status.charAt(0).toUpperCase() + license.status.slice(1)}
+                            </span>
+                          </Badge>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -344,7 +366,7 @@ export default function LicensesPage() {
               {licenses
                 .filter(l => l.status === 'valid' && getDaysUntilExpiry(l.expiryDate) <= 30)
                 .map((license) => (
-                  <div key={license.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div key={license.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <div>
                       <div className="font-medium">{license.holderName}</div>
                       <div className="text-sm text-muted-foreground">
@@ -352,10 +374,9 @@ export default function LicensesPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <StatusBadge
-                        status="warning"
-                        label={`${getDaysUntilExpiry(license.expiryDate)} days left`}
-                      />
+                      <Badge className="bg-orange-100 text-orange-800">
+                        {getDaysUntilExpiry(license.expiryDate)} days left
+                      </Badge>
                       <Button variant="link" size="sm" className="mt-1">
                         Send Reminder
                       </Button>
@@ -402,6 +423,6 @@ export default function LicensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

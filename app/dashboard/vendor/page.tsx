@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,8 +36,12 @@ export default function VendorDashboardPage() {
   }, [])
 
   return (
-    <DashboardPageLayout title="Vendor dashboard" description="Manage listings, orders, and payouts in one place.">
-
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold flex items-center gap-2">
+        <Store className="h-7 w-7" />
+        Vendor dashboard
+      </h1>
+      <p className="text-muted-foreground">Manage listings, orders, and payouts in one place.</p>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -64,6 +67,7 @@ export default function VendorDashboardPage() {
         <Button asChild variant="outline"><Link href="/dashboard/orders">Orders</Link></Button>
         <Button asChild variant="outline"><Link href="/dashboard/commerce/payouts"><Wallet className="h-4 w-4 mr-2" />Payouts</Link></Button>
         <Button asChild variant="outline"><Link href="/dashboard/commerce/reviews">Reviews</Link></Button>
-    </DashboardPageLayout>
+      </div>
+    </div>
   )
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -61,8 +60,11 @@ export default function TaxReturnsPage() {
   }
 
   return (
-    <DashboardPageLayout title="Tax Returns" description="VAT, PAYE, withholding, and corporate tax tracking">
-
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2"><FileText className="h-8 w-8" />Tax Returns</h1>
+        <p className="text-muted-foreground">VAT, PAYE, withholding, and corporate tax tracking</p>
+      </div>
 
       <Card>
         <CardHeader><CardTitle>New return</CardTitle></CardHeader>
@@ -103,6 +105,6 @@ export default function TaxReturnsPage() {
           ))}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

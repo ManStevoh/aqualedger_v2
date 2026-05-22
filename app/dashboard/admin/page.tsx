@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -146,10 +145,47 @@ export default function AdminPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Platform Command Center"
-      description="Super-admin overview — tenants, users, and platform health"
-    >
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Platform Command Center</h1>
+        <p className="text-muted-foreground">
+          Super-admin overview — tenants, users, and platform health
+        </p>
+      </div>
+
+      <AdminHubNav />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Tenants"
+          value={String(totalTenants)}
+          icon={<Building2 className="h-4 w-4" />}
+          description="Registered organizations"
+          loading={overviewLoading}
+        />
+        <StatCard
+          title="Active Tenants"
+          value={String(overview?.activeTenants ?? '—')}
+          icon={<Activity className="h-4 w-4" />}
+          description="Currently active"
+          loading={overviewLoading}
+        />
+        <StatCard
+          title="Total Users"
+          value={String(totalUsers)}
+          icon={<Users className="h-4 w-4" />}
+          description="Across all tenants"
+          loading={overviewLoading}
+        />
+        <StatCard
+          title="Suspended Tenants"
+          value={String(suspendedTenants)}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          description="Requires review"
+          loading={overviewLoading}
+        />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {QUICK_ACTIONS.map(({ href, label, description, icon: Icon }) => (
           <Link key={href} href={href}>
@@ -275,6 +311,5 @@ export default function AdminPage() {
         Active users: <span className="font-medium text-foreground">{activeUsers}</span>
       </p>
     </div>
-      </DashboardPageLayout>
   )
 }

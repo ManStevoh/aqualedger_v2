@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -188,10 +187,39 @@ export default function AnalyticsPage() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
   return (
-    <DashboardPageLayout
-      title="Financial Analytics"
-      description="Comprehensive financial and operational insights"
-    >
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Financial Analytics</h1>
+        <p className="text-muted-foreground">Comprehensive financial and operational insights</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatCard
+          title="Total Revenue"
+          value={`KES ${revenue.toLocaleString()}`}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 12, isPositive: true }}
+        />
+        <StatCard
+          title="Total Expenses"
+          value={`KES ${expenses.toLocaleString()}`}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 8, isPositive: false }}
+        />
+        <StatCard
+          title="Net Profit"
+          value={`KES ${profit.toLocaleString()}`}
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 15, isPositive: true }}
+        />
+        <StatCard
+          title="Profit Margin"
+          value={`${profitMargin}%`}
+          icon={<PieChartIcon className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 2, isPositive: true }}
+        />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <StatCard title="Fleet boats" value={fleetBoats} icon={<Ship className="h-4 w-4 text-muted-foreground" />} />
         <StatCard title="Active fleet" value={activeFleet} icon={<Ship className="h-4 w-4 text-muted-foreground" />} />
@@ -445,6 +473,6 @@ export default function AnalyticsPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </DashboardPageLayout>
+    </div>
   )
 }

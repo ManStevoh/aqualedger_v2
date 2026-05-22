@@ -1,11 +1,12 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Anchor, Ship, Clock, Fish, DollarSign, Fuel, Plus, Play, Square, Eye } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -24,10 +25,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
-import { StatusBadge } from '@/components/dashboard/status-badge'
 import { useTrips, useBoats, createTrip, completeTrip } from '@/lib/api'
 import type { FishingTrip, Boat } from '@/lib/types'
 import { toast } from 'sonner'
+
+const statusColors: Record<string, string> = {
+  planned: 'bg-blue-100 text-blue-700 border-blue-200',
+  ongoing: 'bg-green-100 text-green-700 border-green-200',
+  completed: 'bg-gray-100 text-gray-700 border-gray-200',
+  cancelled: 'bg-red-100 text-red-700 border-red-200',
+}
 
 function TripsPageContent() {
   const searchParams = useSearchParams()
@@ -104,16 +111,20 @@ function TripsPageContent() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Fishing Trips"
-      description="Manage and track fishing operations"
-      actions={
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Fishing Trips</h1>
+          <p className="text-muted-foreground">
+            Manage and track fishing operations
+          </p>
+        </div>
         <Button onClick={() => setShowNewTripDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Trip
         </Button>
-      }
-    >
+      </div>
+
       <StatCardGrid>
         <StatCard
           title="Ongoing Trips"
@@ -185,43 +196,28 @@ function TripsPageContent() {
       </Tabs>
 
       <Dialog open={!!viewTrip} onOpenChange={(open) => !open && setViewTrip(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>{viewTrip?.boatName ?? 'Trip details'}</DialogTitle>
+            <DialogTitle>{viewTrip?.boatName}</DialogTitle>
             <DialogDescription>{viewTrip?.fishingZone}</DialogDescription>
           </DialogHeader>
           {viewTrip && (
-            <div className="grid gap-3 py-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">Captain</span>
-                <p className="font-medium">{viewTrip.captainName}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Catch</span>
-                <p className="font-medium">{viewTrip.totalCatch} kg</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Revenue</span>
-                <p className="font-medium">KES {viewTrip.totalRevenue.toLocaleString()}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Fuel</span>
-                <p className="font-medium">{viewTrip.fuelUsed} L</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Started</span>
-                <p className="font-medium">{new Date(viewTrip.startTime).toLocaleString()}</p>
-              </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-muted-foreground">Status</span><p className="font-medium">{viewTrip.status}</p></div>
+              <div><span className="text-muted-foreground">Captain</span><p className="font-medium">{viewTrip.captainName}</p></div>
+              <div><span className="text-muted-foreground">Catch</span><p className="font-medium">{viewTrip.totalCatch} kg</p></div>
+              <div><span className="text-muted-foreground">Revenue</span><p className="font-medium">KES {viewTrip.totalRevenue.toLocaleString()}</p></div>
+              <div><span className="text-muted-foreground">Fuel</span><p className="font-medium">{viewTrip.fuelUsed} L</p></div>
+              <div><span className="text-muted-foreground">Started</span><p className="font-medium">{new Date(viewTrip.startTime).toLocaleString()}</p></div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewTrip(null)}>
-              Close
-            </Button>
+            <Button variant="outline" onClick={() => setViewTrip(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* New Trip Dialog */}
       <Dialog open={showNewTripDialog} onOpenChange={setShowNewTripDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -284,7 +280,7 @@ function TripsPageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }
 
@@ -335,29 +331,21 @@ function TripCard({
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                trip.status === 'ongoing'
-                  ? 'bg-green-100'
-                  : trip.status === 'completed'
-                    ? 'bg-gray-100'
-                    : 'bg-blue-100'
-              }`}
-            >
-              <Anchor
-                className={`h-6 w-6 ${
-                  trip.status === 'ongoing'
-                    ? 'text-green-600'
-                    : trip.status === 'completed'
-                      ? 'text-gray-600'
-                      : 'text-blue-600'
-                }`}
-              />
+            <div className={`flex h-12 w-12 items-center justify-center rounded-full ${
+              trip.status === 'ongoing' ? 'bg-green-100' : 
+              trip.status === 'completed' ? 'bg-gray-100' : 'bg-blue-100'
+            }`}>
+              <Anchor className={`h-6 w-6 ${
+                trip.status === 'ongoing' ? 'text-green-600' : 
+                trip.status === 'completed' ? 'text-gray-600' : 'text-blue-600'
+              }`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{trip.boatName}</h3>
-                <StatusBadge status={trip.status} />
+                <Badge variant="outline" className={statusColors[trip.status]}>
+                  {trip.status}
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground">{trip.fishingZone}</p>
               <p className="text-xs text-muted-foreground mt-1">

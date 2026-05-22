@@ -1,12 +1,11 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { StatusBadge } from '@/components/dashboard/status-badge'
+import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
@@ -138,6 +137,19 @@ export default function MarketplacePage() {
   const totalValue = items.reduce((sum, item) => sum + item.availableQuantity * item.pricePerKg, 0)
   const avgPrice = totalListings > 0 ? totalValue / totalListings : 0
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-100 text-green-800'
+      case 'sold':
+        return 'bg-blue-100 text-blue-800'
+      case 'reserved':
+        return 'bg-yellow-100 text-yellow-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   const handleCreateListing = async () => {
     if (!currentUser) {
       toast.error('Sign in required')
@@ -257,10 +269,25 @@ export default function MarketplacePage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Fish Marketplace"
-      description="Buy and sell fish — listings from the database"
-    >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Fish Marketplace</h1>
+          <p className="text-muted-foreground">Buy and sell fish — listings from the database</p>
+        </div>
+        <Button
+          className="gap-2"
+          onClick={() => setShowListDialog(true)}
+          disabled={
+            !currentUser ||
+            !['boat_owner', 'fisherman', 'super_admin', 'investor'].includes(currentUser.role)
+          }
+        >
+          <Plus className="w-4 h-4" />
+          List catch
+        </Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active listings"
@@ -397,7 +424,7 @@ export default function MarketplacePage() {
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">{item.landingSite || item.location}</td>
                       <td className="py-3 px-4">
-                        <StatusBadge status={item.status} />
+                        <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-1">
@@ -558,6 +585,6 @@ export default function MarketplacePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

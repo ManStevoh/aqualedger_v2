@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -69,8 +68,14 @@ export default function AuditLogsPage() {
     log.tenant_name || log.tenant_slug || log.tenant_id?.slice(0, 8) || '—'
 
   return (
-    <DashboardPageLayout title="Audit trail" description="OWASP-compliant activity log · GDPR accountability">
-
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Shield className="h-7 w-7" />
+          Audit trail
+        </h1>
+        <p className="text-muted-foreground">OWASP-compliant activity log · GDPR accountability</p>
+      </div>
 
       {isSuperAdmin && <AdminHubNav />}
 
@@ -132,6 +137,6 @@ export default function AuditLogsPage() {
           )}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

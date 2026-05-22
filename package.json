@@ -14,10 +14,8 @@
     "mpesa:check": "node scripts/mpesa-sandbox-check.mjs",
     "exports:process": "node scripts/process-exports.mjs",
     "smoke": "node scripts/smoke-platform.mjs",
-    "test:auth": "node scripts/test-auth-flow.mjs",
     "setup:cron": "node scripts/ensure-cron-secret.mjs",
-    "predeploy": "node scripts/predeploy.mjs",
-    "env:check": "node scripts/env-check.mjs"
+    "predeploy": "node scripts/predeploy.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

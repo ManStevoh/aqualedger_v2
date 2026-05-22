@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -306,7 +305,16 @@ export default function PlatformTenantsPage() {
   }
 
   return (
-    <DashboardPageLayout title="Tenants" description="Provision, manage plans, and export tenant data" actions={<><Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Building2 className="h-7 w-7" />
+            Tenants
+          </h1>
+          <p className="text-muted-foreground">Provision, manage plans, and export tenant data</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -324,8 +332,8 @@ export default function PlatformTenantsPage() {
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
                 <Label htmlFor="org">Organization name</Label>
-                <Input id="org" value={orgName} onChange={(e) => setOrgName(e.target.value)} /></>}>
-
+                <Input id="org" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Owner email</Label>
                 <Input id="email" type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} />
@@ -561,6 +569,6 @@ export default function PlatformTenantsPage() {
           )}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }

@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -204,10 +203,17 @@ export default function ReportsHubPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Reports & delivery"
-      description="ISO 8601 periods · UTF-8 CSV (Excel) · HTML email · HMAC webhooks · GDPR share links · IFRS financials · EU traceability"
-      actions={
+    <div className="space-y-8 p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <BarChart3 className="h-7 w-7" />
+            Reports & delivery
+          </h1>
+          <p className="text-muted-foreground mt-1 max-w-2xl">
+            ISO 8601 periods · UTF-8 CSV (Excel) · HTML email · HMAC webhooks · GDPR share links · IFRS financials · EU traceability
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href="/dashboard/communications">Settings</Link>
@@ -226,8 +232,8 @@ export default function ReportsHubPage() {
             Send report
           </Button>
         </div>
-      }
-    >
+      </div>
+
       {lastShareUrl && (
         <Card className="border-sky-200 bg-sky-50/50 dark:bg-sky-950/20">
           <CardContent className="pt-4 flex flex-wrap items-center gap-3">
@@ -404,6 +410,6 @@ export default function ReportsHubPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }
