@@ -64,7 +64,6 @@ export default function VendorDashboardPage() {
         <Button asChild variant="outline"><Link href="/dashboard/orders">Orders</Link></Button>
         <Button asChild variant="outline"><Link href="/dashboard/commerce/payouts"><Wallet className="h-4 w-4 mr-2" />Payouts</Link></Button>
         <Button asChild variant="outline"><Link href="/dashboard/commerce/reviews">Reviews</Link></Button>
-      </div>
     </DashboardPageLayout>
   )
 }

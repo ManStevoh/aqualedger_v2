@@ -1,9 +1,10 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -132,27 +133,17 @@ export default function LandingSitesPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-red-100 text-red-800',
-    }
-    return colors[status] || 'bg-muted'
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Landing sites</h1>
-          <p className="text-muted-foreground">Data from `landing_sites` (active only)</p>
-        </div>
+    <DashboardPageLayout
+      title="Landing sites"
+      description="Data from landing_sites (active only)"
+      actions={
         <Button onClick={() => setDialogOpen(true)} disabled={!canCreate}>
           <Plus className="h-4 w-4 mr-2" />
           Add landing site
         </Button>
-      </div>
-
+      }
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Sites shown"
@@ -197,7 +188,7 @@ export default function LandingSitesPage() {
                         {site.county} {site.bmu_name ? `· ${site.bmu_name}` : ''}
                       </CardDescription>
                     </div>
-                    <Badge className={getStatusColor(site.status)}>{site.status}</Badge>
+                    <StatusBadge status={site.status} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
@@ -264,6 +255,6 @@ export default function LandingSitesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

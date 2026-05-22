@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
 import { FileSpreadsheet, Plus, Package } from 'lucide-react'
@@ -127,11 +127,74 @@ export default function SalesContractsPage() {
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n)
 
   return (
-    <DashboardPageLayout
-      title="Forward sales contracts"
-      description="Pre-sell harvest to hotels, exporters, and wholesalers"
-    >
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Forward sales contracts</h1>
+          <p className="text-muted-foreground">Pre-sell harvest to hotels, exporters, and wholesalers</p>
+        </div>
+        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" />
+          New contract
+        </Button>
+      </div>
+
+      <StatCardGrid>
+        <StatCard title="Active" value={summary.active} icon={<FileSpreadsheet className="h-4 w-4" />} loading={loading} />
+        <StatCard title="Draft" value={summary.draft} loading={loading} />
+        <StatCard title="Open volume (kg)" value={summary.openKg.toLocaleString()} icon={<Package className="h-4 w-4" />} loading={loading} />
+        <StatCard title="Open value" value={kes(summary.openValueKes)} loading={loading} />
+      </StatCardGrid>
+
+      <Card>
+        <CardHeader><CardTitle>Contracts</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Number</TableHead>
+                <TableHead>Buyer</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead>Price/kg</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {contracts.map((c) => {
+                const pct = Number(c.contracted_kg) > 0
+                  ? Math.round((Number(c.delivered_kg) / Number(c.contracted_kg)) * 100)
+                  : 0
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-mono text-sm">{c.contract_number}</TableCell>
+                    <TableCell>{c.buyer_name}</TableCell>
+                    <TableCell>
+                      {Number(c.delivered_kg).toLocaleString()} / {Number(c.contracted_kg).toLocaleString()} kg ({pct}%)
+                    </TableCell>
+                    <TableCell>{kes(Number(c.price_per_kg))}</TableCell>
+                    <TableCell><Badge variant="outline">{c.status}</Badge></TableCell>
+                    <TableCell>
+                      {c.status === 'active' && (
+                        <Button size="sm" variant="outline" onClick={() => setFulfillId(c.id)}>
+                          Record delivery
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New forward contract</DialogTitle></DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="space-y-2"><Label>Buyer</Label><Input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} /></div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2"><Label>Price/kg (KES)</Label><Input type="number" value={pricePerKg} onChange={(e) => setPricePerKg(e.target.value)} /></div>
               <div className="space-y-2"><Label>Volume (kg)</Label><Input type="number" value={contractedKg} onChange={(e) => setContractedKg(e.target.value)} /></div>
             </div>
@@ -158,6 +221,6 @@ export default function SalesContractsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

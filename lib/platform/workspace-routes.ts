@@ -5,7 +5,7 @@ import {
   HR_WORKSPACE_NAV,
   PROCUREMENT_WORKSPACE_NAV,
 } from '@/components/dashboard/workspace-nav'
-import { Warehouse, ClipboardList, Bell } from 'lucide-react'
+import { Snowflake, Warehouse, ClipboardList, Bell } from 'lucide-react'
 
 export const COLDCHAIN_WORKSPACE_NAV: WorkspaceNavItem[] = [
   { href: '/dashboard/storage', label: 'Facilities', icon: Warehouse },

@@ -36,8 +36,7 @@ export default function DeliverySlotsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <DashboardPageLayout
+    <DashboardPageLayout
       title="Delivery scheduling"
       description="Cold-chain slots for storefront checkout"
     >
@@ -62,7 +61,6 @@ export default function DeliverySlotsPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
     </DashboardPageLayout>
   )
 }

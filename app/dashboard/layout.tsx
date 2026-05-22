@@ -1,8 +1,6 @@
-'use client'
-
 import { AuthProvider } from '@/components/auth-provider'
-import { DashboardHeader } from '@/components/dashboard/header'
-import { DashboardSidebar } from '@/components/dashboard/sidebar'
+import { DashboardChrome } from '@/components/dashboard/dashboard-chrome'
+import { DashboardModuleServerGate } from '@/components/dashboard/dashboard-module-server-gate'
 
 export default function DashboardLayout({
   children,
@@ -10,16 +8,10 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <AuthProvider>
-    <div className="flex h-screen overflow-hidden bg-background">
-      <DashboardSidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
-        </main>
-      </div>
-    </div>
-    </AuthProvider>
+    <DashboardModuleServerGate>
+      <AuthProvider>
+        <DashboardChrome>{children}</DashboardChrome>
+      </AuthProvider>
+    </DashboardModuleServerGate>
   )
 }

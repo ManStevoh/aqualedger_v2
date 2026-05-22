@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -117,11 +116,81 @@ export default function CouponsPage() {
       : `KES ${Number(c.discount_value).toLocaleString()}`
 
   return (
-    <DashboardPageLayout
-      title="Coupons"
-      description="Promotions and discount codes for commerce orders"
-    >
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Coupons</h1>
+        <p className="text-muted-foreground">Promotions and discount codes for commerce orders</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Ticket className="h-5 w-5" />
+            Active promotions
+          </CardTitle>
+          <CardDescription>Tenant-scoped coupon codes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            loading={loading}
+            data={coupons}
+            emptyMessage="No coupons yet"
+            actions={
+              <Button className="gap-2" onClick={() => setShowDialog(true)}>
+                <Plus className="h-4 w-4" />
+                New coupon
+              </Button>
+            }
+            columns={[
+              { key: 'code', header: 'Code' },
+              {
+                key: 'discount_value',
+                header: 'Discount',
+                cell: (row) => formatDiscount(row),
+              },
+              {
+                key: 'min_order_amount',
+                header: 'Min order',
+                cell: (row) => `KES ${Number(row.min_order_amount).toLocaleString()}`,
+              },
+              {
+                key: 'uses_count',
+                header: 'Uses',
+                cell: (row) =>
+                  `${row.uses_count}${row.max_uses != null ? ` / ${row.max_uses}` : ''}`,
+              },
+              {
+                key: 'valid_to',
+                header: 'Valid to',
+                cell: (row) =>
+                  row.valid_to ? new Date(row.valid_to).toLocaleDateString() : '—',
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                cell: (row) => (
+                  <Badge variant={row.status === 'active' ? 'default' : 'secondary'}>
+                    {row.status}
+                  </Badge>
+                ),
+              },
+            ]}
+          />
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create coupon</DialogTitle>
+            <DialogDescription>Codes are stored uppercase per tenant</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label>Code</Label>
+              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="SUMMER10" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select
@@ -159,6 +228,6 @@ export default function CouponsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardPageLayout>
+    </div>
   )
 }

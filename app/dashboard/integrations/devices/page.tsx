@@ -134,10 +134,11 @@ export default function IotDevicesPage() {
             Register device
           </Button>
         </div>
-      }>
+      }
+    >
       <Link
         href="/dashboard/integrations/iot"
-        className="text-sm text-muted-foreground flex items-center gap-1 -mt-2 hover:text-foreground"
+        className="text-sm text-muted-foreground flex items-center gap-1 mb-2 hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         IoT hub

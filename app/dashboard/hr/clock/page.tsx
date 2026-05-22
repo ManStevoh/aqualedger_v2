@@ -43,45 +43,34 @@ export default function ClockInPage() {
   }
 
   return (
-    <DashboardPageLayout
+    <div className="space-y-6 max-w-md mx-auto">
+      <div className="text-center">
+        <Clock className="h-12 w-12 mx-auto text-primary mb-2" />
+        <DashboardPageLayout
       title="Clock In / Out"
-      description={`${today} · ${now}`}
+      description="{today} · {now}"
     >
-      <div className="max-w-md mx-auto space-y-4">
-        <div className="text-center">
-          <Clock className="h-12 w-12 mx-auto text-primary mb-2" />
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Select yourself</Label>
-              <Select value={employeeId} onValueChange={setEmployeeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button size="lg" onClick={() => clock('in')}>
-                Clock In
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => clock('out')}>
-                Clock Out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader><CardTitle>Employee</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Select yourself</Label>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
+              <SelectTrigger><SelectValue placeholder="Employee" /></SelectTrigger>
+              <SelectContent>
+                {employees.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Button size="lg" onClick={() => clock('in')}>Clock In</Button>
+            <Button size="lg" variant="outline" onClick={() => clock('out')}>Clock Out</Button>
+          </div>
+        </CardContent>
+      </Card>
     </DashboardPageLayout>
   )
 }

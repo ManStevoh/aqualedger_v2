@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { AdminHubNav } from '@/components/dashboard/admin-hub-nav'
 import { authFetchJson } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
@@ -22,16 +22,7 @@ interface HealthService {
 }
 
 function statusBadge(status: ServiceStatus) {
-  switch (status) {
-    case 'healthy':
-      return <Badge className="bg-emerald-600 hover:bg-emerald-600">Healthy</Badge>
-    case 'degraded':
-      return <Badge variant="secondary" className="bg-amber-500/15 text-amber-700 dark:text-amber-400">Degraded</Badge>
-    case 'down':
-      return <Badge variant="destructive">Down</Badge>
-    default:
-      return <Badge variant="outline">Unknown</Badge>
-  }
+  return <StatusBadge status={status} />
 }
 
 export default function PlatformHealthPage() {

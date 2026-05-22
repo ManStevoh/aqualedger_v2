@@ -4,10 +4,8 @@ import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layou
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Anchor, Ship, Clock, Fish, DollarSign, Fuel, Plus, Play, Square, Eye } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { StatusBadge } from '@/components/dashboard/status-badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -26,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { useTrips, useBoats, createTrip, completeTrip } from '@/lib/api'
 import type { FishingTrip, Boat } from '@/lib/types'
 import { toast } from 'sonner'
@@ -108,25 +107,121 @@ function TripsPageContent() {
     <DashboardPageLayout
       title="Fishing Trips"
       description="Manage and track fishing operations"
+      actions={
+        <Button onClick={() => setShowNewTripDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Trip
+        </Button>
+      }
     >
-      <DashboardPageLayout
-      title="Fishing Trips"
-      description="Manage and track fishing operations"
-    >
-      <div><span className="text-muted-foreground">Captain</span><p className="font-medium">{viewTrip.captainName}</p></div>
-              <div><span className="text-muted-foreground">Catch</span><p className="font-medium">{viewTrip.totalCatch} kg</p></div>
-              <div><span className="text-muted-foreground">Revenue</span><p className="font-medium">KES {viewTrip.totalRevenue.toLocaleString()}</p></div>
-              <div><span className="text-muted-foreground">Fuel</span><p className="font-medium">{viewTrip.fuelUsed} L</p></div>
-              <div><span className="text-muted-foreground">Started</span><p className="font-medium">{new Date(viewTrip.startTime).toLocaleString()}</p></div>
+      <StatCardGrid>
+        <StatCard
+          title="Ongoing Trips"
+          value={ongoingTrips}
+          icon={<Anchor className="h-4 w-4 text-muted-foreground" />}
+          description="Currently active"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Completed Trips"
+          value={completedTrips}
+          icon={<Ship className="h-4 w-4 text-muted-foreground" />}
+          description="This month"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Catch"
+          value={`${(totalCatch / 1000).toFixed(1)}T`}
+          icon={<Fish className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 8.5, isPositive: true }}
+          description="All trips"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Revenue"
+          value={`KES ${(totalRevenue / 1000000).toFixed(1)}M`}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          trend={{ value: 12.3, isPositive: true }}
+          description="From catches"
+          loading={isLoading}
+        />
+      </StatCardGrid>
+
+      <Tabs defaultValue="all">
+        <TabsList>
+          <TabsTrigger value="all">All Trips</TabsTrigger>
+          <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
+          <TabsTrigger value="planned">Planned</TabsTrigger>
+          <TabsTrigger value="completed">Completed</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-6">
+          <TripsList trips={trips} onEndTrip={handleEndTrip} endingId={endingId} onView={setViewTrip} />
+        </TabsContent>
+        <TabsContent value="ongoing" className="mt-6">
+          <TripsList
+            trips={trips.filter((t: FishingTrip) => t.status === 'ongoing')}
+            onEndTrip={handleEndTrip}
+            endingId={endingId}
+            onView={setViewTrip}
+          />
+        </TabsContent>
+        <TabsContent value="planned" className="mt-6">
+          <TripsList
+            trips={trips.filter((t: FishingTrip) => t.status === 'planned')}
+            onEndTrip={handleEndTrip}
+            endingId={endingId}
+            onView={setViewTrip}
+          />
+        </TabsContent>
+        <TabsContent value="completed" className="mt-6">
+          <TripsList
+            trips={trips.filter((t: FishingTrip) => t.status === 'completed')}
+            onEndTrip={handleEndTrip}
+            endingId={endingId}
+            onView={setViewTrip}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={!!viewTrip} onOpenChange={(open) => !open && setViewTrip(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{viewTrip?.boatName ?? 'Trip details'}</DialogTitle>
+            <DialogDescription>{viewTrip?.fishingZone}</DialogDescription>
+          </DialogHeader>
+          {viewTrip && (
+            <div className="grid gap-3 py-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Captain</span>
+                <p className="font-medium">{viewTrip.captainName}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Catch</span>
+                <p className="font-medium">{viewTrip.totalCatch} kg</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Revenue</span>
+                <p className="font-medium">KES {viewTrip.totalRevenue.toLocaleString()}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Fuel</span>
+                <p className="font-medium">{viewTrip.fuelUsed} L</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Started</span>
+                <p className="font-medium">{new Date(viewTrip.startTime).toLocaleString()}</p>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewTrip(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setViewTrip(null)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* New Trip Dialog */}
       <Dialog open={showNewTripDialog} onOpenChange={setShowNewTripDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -189,7 +284,7 @@ function TripsPageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
 
@@ -240,14 +335,24 @@ function TripCard({
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-full ${
-              trip.status === 'ongoing' ? 'bg-green-100' : 
-              trip.status === 'completed' ? 'bg-gray-100' : 'bg-blue-100'
-            }`}>
-              <Anchor className={`h-6 w-6 ${
-                trip.status === 'ongoing' ? 'text-green-600' : 
-                trip.status === 'completed' ? 'text-gray-600' : 'text-blue-600'
-              }`} />
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                trip.status === 'ongoing'
+                  ? 'bg-green-100'
+                  : trip.status === 'completed'
+                    ? 'bg-gray-100'
+                    : 'bg-blue-100'
+              }`}
+            >
+              <Anchor
+                className={`h-6 w-6 ${
+                  trip.status === 'ongoing'
+                    ? 'text-green-600'
+                    : trip.status === 'completed'
+                      ? 'text-gray-600'
+                      : 'text-blue-600'
+                }`}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -329,6 +434,5 @@ export default function TripsPage() {
     <Suspense fallback={<div className="py-12 text-center text-muted-foreground">Loading…</div>}>
       <TripsPageContent />
     </Suspense>
-    </DashboardPageLayout>
   )
 }

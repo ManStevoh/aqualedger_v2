@@ -76,7 +76,6 @@ export default function RecruitmentPage() {
             ))}
           </CardContent>
         </Card>
-      </div>
     </DashboardPageLayout>
   )
 }

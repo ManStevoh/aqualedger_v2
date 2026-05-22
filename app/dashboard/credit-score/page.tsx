@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Progress } from '@/components/ui/progress'
 import { StatCard } from '@/components/dashboard/stat-card'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { TrendingUp, CreditCard, DollarSign, AlertCircle, CheckCircle2, Info } from 'lucide-react'
 import { authFetchJson } from '@/lib/api'
 
@@ -93,17 +94,6 @@ export default function CreditScorePage() {
     return 'text-red-500'
   }
 
-  const getRatingBadge = (rating: string) => {
-    const colors: Record<string, string> = {
-      excellent: 'bg-emerald-100 text-emerald-800',
-      very_good: 'bg-green-100 text-green-800',
-      good: 'bg-yellow-100 text-yellow-800',
-      fair: 'bg-orange-100 text-orange-800',
-      poor: 'bg-red-100 text-red-800'
-    }
-    return colors[rating] || 'bg-muted text-muted-foreground'
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -128,15 +118,10 @@ export default function CreditScorePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">AI Credit Score</h1>
-        <p className="text-muted-foreground">
-          Your credit score based on fishing activity, income patterns, and financial behavior
-        </p>
-      </div>
-
-      {/* Stats Overview */}
+    <DashboardPageLayout
+      title="AI Credit Score"
+      description="Your credit score based on fishing activity, income patterns, and financial behavior"
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Credit Score"
@@ -175,9 +160,11 @@ export default function CreditScorePage() {
               <div className={`text-6xl font-bold ${getScoreColor(creditData.score)}`}>
                 {creditData.score}
               </div>
-              <Badge className={`mt-2 ${getRatingBadge(creditData.rating)}`}>
-                {creditData.rating.replace('_', ' ').toUpperCase()}
-              </Badge>
+              <StatusBadge
+                status={creditData.rating}
+                label={creditData.rating.replace('_', ' ').toUpperCase()}
+                className="mt-2"
+              />
               <p className="text-sm text-muted-foreground mt-2">
                 Score range: 300 - 850
               </p>
@@ -295,6 +282,6 @@ export default function CreditScorePage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

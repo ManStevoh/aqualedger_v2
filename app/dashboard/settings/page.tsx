@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   User,
@@ -157,15 +158,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Profile, password (with current password check), and notification toggles persist on your user row when the DB
-          migration has been applied.
-        </p>
-      </div>
-
+    <DashboardPageLayout
+      title="Settings"
+      description="Profile, password (with current password check), and notification toggles persist on your user row when the DB migration has been applied."
+    >
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -465,6 +461,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardPageLayout>
   )
 }

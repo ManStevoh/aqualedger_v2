@@ -747,14 +747,8 @@ export default function FleetPage() {
             {maintenance.map((record: MaintenanceRecord) => (
               <div key={record.id} className="flex items-center justify-between p-4 rounded-lg border">
                 <div className="flex items-center gap-4">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                    record.status === 'in_progress' ? 'bg-yellow-100' : 
-                    record.status === 'completed' ? 'bg-green-100' : 'bg-blue-100'
-                  }`}>
-                    <Wrench className={`h-5 w-5 ${
-                      record.status === 'in_progress' ? 'text-yellow-600' : 
-                      record.status === 'completed' ? 'text-green-600' : 'text-blue-600'
-                    }`} />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <Wrench className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="font-medium">{record.boatName}</p>
@@ -762,12 +756,7 @@ export default function FleetPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <Badge variant="outline" className={
-                    record.status === 'in_progress' ? 'bg-yellow-50 text-yellow-700' :
-                    record.status === 'completed' ? 'bg-green-50 text-green-700' : ''
-                  }>
-                    {record.status.replace('_', ' ')}
-                  </Badge>
+                  <StatusBadge status={record.status} />
                   <p className="text-sm text-muted-foreground mt-1">
                     {record.scheduledDate}
                   </p>
@@ -864,12 +853,12 @@ function BoatCard({ boat, trips, onView, onStartTrip, onMaintenance, onManageCre
 
         {/* Active Trip */}
         {activeTrip && (
-          <div className="rounded-lg bg-green-50 p-3">
-            <div className="flex items-center gap-2 text-green-700">
-              <Anchor className="h-4 w-4" />
-              <span className="font-medium text-sm">Currently Fishing</span>
+          <div className="rounded-lg border p-3">
+            <div className="flex items-center gap-2">
+              <Anchor className="h-4 w-4 text-muted-foreground" />
+              <StatusBadge status="ongoing" label="Currently Fishing" />
             </div>
-            <p className="text-sm text-green-600 mt-1">{activeTrip.fishingZone}</p>
+            <p className="text-sm text-muted-foreground mt-1">{activeTrip.fishingZone}</p>
           </div>
         )}
 
@@ -877,15 +866,21 @@ function BoatCard({ boat, trips, onView, onStartTrip, onMaintenance, onManageCre
         {(daysUntilLicenseExpiry <= 30 || daysUntilInsuranceExpiry <= 30) && (
           <div className="space-y-2">
             {daysUntilLicenseExpiry <= 30 && (
-              <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 p-2 rounded-lg text-sm">
-                <AlertTriangle className="h-4 w-4" />
-                <span>License expires in {daysUntilLicenseExpiry} days</span>
+              <div className="flex items-center gap-2 p-2 rounded-lg border text-sm">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <StatusBadge
+                  status="warning"
+                  label={`License expires in ${daysUntilLicenseExpiry} days`}
+                />
               </div>
             )}
             {daysUntilInsuranceExpiry <= 30 && (
-              <div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 p-2 rounded-lg text-sm">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Insurance expires in {daysUntilInsuranceExpiry} days</span>
+              <div className="flex items-center gap-2 p-2 rounded-lg border text-sm">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <StatusBadge
+                  status="warning"
+                  label={`Insurance expires in ${daysUntilInsuranceExpiry} days`}
+                />
               </div>
             )}
           </div>
@@ -897,9 +892,10 @@ function BoatCard({ boat, trips, onView, onStartTrip, onMaintenance, onManageCre
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">GPS</span>
           </div>
-          <Badge variant="outline" className={boat.gpsEnabled ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'}>
-            {boat.gpsEnabled ? 'Enabled' : 'Disabled'}
-          </Badge>
+          <StatusBadge
+            status={boat.gpsEnabled ? 'active' : 'inactive'}
+            label={boat.gpsEnabled ? 'Enabled' : 'Disabled'}
+          />
         </div>
       </CardContent>
     </Card>

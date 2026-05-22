@@ -18,12 +18,11 @@ export default function CatchForecastPage() {
   }, [])
 
   return (
-    <div className="space-y-8">
-      <DashboardPageLayout
+    <DashboardPageLayout
       title="Catch yield forecast"
       description="30-day projection by zone and species from trip history"
     >
-            <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {rows.map((r, i) => (
           <Card key={`${r.zoneId}-${r.speciesName}-${i}`}>
             <CardContent className="pt-4 flex justify-between">
@@ -38,7 +37,6 @@ export default function CatchForecastPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
     </DashboardPageLayout>
   )
 }

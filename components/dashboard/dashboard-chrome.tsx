@@ -25,17 +25,8 @@ export function DashboardChrome({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const useMesh =
-    pathname === '/dashboard' ||
-    pathname === '/dashboard/modules' ||
-    pathname?.startsWith('/dashboard/modules/')
-
   return (
-    <div
-      className={
-        useMesh ? 'flex h-screen overflow-hidden bg-mesh-dashboard' : 'flex h-screen overflow-hidden bg-background'
-      }
-    >
+    <div className="flex h-screen overflow-hidden bg-mesh-dashboard">
       <DashboardSidebar />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <DashboardHeader />

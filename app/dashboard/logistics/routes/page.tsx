@@ -1,10 +1,8 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/dashboard/status-badge'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { Route, MapPin, Truck, Package } from 'lucide-react'
 import { authFetchJson } from '@/lib/api'
@@ -52,11 +50,31 @@ export default function LogisticsRoutesPage() {
   const counties = groups.length
   const largestGroup = groups[0]?.deliveryCount ?? 0
 
+  const statusColor = (status: string) => {
+    switch (status) {
+      case 'delivered': return 'bg-green-100 text-green-800'
+      case 'in_transit':
+      case 'assigned': return 'bg-blue-100 text-blue-800'
+      default: return 'bg-yellow-100 text-yellow-800'
+    }
+  }
+
   return (
-    <DashboardPageLayout
-      title="Route Planner"
-      description="Stub route optimization — pending deliveries grouped by county"
-    >
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Route Planner</h1>
+        <p className="text-muted-foreground">
+          Stub route optimization — pending deliveries grouped by county
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatCard title="Pending deliveries" value={totalDeliveries} icon={<Truck className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+        <StatCard title="Counties" value={counties} icon={<MapPin className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+        <StatCard title="Largest group" value={largestGroup} icon={<Package className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+        <StatCard title="Route batches" value={groups.length} icon={<Route className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         {groups.map((group) => (
           <Card key={group.county}>
@@ -78,7 +96,7 @@ export default function LogisticsRoutesPage() {
                       <p className="font-mono font-medium">{d.tracking_code}</p>
                       <p className="text-muted-foreground text-xs">{d.delivery_address}</p>
                     </div>
-                    <StatusBadge status={d.status} />
+                    <Badge className={statusColor(d.status)}>{d.status.replace('_', ' ')}</Badge>
                   </li>
                 ))}
               </ul>
@@ -93,6 +111,6 @@ export default function LogisticsRoutesPage() {
           </Card>
         )}
       </div>
-    </DashboardPageLayout>
+    </div>
   )
 }

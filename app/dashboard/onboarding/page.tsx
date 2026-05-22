@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { authFetchJson } from '@/lib/api'
 import { updateProfile } from '@/lib/api'
 import Link from 'next/link'
@@ -201,13 +200,15 @@ export default function OnboardingPage() {
   }
 
   return (
-    <DashboardPageLayout
-      title="Welcome to AquaERP"
-      description={`Complete these steps to set up ${
-        onboarding?.business_type ? onboarding.business_type.replace('_', ' ') : 'your organization'
-      }`}
-    >
-      <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Welcome to AquaERP</h1>
+        <p className="mt-1 text-muted-foreground">
+          Complete these steps to set up{' '}
+          {onboarding?.business_type ? onboarding.business_type.replace('_', ' ') : 'your organization'}
+        </p>
+      </div>
+
       <div className="flex justify-center gap-4">
         {STEPS.map(({ num, title, icon: Icon, desc }) => {
           const done = onboarding?.completed_steps.includes(num)
@@ -448,7 +449,6 @@ export default function OnboardingPage() {
           </CardContent>
         </Card>
       )}
-      </div>
-    </DashboardPageLayout>
+    </div>
   )
 }

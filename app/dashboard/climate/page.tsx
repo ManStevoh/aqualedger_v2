@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StatCard } from '@/components/dashboard/stat-card'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { 
   CloudRain, Wind, Waves, Thermometer, AlertTriangle, 
   CheckCircle2, MapPin, Clock, RefreshCw, Bell
@@ -114,23 +116,11 @@ export default function ClimateAlertsPage() {
     }
   }
 
-  const getSeverityColor = (severity: string) => {
-    const colors: Record<string, string> = {
-      info: 'bg-blue-100 text-blue-800 border-blue-200',
-      warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      danger: 'bg-orange-100 text-orange-800 border-orange-200',
-      critical: 'bg-red-100 text-red-800 border-red-200'
-    }
-    return colors[severity] || 'bg-muted'
-  }
-
-  const getSafetyColor = (status: string) => {
-    const colors: Record<string, string> = {
-      safe: 'bg-green-100 text-green-800',
-      caution: 'bg-yellow-100 text-yellow-800',
-      dangerous: 'bg-red-100 text-red-800'
-    }
-    return colors[status] || 'bg-muted'
+  const severityBorder: Record<string, string> = {
+    info: 'border-l-blue-500',
+    warning: 'border-l-amber-500',
+    danger: 'border-l-orange-500',
+    critical: 'border-l-red-500',
   }
 
   const getSafetyIcon = (status: string) => {
@@ -151,20 +141,16 @@ export default function ClimateAlertsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Climate & Ocean Safety</h1>
-          <p className="text-muted-foreground">
-            Real-time weather alerts and ocean conditions for safe fishing
-          </p>
-        </div>
+    <DashboardPageLayout
+      title="Climate & Ocean Safety"
+      description="Real-time weather alerts and ocean conditions for safe fishing"
+      actions={
         <Button variant="outline" onClick={fetchClimateData}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
-      </div>
-
+      }
+    >
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
@@ -226,9 +212,7 @@ export default function ClimateAlertsPage() {
                       <MapPin className="h-5 w-5" />
                       {condition.region}
                     </CardTitle>
-                    <Badge className={getSafetyColor(condition.safetyStatus)}>
-                      {condition.safetyStatus.toUpperCase()}
-                    </Badge>
+                    <StatusBadge status={condition.safetyStatus} label={condition.safetyStatus.toUpperCase()} />
                   </div>
                   <CardDescription className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
@@ -289,13 +273,11 @@ export default function ClimateAlertsPage() {
             </Card>
           ) : (
             alerts.map((alert) => (
-              <Card key={alert.id} className={`border-l-4 ${getSeverityColor(alert.severity)}`}>
+              <Card key={alert.id} className={`border-l-4 ${severityBorder[alert.severity] ?? 'border-l-muted'}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <Badge className={getSeverityColor(alert.severity)}>
-                        {alert.severity.toUpperCase()}
-                      </Badge>
+                      <StatusBadge status={alert.severity} label={alert.severity.toUpperCase()} />
                       <CardTitle className="mt-2">{alert.title}</CardTitle>
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <MapPin className="h-3 w-3" />
@@ -369,6 +351,6 @@ export default function ClimateAlertsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

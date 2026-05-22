@@ -81,7 +81,6 @@ export default function FishermanMobilePage() {
           <a href="/dashboard/catches">Full catches module →</a>
         </Button>
       </main>
-    </div>
     </DashboardPageLayout>
   )
 }

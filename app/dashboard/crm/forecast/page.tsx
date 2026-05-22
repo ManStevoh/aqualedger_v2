@@ -21,8 +21,7 @@ export default function SalesForecastPage() {
   }, [])
 
   return (
-    <div className="space-y-8">
-      <DashboardPageLayout
+    <DashboardPageLayout
       title="Sales forecasting"
       description="Pipeline-weighted forecast · Win rate {(winRate * 100).toFixed(0)}%"
     >
@@ -36,7 +35,6 @@ export default function SalesForecastPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
     </DashboardPageLayout>
   )
 }

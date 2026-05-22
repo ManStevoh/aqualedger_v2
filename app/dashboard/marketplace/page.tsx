@@ -261,10 +261,6 @@ export default function MarketplacePage() {
       title="Fish Marketplace"
       description="Buy and sell fish — listings from the database"
     >
-      <DashboardPageLayout
-      title="Fish Marketplace"
-      description="Buy and sell fish — listings from the database"
-    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active listings"
@@ -562,7 +558,6 @@ export default function MarketplacePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
     </DashboardPageLayout>
   )
 }

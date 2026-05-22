@@ -97,7 +97,8 @@ export default function IntegrationsIotPage() {
             </Link>
           </Button>
         </div>
-      }>
+      }
+    >
       <div className="grid gap-4 md:grid-cols-3">
         {endpoints.map((ep) => {
           const Icon = ep.icon

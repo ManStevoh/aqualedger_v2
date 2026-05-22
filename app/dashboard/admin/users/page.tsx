@@ -219,7 +219,6 @@ function PlatformUsersContent() {
         </Button>
       }>
 
-
       <AdminHubNav />
 
       <Card>

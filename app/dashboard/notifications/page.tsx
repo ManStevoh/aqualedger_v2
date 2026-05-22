@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -82,15 +83,11 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground">System alerts and messages</p>
-        </div>
-        <Button variant="outline">Mark All as Read</Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Notifications"
+      description="System alerts and messages"
+      actions={<Button variant="outline">Mark All as Read</Button>}
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Total Notifications"
@@ -174,6 +171,6 @@ export default function NotificationsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

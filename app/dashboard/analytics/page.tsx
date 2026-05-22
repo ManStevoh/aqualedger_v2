@@ -1,12 +1,13 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts'
-import { TrendingUp, DollarSign, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { TrendingUp, DollarSign, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, Ship, Snowflake, ClipboardList } from 'lucide-react'
 import { authFetchJson } from '@/lib/api'
 
 type AnalyticsShape = {
@@ -20,6 +21,7 @@ type AnalyticsShape = {
   topRevenueDays: { day: string; revenue: number; trend: 'up' | 'down' }[]
   portfolioPerformance: { month: string; value: number; returns: number }[]
   portfolioSummary: { currentValue: number; totalReturns: number; avgAnnualPct: number }
+  enterpriseKpis: { label: string; value: string }[]
 }
 
 export default function AnalyticsPage() {
@@ -51,16 +53,10 @@ export default function AnalyticsPage() {
         data?: { dailyTrend?: { date: string; total_value: number }[] }
       }>('/api/v2/analytics?type=catches&period=365')
 
-      let invRows: Record<string, unknown>[] = []
-      try {
-        const invRes = await authFetchJson<{
-          success: boolean
-          data?: { investments?: Record<string, unknown>[] }
-        }>('/api/v2/investments?limit=200')
-        if (invRes.success && invRes.data?.investments) invRows = invRes.data.investments
-      } catch {
-        invRows = []
-      }
+      const commerceRes = await authFetchJson<{
+        success: boolean
+        data?: { name: string; value: number }[]
+      }>('/api/v2/analytics?type=commerce-revenue')
 
       const revenue = Number(fin.data?.summary?.totalRevenue) || 0
       const expenses = Number(fin.data?.summary?.totalExpenses) || 0
@@ -74,10 +70,16 @@ export default function AnalyticsPage() {
         revenue: Number(m.revenue) || 0,
         expenses: Number(m.expenses) || 0,
       }))
-      const fishTypeBreakdown = (dash.data?.topSpecies || []).map((s) => ({
+      let fishTypeBreakdown = (dash.data?.topSpecies || []).map((s) => ({
         type: s.species_name || 'Unknown',
         sales: Number(s.total_value) || 0,
       }))
+      if (commerceRes.success && Array.isArray(commerceRes.data) && commerceRes.data.length > 0) {
+        fishTypeBreakdown = commerceRes.data.map((r) => ({
+          type: r.name,
+          sales: Number(r.value) || 0,
+        }))
+      }
 
       const expenseByCategory = (fin.data?.expensesByCategory || []).map((e) => ({
         name: String(e.category || 'other').replace(/_/g, ' '),
@@ -96,30 +98,30 @@ export default function AnalyticsPage() {
             : ('down' as const),
       }))
 
-      const byMonth = new Map<string, { value: number; returns: number }>()
-      for (const r of invRows) {
-        const raw = String(r.created_at || r.start_date || '')
-        const month = raw.slice(0, 7)
-        if (month.length < 7) continue
-        const cur = byMonth.get(month) || { value: 0, returns: 0 }
-        cur.value += Number(r.amount) || 0
-        cur.returns += Number(r.dividends_paid) || 0
-        byMonth.set(month, cur)
-      }
-      const portfolioPerformance = [...byMonth.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([month, v]) => ({ month, value: v.value, returns: v.returns }))
+      const portfolioPerformance = monthlyRevenue.map((m) => ({
+        month: m.month,
+        value: m.revenue,
+        returns: m.revenue - m.expenses,
+      }))
+      const currentValue = revenue
+      const totalReturns = profit
+      const avgAnnualPct = profitMargin
 
-      const currentValue = invRows.reduce((s, r) => s + (Number(r.amount) || 0), 0)
-      const totalReturns = invRows.reduce((s, r) => s + (Number(r.dividends_paid) || 0), 0)
-      const avgAnnualPct =
-        invRows.length > 0
-          ? invRows.reduce((s, r) => {
-              const exp = Number(r.expected_return) || 0
-              const amt = Number(r.amount) || 1
-              return s + ((exp - amt) / amt) * 100
-            }, 0) / invRows.length
-          : 0
+      let enterpriseKpis: { label: string; value: string }[] = []
+      try {
+        const kpiRes = await authFetchJson<{
+          success: boolean
+          data?: { kpis?: { metric: string; value: string; unit: string }[] }
+        }>('/api/v2/analytics/export?type=kpi&format=json')
+        if (kpiRes.success && kpiRes.data?.kpis) {
+          enterpriseKpis = kpiRes.data.kpis.map((k) => ({
+            label: k.metric,
+            value: k.unit === 'KES' ? `KES ${Number(k.value).toLocaleString()}` : k.value,
+          }))
+        }
+      } catch {
+        enterpriseKpis = []
+      }
 
       setAnalyticsData({
         revenue,
@@ -136,6 +138,7 @@ export default function AnalyticsPage() {
           totalReturns,
           avgAnnualPct,
         },
+        enterpriseKpis,
       })
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
@@ -150,6 +153,7 @@ export default function AnalyticsPage() {
         topRevenueDays: [],
         portfolioPerformance: [],
         portfolioSummary: { currentValue: 0, totalReturns: 0, avgAnnualPct: 0 },
+        enterpriseKpis: [],
       })
     } finally {
       setLoading(false)
@@ -169,44 +173,32 @@ export default function AnalyticsPage() {
     topRevenueDays,
     portfolioPerformance,
     portfolioSummary,
+    enterpriseKpis,
   } = analyticsData
+
+  const fleetBoats = enterpriseKpis.find((k) => k.label === 'Fleet boats')?.value ?? '0'
+  const activeFleet = enterpriseKpis.find((k) => k.label === 'Active fleet')?.value ?? '0'
+  const coldZones = enterpriseKpis.find((k) => k.label === 'Cold chain zones')?.value ?? '0'
+  const coldAlerts = enterpriseKpis.find((k) => k.label === 'Open cold chain alerts')?.value ?? '0'
+  const purchaseOrders = enterpriseKpis.find((k) => k.label === 'Purchase orders')?.value ?? '0'
+  const suppliers = enterpriseKpis.find((k) => k.label === 'Suppliers')?.value ?? '0'
 
   const kes = (v: number) => `KES ${Number(v).toLocaleString()}`
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Financial Analytics</h1>
-        <p className="text-muted-foreground">Comprehensive financial and operational insights</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
-          title="Total Revenue"
-          value={`KES ${revenue.toLocaleString()}`}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 12, isPositive: true }}
-        />
-        <StatCard
-          title="Total Expenses"
-          value={`KES ${expenses.toLocaleString()}`}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 8, isPositive: false }}
-        />
-        <StatCard
-          title="Net Profit"
-          value={`KES ${profit.toLocaleString()}`}
-          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 15, isPositive: true }}
-        />
-        <StatCard
-          title="Profit Margin"
-          value={`${profitMargin}%`}
-          icon={<PieChartIcon className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 2, isPositive: true }}
-        />
+    <DashboardPageLayout
+      title="Financial Analytics"
+      description="Comprehensive financial and operational insights"
+    >
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <StatCard title="Fleet boats" value={fleetBoats} icon={<Ship className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Active fleet" value={activeFleet} icon={<Ship className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Cold chain zones" value={coldZones} icon={<Snowflake className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Cold chain alerts" value={coldAlerts} icon={<Snowflake className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Purchase orders" value={purchaseOrders} icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Suppliers" value={suppliers} icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />} />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -214,7 +206,7 @@ export default function AnalyticsPage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
-          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+          <TabsTrigger value="portfolio">Commerce</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -389,7 +381,7 @@ export default function AnalyticsPage() {
             <CardContent>
               {portfolioPerformance.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-12 text-center">
-                  No investment history to chart yet (or no access).
+                  No commerce revenue history yet.
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height={400}>
@@ -453,6 +445,6 @@ export default function AnalyticsPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardPageLayout>
   )
 }

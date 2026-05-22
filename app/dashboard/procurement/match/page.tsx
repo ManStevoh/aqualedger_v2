@@ -36,8 +36,7 @@ export default function ThreeWayMatchPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <DashboardPageLayout
+    <DashboardPageLayout
       title="Procurement 3-way match"
       description="Purchase order · Goods receipt · Supplier invoice"
     >

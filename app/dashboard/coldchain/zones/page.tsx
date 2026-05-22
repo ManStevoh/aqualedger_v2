@@ -184,25 +184,19 @@ function ColdchainZonesContent() {
     <DashboardPageLayout
       title="Storage zones"
       description="Temperature zones per cold storage facility (ISO 22000)"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <Button variant="ghost" size="sm" className="mb-2 gap-1" asChild>
-            <Link href="/dashboard/storage">
-              <ArrowLeft className="h-4 w-4" />
-              Facilities
-            </Link>
-          </Button>
-          <DashboardPageLayout
-      title="Storage zones"
-      description="Temperature zones per cold storage facility (ISO 22000)"
-    >
-              </div>
+      actions={
         <Button className="gap-2" onClick={() => setShowDialog(true)} disabled={!facilityId}>
           <Plus className="w-4 h-4" />
           Add zone
         </Button>
-      </div>
+      }
+    >
+      <Button variant="ghost" size="sm" className="mb-2 gap-1" asChild>
+        <Link href="/dashboard/storage">
+          <ArrowLeft className="h-4 w-4" />
+          Facilities
+        </Link>
+      </Button>
 
       <Card>
         <CardHeader>
@@ -318,7 +312,7 @@ function ColdchainZonesContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
 
@@ -327,6 +321,5 @@ export default function ColdchainZonesPage() {
     <Suspense fallback={<div className="py-12 text-center text-muted-foreground">Loading…</div>}>
       <ColdchainZonesContent />
     </Suspense>
-    </DashboardPageLayout>
   )
 }

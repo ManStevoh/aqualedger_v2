@@ -1,11 +1,12 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import {
   Dialog,
   DialogContent,
@@ -150,32 +151,17 @@ export default function ExpensesPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'rejected':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Expenses</h1>
-          <p className="text-muted-foreground">Track and manage operational expenses</p>
-        </div>
+    <DashboardPageLayout
+      title="Expenses"
+      description="Track and manage operational expenses"
+      actions={
         <Button className="gap-2" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           Add Expense
         </Button>
-      </div>
-
+      }
+    >
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -274,18 +260,17 @@ export default function ExpensesPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <span className="font-medium">Approved</span>
-                <span className="text-2xl font-bold text-green-600">{expenses.filter(e => e.status === 'approved').length}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                <span className="font-medium">Pending</span>
-                <span className="text-2xl font-bold text-yellow-600">{expenses.filter(e => e.status === 'pending').length}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                <span className="font-medium">Rejected</span>
-                <span className="text-2xl font-bold text-red-600">{expenses.filter(e => e.status === 'rejected').length}</span>
-              </div>
+              {(['approved', 'pending', 'rejected'] as const).map((status) => (
+                <div
+                  key={status}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
+                  <StatusBadge status={status} />
+                  <span className="text-2xl font-bold">
+                    {expenses.filter((e) => e.status === status).length}
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -332,9 +317,7 @@ export default function ExpensesPage() {
                     <td className="py-3 px-4">{expense.boat}</td>
                     <td className="py-3 px-4 text-muted-foreground">{expense.date}</td>
                     <td className="py-3 px-4">
-                      <Badge className={getStatusColor(expense.status)}>
-                        {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}
-                      </Badge>
+                      <StatusBadge status={expense.status} />
                     </td>
                     <td className="py-3 px-4">
                       <Button variant="ghost" size="sm">
@@ -348,6 +331,6 @@ export default function ExpensesPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

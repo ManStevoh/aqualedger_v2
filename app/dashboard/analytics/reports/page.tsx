@@ -1,11 +1,11 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -204,7 +204,10 @@ export default function ReportsHubPage() {
   }
 
   return (
-    <DashboardPageLayout title="Reports & delivery" description="ISO 8601 periods · UTF-8 CSV (Excel) · HTML email · HMAC webhooks · GDPR share links · IFRS financials · EU traceability" actions={
+    <DashboardPageLayout
+      title="Reports & delivery"
+      description="ISO 8601 periods · UTF-8 CSV (Excel) · HTML email · HMAC webhooks · GDPR share links · IFRS financials · EU traceability"
+      actions={
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href="/dashboard/communications">Settings</Link>
@@ -223,7 +226,8 @@ export default function ReportsHubPage() {
             Send report
           </Button>
         </div>
-      }>
+      }
+    >
       {lastShareUrl && (
         <Card className="border-sky-200 bg-sky-50/50 dark:bg-sky-950/20">
           <CardContent className="pt-4 flex flex-wrap items-center gap-3">

@@ -127,18 +127,6 @@ export default function UsersPage() {
     return icons[role] || <Users className="h-4 w-4" />
   }
 
-  const getRoleBadgeColor = (role: string) => {
-    const colors: Record<string, string> = {
-      super_admin: 'bg-purple-100 text-purple-800',
-      investor: 'bg-green-100 text-green-800',
-      boat_owner: 'bg-blue-100 text-blue-800',
-      fisherman: 'bg-cyan-100 text-cyan-800',
-      fish_buyer: 'bg-orange-100 text-orange-800',
-      bmu_official: 'bg-yellow-100 text-yellow-800'
-    }
-    return colors[role] || 'bg-muted'
-  }
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -195,10 +183,6 @@ export default function UsersPage() {
 
   return (
     <DashboardPageLayout
-      title="User Management"
-      description="Manage all users across the platform"
-    >
-      <DashboardPageLayout
       title="User Management"
       description="Manage all users across the platform"
     >
@@ -295,12 +279,10 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <Badge className={getRoleBadgeColor(user.role)}>
-                          <span className="flex items-center gap-1">
-                            {getRoleIcon(user.role)}
-                            {user.role.replace('_', ' ')}
-                          </span>
-                        </Badge>
+                        <span className="flex items-center gap-1">
+                          {getRoleIcon(user.role)}
+                          <StatusBadge status={user.role} label={user.role.replace('_', ' ')} />
+                        </span>
                       </td>
                       <td className="py-3 px-4">{user.region || '-'}</td>
                       <td className="py-3 px-4">{user.phone}</td>
@@ -425,7 +407,6 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
     </DashboardPageLayout>
   )
 }

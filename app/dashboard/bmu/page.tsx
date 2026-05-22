@@ -121,10 +121,6 @@ export default function BMUPage() {
       title="Beach Management Units"
       description="Manage and monitor all BMUs"
     >
-      <DashboardPageLayout
-      title="Beach Management Units"
-      description="Manage and monitor all BMUs"
-    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active BMUs"
@@ -280,7 +276,6 @@ export default function BMUPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
     </DashboardPageLayout>
   )
 }

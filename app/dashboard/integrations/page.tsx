@@ -359,7 +359,8 @@ export default function IntegrationsPage() {
                     : row.status === 'error'
                       ? 'destructive'
                       : 'secondary'
-                }>
+                }
+              >
                 {row.status}
               </Badge>
             ),

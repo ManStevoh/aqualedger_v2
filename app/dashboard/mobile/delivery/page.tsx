@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'

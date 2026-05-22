@@ -38,8 +38,7 @@ export default function QualityInspectionPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <DashboardPageLayout
+    <DashboardPageLayout
       title="Landing quality inspection"
       description="EU grade A/B/C · reject spoiled catch before market"
     >

@@ -41,7 +41,9 @@ export interface Session {
 }
 
 // Constants
-const DEV_JWT_FALLBACK = 'dev-only-jwt-secret-not-for-production'
+import { getJwtSecret } from '@/lib/jwt-config'
+
+export { getJwtSecret }
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET

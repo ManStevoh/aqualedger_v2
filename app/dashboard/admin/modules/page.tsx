@@ -173,6 +173,7 @@ export default function PlatformModulesAdminPage() {
           )}
         </CardContent>
       </Card>
+    </div>
     </DashboardPageLayout>
   )
 }

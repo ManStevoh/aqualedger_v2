@@ -47,7 +47,6 @@ export default function CrmSegmentsPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
     </DashboardPageLayout>
   )
 }

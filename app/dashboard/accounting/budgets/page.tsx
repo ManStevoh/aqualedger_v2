@@ -40,7 +40,7 @@ export default function BudgetsPage() {
         <Button variant="outline" asChild>
           <Link href="/dashboard/accounting/reports">Budget vs Actual report</Link>
         </Button>
-      }>
+      }
 
 
       <Card>

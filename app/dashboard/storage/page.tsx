@@ -139,10 +139,6 @@ export default function StoragePage() {
       title="Storage Facilities"
       description="Monitor cold storage and inventory"
     >
-      <DashboardPageLayout
-      title="Storage Facilities"
-      description="Monitor cold storage and inventory"
-    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Operational Facilities"
@@ -203,9 +199,7 @@ export default function StoragePage() {
                 <div key={facility.id} className="p-3 bg-muted rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-medium">{facility.name}</p>
-                    <Badge variant={facility.status === 'operational' ? 'default' : 'secondary'}>
-                      {facility.status}
-                    </Badge>
+                    <StatusBadge status={facility.status} />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-1">
@@ -257,9 +251,7 @@ export default function StoragePage() {
                       <td className="py-3 px-4">{facility.temperature}°C</td>
                       <td className="py-3 px-4">{facility.humidity}%</td>
                       <td className="py-3 px-4">
-                        <Badge className={getStatusColor(facility.status)}>
-                          {facility.status.charAt(0).toUpperCase() + facility.status.slice(1)}
-                        </Badge>
+                        <StatusBadge status={facility.status} />
                       </td>
                       <td className="py-3 px-4">
                         <Button variant="ghost" size="sm" asChild>
@@ -325,7 +317,6 @@ export default function StoragePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
     </DashboardPageLayout>
   )
 }

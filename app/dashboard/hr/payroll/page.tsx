@@ -149,12 +149,6 @@ export default function PayrollPage() {
     <DashboardPageLayout
       title="Payroll"
       description="Create runs, approve, pay, and post to GL (PAYE/NHIF estimates)"
-      actions={
-        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New payroll run
-        </Button>
-      }
     >
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total Runs" value={payrollRuns.length} icon={<FileText className="h-4 w-4" />} loading={loading} />

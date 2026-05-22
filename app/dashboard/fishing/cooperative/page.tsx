@@ -33,8 +33,7 @@ export default function CooperativeSharesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <DashboardPageLayout
+    <DashboardPageLayout
       title="Cooperative revenue sharing"
       description="Distribute catch revenue to members by landed kg"
     >

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
 import { Wrench, Calendar, DollarSign, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -28,12 +29,6 @@ import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { useMaintenance, useBoats, scheduleMaintenance } from '@/lib/api'
 import { toast } from 'sonner'
 import type { MaintenanceRecord, Boat } from '@/lib/types'
-
-const typeColors: Record<string, string> = {
-  scheduled: 'bg-blue-100 text-blue-700',
-  emergency: 'bg-red-100 text-red-700',
-  inspection: 'bg-purple-100 text-purple-700',
-}
 
 export default function MaintenancePage() {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
@@ -90,20 +85,16 @@ export default function MaintenancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Maintenance</h1>
-          <p className="text-muted-foreground">
-            Schedule and track boat maintenance
-          </p>
-        </div>
+    <DashboardPageLayout
+      title="Maintenance"
+      description="Schedule and track boat maintenance"
+      actions={
         <Button onClick={() => setShowScheduleDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Schedule Maintenance
         </Button>
-      </div>
-
+      }
+    >
       <StatCardGrid>
         <StatCard
           title="Scheduled"
@@ -246,7 +237,7 @@ export default function MaintenancePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }
 
@@ -268,18 +259,19 @@ function MaintenanceList({ records }: { records: MaintenanceRecord[] }) {
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${typeColors[record.type]}`}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                   {record.type === 'emergency' ? (
-                    <AlertTriangle className="h-6 w-6" />
+                    <AlertTriangle className="h-6 w-6 text-muted-foreground" />
                   ) : record.type === 'inspection' ? (
-                    <CheckCircle className="h-6 w-6" />
+                    <CheckCircle className="h-6 w-6 text-muted-foreground" />
                   ) : (
-                    <Wrench className="h-6 w-6" />
+                    <Wrench className="h-6 w-6 text-muted-foreground" />
                   )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{record.boatName}</h3>
+                    <StatusBadge status={record.type} />
                     <StatusBadge status={record.status} />
                   </div>
                   <p className="text-sm text-muted-foreground">{record.description}</p>

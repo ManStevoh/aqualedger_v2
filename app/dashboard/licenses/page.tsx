@@ -112,16 +112,6 @@ export default function LicensesPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      valid: 'bg-green-100 text-green-800',
-      expired: 'bg-red-100 text-red-800',
-      suspended: 'bg-orange-100 text-orange-800',
-      revoked: 'bg-red-100 text-red-800'
-    }
-    return colors[status] || 'bg-muted'
-  }
-
   const getStatusIcon = (status: string) => {
     if (status === 'valid') return <CheckCircle2 className="h-4 w-4 text-green-600" />
     if (status === 'expired') return <AlertCircle className="h-4 w-4 text-red-600" />
@@ -187,10 +177,6 @@ export default function LicensesPage() {
 
   return (
     <DashboardPageLayout
-      title="License Management"
-      description="Manage fishing, boat, and trading licenses"
-    >
-      <DashboardPageLayout
       title="License Management"
       description="Manage fishing, boat, and trading licenses"
     >
@@ -303,20 +289,16 @@ export default function LicensesPage() {
                           <div className="flex items-center gap-2">
                             <span>{license.expiryDate}</span>
                             {license.status === 'valid' && daysLeft <= 30 && (
-                              <Badge variant="outline" className="text-orange-600 border-orange-200">
-                                {daysLeft}d left
-                              </Badge>
+                              <StatusBadge status="warning" label={`${daysLeft}d left`} />
                             )}
                           </div>
                         </td>
                         <td className="py-3 px-4">KES {license.fee.toLocaleString()}</td>
                         <td className="py-3 px-4">
-                          <Badge className={getStatusColor(license.status)}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(license.status)}
-                              {license.status.charAt(0).toUpperCase() + license.status.slice(1)}
-                            </span>
-                          </Badge>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(license.status)}
+                            <StatusBadge status={license.status} />
+                          </span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -362,7 +344,7 @@ export default function LicensesPage() {
               {licenses
                 .filter(l => l.status === 'valid' && getDaysUntilExpiry(l.expiryDate) <= 30)
                 .map((license) => (
-                  <div key={license.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div key={license.id} className="flex items-center justify-between p-3 rounded-lg border">
                     <div>
                       <div className="font-medium">{license.holderName}</div>
                       <div className="text-sm text-muted-foreground">
@@ -370,9 +352,10 @@ export default function LicensesPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge className="bg-orange-100 text-orange-800">
-                        {getDaysUntilExpiry(license.expiryDate)} days left
-                      </Badge>
+                      <StatusBadge
+                        status="warning"
+                        label={`${getDaysUntilExpiry(license.expiryDate)} days left`}
+                      />
                       <Button variant="link" size="sm" className="mt-1">
                         Send Reminder
                       </Button>
@@ -419,7 +402,6 @@ export default function LicensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
     </DashboardPageLayout>
   )
 }

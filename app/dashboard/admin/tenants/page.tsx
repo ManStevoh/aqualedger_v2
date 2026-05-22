@@ -324,8 +324,8 @@ export default function PlatformTenantsPage() {
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
                 <Label htmlFor="org">Organization name</Label>
-                <Input id="org" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
-              </div>
+                <Input id="org" value={orgName} onChange={(e) => setOrgName(e.target.value)} /></>}>
+
               <div className="grid gap-2">
                 <Label htmlFor="email">Owner email</Label>
                 <Input id="email" type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} />
@@ -366,7 +366,7 @@ export default function PlatformTenantsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </>}>
+      </div>
 
       <AdminHubNav />
 

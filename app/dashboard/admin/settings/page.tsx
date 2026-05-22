@@ -225,7 +225,6 @@ export default function PlatformSettingsPage() {
         </Button>
       }>
 
-
       <AdminHubNav />
 
       {loading ? (
@@ -378,7 +377,8 @@ export default function PlatformSettingsPage() {
                                 : row.status === 'failed'
                                   ? 'destructive'
                                   : 'secondary'
-                            }>
+                            }
+                          >
                             {row.status}
                           </Badge>
                         </TableCell>

@@ -1,449 +1,381 @@
 'use client'
 
-import { useMemo } from 'react'
-import { TrendingUp, Ship, Fish, DollarSign, Anchor, ShoppingCart } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import {
+  ArrowRight,
+  Bell,
+  ClipboardList,
+  Package,
+  Ship,
+  ShoppingCart,
+  Snowflake,
+  Sparkles,
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { SetupChecklist } from '@/components/dashboard/setup-checklist'
+import { WidgetCustomizer } from '@/components/dashboard/widget-customizer'
+import { KpiStrip } from '@/components/dashboard/kpi-strip'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import { useAppStore } from '@/lib/store'
-import { useDashboardStats, useRevenueData, useTrips, useInvestments, useFishOrders, useCatches } from '@/lib/api'
-import type { Catch, FishOrder, FishingTrip, UserRole } from '@/lib/types'
-import { hasFullSystemAccess } from '@/lib/platform-access'
+import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
+import { authFetchJson, useExecutiveSummary, useNotifications } from '@/lib/api'
+import { getNavForRole } from '@/lib/platform/modules'
+import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
+import type { UserRole } from '@/lib/types'
 
-function activityTimeLabel(iso?: string): string {
-  if (!iso) return '—'
-  const t = Date.parse(iso)
-  if (!Number.isFinite(t)) return '—'
-  const sec = Math.floor((Date.now() - t) / 1000)
-  if (sec < 60) return `${sec}s ago`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 48) return `${hr}h ago`
-  return `${Math.floor(hr / 24)}d ago`
+const roleLabels: Record<UserRole, string> = {
+  super_admin: 'Super Admin',
+  investor: 'Platform Operator',
+  boat_owner: 'Boat Owner',
+  fisherman: 'Fisherman',
+  fish_buyer: 'Fish Buyer',
+  bmu_official: 'BMU Official',
 }
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts'
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
+const QUICK_ACTIONS = [
+  {
+    id: 'new-order',
+    label: 'Create order',
+    description: 'Record a commerce order',
+    href: '/dashboard/orders',
+    icon: ShoppingCart,
+  },
+  {
+    id: 'log-catch',
+    label: 'Log catch',
+    description: 'Record landing weight',
+    href: '/dashboard/catches',
+    icon: Ship,
+  },
+  {
+    id: 'check-inventory',
+    label: 'Check stock',
+    description: 'View inventory levels',
+    href: '/dashboard/inventory',
+    icon: Package,
+  },
+  {
+    id: 'cold-alerts',
+    label: 'Cold alerts',
+    description: 'Review temperature breaches',
+    href: '/dashboard/coldchain/alerts',
+    icon: Snowflake,
+  },
+  {
+    id: 'procurement',
+    label: 'Purchase order',
+    description: 'Raise supplier PO',
+    href: '/dashboard/procurement/orders',
+    icon: ClipboardList,
+  },
+  {
+    id: 'ai-insights',
+    label: 'AI insights',
+    description: 'Demand & yield forecasts',
+    href: '/dashboard/ai',
+    icon: Sparkles,
+  },
+] as const
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function formatRelativeTime(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
+}
+
+type OnboardingStatus = {
+  isComplete: boolean
+  completedCount: number
+  totalSteps: number
+}
 
 export default function DashboardPage() {
-  const { currentRole, currentUser } = useAppStore()
-  const { data: statsData, isLoading: statsLoading } = useDashboardStats(currentRole, currentUser?.id)
-  const { data: revenueData } = useRevenueData()
-  const { data: tripsData } = useTrips()
-  const { data: investmentsData } = useInvestments(
-    hasFullSystemAccess(currentRole as UserRole) ? undefined : currentUser?.id,
+  const { currentRole, currentUser, enabledModuleIds, modulesLoaded } = useAppStore()
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
+  const { data: summary, isLoading: kpisLoading } = useExecutiveSummary()
+  const { data: notificationsData, isLoading: activityLoading } = useNotifications(
+    currentUser?.id,
   )
-  const orderHookRole =
-    hasFullSystemAccess((currentUser?.role || currentRole) as UserRole)
-      ? 'seller'
-      : currentUser?.role === 'fish_buyer'
-        ? 'buyer'
-        : 'seller'
-  const { data: ordersData } = useFishOrders(orderHookRole)
-  const { data: catchesData } = useCatches({ limit: '8' })
 
-  const stats = statsData?.data
-  const revenue = revenueData?.data || []
-  const trips = tripsData?.data?.items || []
-  const investments = investmentsData?.data?.items || []
-  const orders = ordersData?.data?.items || []
-  const recentCatches = catchesData?.data?.items || []
+  const modules = useMemo(() => {
+    const memberRole = legacyRoleToMemberRole(currentRole)
+    return getNavForRole(
+      memberRole,
+      currentRole,
+      modulesLoaded ? enabledModuleIds : ['platform'],
+    ).filter((m) => m.id !== 'platform')
+  }, [currentRole, enabledModuleIds, modulesLoaded])
 
-  type ActivityRow = {
-    id: string
-    kind: 'catch' | 'order' | 'trip'
-    title: string
-    subtitle: string
-    atMs: number
-  }
+  const recentActivity = (notificationsData?.items ?? []).slice(0, 8)
 
-  const recentActivity = useMemo(() => {
-    const rows: ActivityRow[] = []
-    for (const c of recentCatches as Catch[]) {
-      const atMs = c.loggedAt ? Date.parse(c.loggedAt) : 0
-      rows.push({
-        id: `catch-${c.id}`,
-        kind: 'catch',
-        title: `Catch: ${c.weight.toLocaleString()} kg ${c.fishType}`,
-        subtitle: `KES ${c.totalValue.toLocaleString()} · trip`,
-        atMs,
+  useEffect(() => {
+    authFetchJson<{
+      success: boolean
+      data?: {
+        isComplete: boolean
+        onboarding: { completed_steps: number[]; totalSteps: number } | null
+      }
+    }>('/api/v2/tenant/onboarding')
+      .then((res) => {
+        if (!res.success || !res.data) return
+        if (res.data.isComplete || !res.data.onboarding) {
+          setOnboardingStatus({ isComplete: true, completedCount: 0, totalSteps: 0 })
+          return
+        }
+        const { completed_steps, totalSteps } = res.data.onboarding
+        setOnboardingStatus({
+          isComplete: false,
+          completedCount: completed_steps.length,
+          totalSteps: totalSteps,
+        })
       })
-    }
-    for (const o of orders as FishOrder[]) {
-      const atMs = o.createdAt ? Date.parse(o.createdAt) : 0
-      rows.push({
-        id: `order-${o.id}`,
-        kind: 'order',
-        title: `Order ${o.status}: ${o.quantity} kg ${o.fishType}`,
-        subtitle: `${o.buyerName} → ${o.sellerName}`,
-        atMs,
-      })
-    }
-    for (const trip of trips as FishingTrip[]) {
-      if (trip.status !== 'completed') continue
-      const raw = trip.endTime || trip.startTime
-      const atMs = raw ? Date.parse(raw) : 0
-      rows.push({
-        id: `trip-${trip.id}`,
-        kind: 'trip',
-        title: `Trip completed: ${trip.boatName}`,
-        subtitle: `${trip.totalCatch.toLocaleString()} kg · KES ${trip.totalRevenue.toLocaleString()}`,
-        atMs,
-      })
-    }
-    return rows
-      .filter((r) => r.atMs > 0)
-      .sort((a, b) => b.atMs - a.atMs)
-      .slice(0, 8)
-  }, [recentCatches, orders, trips])
+      .catch(() => {})
+  }, [])
 
-  // Role-specific stats
-  const getStatCards = () => {
-    switch (currentRole) {
-      case 'boat_owner':
-        return (
-          <>
-            <StatCard
-              title="Total Boats"
-              value={stats?.totalBoats || 0}
-              icon={<Ship className="h-4 w-4 text-muted-foreground" />}
-              description="in your fleet"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Active Trips"
-              value={stats?.activeTrips || 0}
-              icon={<Anchor className="h-4 w-4 text-muted-foreground" />}
-              description="currently ongoing"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Total Catch"
-              value={`${((stats?.totalCatch || 0) / 1000).toFixed(1)}T`}
-              icon={<Fish className="h-4 w-4 text-muted-foreground" />}
-              trend={{ value: 8.3, isPositive: true }}
-              description="this month"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Net Profit"
-              value={`KES ${(stats?.netProfit || 0).toLocaleString()}`}
-              icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-              trend={{ value: 15.2, isPositive: true }}
-              description="this month"
-              loading={statsLoading}
-            />
-          </>
-        )
-      case 'fish_buyer':
-        return (
-          <>
-            <StatCard
-              title="Active Orders"
-              value={orders.filter((o: { status: string }) => o.status === 'pending' || o.status === 'shipped').length}
-              icon={<ShoppingCart className="h-4 w-4 text-muted-foreground" />}
-              description="in progress"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Total Purchased"
-              value={`${(orders.reduce((s: number, o: { quantity: number }) => s + o.quantity, 0) / 1000).toFixed(1)}T`}
-              icon={<Fish className="h-4 w-4 text-muted-foreground" />}
-              description="this month"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Total Spent"
-              value={`KES ${orders.reduce((s: number, o: { totalAmount: number }) => s + o.totalAmount, 0).toLocaleString()}`}
-              icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-              description="this month"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Avg Order Value"
-              value={`KES ${orders.length > 0 ? Math.round(orders.reduce((s: number, o: { totalAmount: number }) => s + o.totalAmount, 0) / orders.length).toLocaleString() : 0}`}
-              icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-              description="per order"
-              loading={statsLoading}
-            />
-          </>
-        )
-      default:
-        return (
-          <>
-            <StatCard
-              title="Total Investments"
-              value={`KES ${(stats?.totalInvestments || 0).toLocaleString()}`}
-              icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-              trend={{ value: 12.5, isPositive: true }}
-              description="platform-wide"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Active Boats"
-              value={stats?.totalBoats || 0}
-              icon={<Ship className="h-4 w-4 text-muted-foreground" />}
-              description="registered vessels"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Total Catch"
-              value={`${((stats?.totalCatch || 0) / 1000).toFixed(1)}T`}
-              icon={<Fish className="h-4 w-4 text-muted-foreground" />}
-              trend={{ value: 8.3, isPositive: true }}
-              description="this month"
-              loading={statsLoading}
-            />
-            <StatCard
-              title="Total Revenue"
-              value={`KES ${(stats?.totalRevenue || 0).toLocaleString()}`}
-              icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-              trend={{ value: 15.2, isPositive: true }}
-              description="this month"
-              loading={statsLoading}
-            />
-          </>
-        )
-    }
-  }
+  const showSetupChecklist =
+    onboardingStatus !== null && !onboardingStatus.isComplete
+
+  const kpiItems = [
+    {
+      id: 'fleet',
+      title: 'Fleet vessels',
+      value: summary?.fleetCount ?? '—',
+      description: summary ? `${summary.activeFleetCount} active` : undefined,
+      icon: <Ship className="h-4 w-4" />,
+    },
+    {
+      id: 'orders',
+      title: 'Orders',
+      value: summary?.ordersCount ?? '—',
+      description: 'Commerce orders',
+      icon: <ShoppingCart className="h-4 w-4" />,
+    },
+    {
+      id: 'revenue',
+      title: 'Revenue',
+      value: summary ? formatCurrency(summary.revenueTotal) : '—',
+      description: 'Order totals',
+      icon: <Package className="h-4 w-4" />,
+    },
+    {
+      id: 'cold-alerts',
+      title: 'Cold alerts',
+      value: summary?.openColdAlertsCount ?? '—',
+      description: summary
+        ? `${summary.coldAlertsCount} total recorded`
+        : undefined,
+      icon: <Snowflake className="h-4 w-4" />,
+    },
+  ]
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back{currentUser?.name ? `, ${currentUser.name}` : ''}. Here&apos;s your overview.
-        </p>
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-background p-6 shadow-sm lg:p-8">
+        <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative">
+          <ModulePageHeader
+            title={`${APP_NAME} Command Center`}
+            description={`Welcome back${currentUser?.name ? `, ${currentUser.name}` : ''}. ${APP_TAGLINE}`}
+            breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Command Center' }]}
+            actions={
+              <div className="flex items-center gap-2 pointer-events-auto">
+                <WidgetCustomizer />
+                <Badge variant="secondary" className="font-normal">
+                  {roleLabels[currentRole]}
+                </Badge>
+              </div>
+            }
+          />
+        </div>
       </div>
 
-      <StatCardGrid>{getStatCards()}</StatCardGrid>
+      {showSetupChecklist && (
+        <SetupChecklist
+          completedSteps={onboardingStatus.completedCount}
+          totalSteps={onboardingStatus.totalSteps}
+        />
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-7">
-        {/* Revenue Chart */}
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Revenue & Profit Trend</CardTitle>
-            <CardDescription>Monthly revenue and profit analysis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenue}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="name" className="text-xs" />
-                  <YAxis className="text-xs" tickFormatter={(v) => `${v / 1000}K`} />
-                  <Tooltip
-                    formatter={(value: number) => [`KES ${value.toLocaleString()}`, '']}
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stackId="1"
-                    stroke="#0088FE"
-                    fill="#0088FE"
-                    fillOpacity={0.3}
-                    name="Revenue"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="profit"
-                    stackId="2"
-                    stroke="#00C49F"
-                    fill="#00C49F"
-                    fillOpacity={0.3}
-                    name="Profit"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Executive summary</h2>
+        <KpiStrip items={kpiItems} loading={kpisLoading} />
+      </section>
 
-        {/* Recent Activity */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest updates and alerts</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentActivity.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No recent catches, orders, or completed trips yet.
-              </p>
-            ) : (
-              recentActivity.map((item) => {
-                const iconWrap =
-                  item.kind === 'catch'
-                    ? 'bg-green-100'
-                    : item.kind === 'trip'
-                      ? 'bg-sky-100'
-                      : 'bg-purple-100'
-                const Icon =
-                  item.kind === 'catch' ? Fish : item.kind === 'trip' ? Anchor : ShoppingCart
-                const iconColor =
-                  item.kind === 'catch' ? 'text-green-600' : item.kind === 'trip' ? 'text-sky-600' : 'text-purple-600'
-                return (
-                  <div key={item.id} className="flex items-start gap-3">
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconWrap}`}>
-                      <Icon className={`h-4 w-4 ${iconColor}`} />
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Quick actions</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon
+            return (
+              <Link key={action.id} href={action.href}>
+                <Card className="h-full transition-all hover:border-primary/25 hover:shadow-md hover:shadow-primary/5">
+                  <CardHeader className="flex flex-row items-start gap-3 space-y-0 pb-2">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base">{action.label}</CardTitle>
+                      <CardDescription>{action.description}</CardDescription>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {activityTimeLabel(new Date(item.atMs).toISOString())}
-                    </span>
-                  </div>
-                )
-              })
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  </CardHeader>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
+      </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Active Trips */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Active Trips</CardTitle>
-              <CardDescription>Currently ongoing fishing operations</CardDescription>
-            </div>
-            <Button variant="outline" size="sm">View All</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {trips.filter((t: { status: string }) => t.status === 'ongoing').length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No active trips</p>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <section className="space-y-3 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">Recent activity</h2>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/dashboard/notifications">View all</Link>
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              {activityLoading ? (
+                <div className="space-y-3 p-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-12 animate-pulse rounded-md bg-muted" />
+                  ))}
+                </div>
+              ) : recentActivity.length === 0 ? (
+                <EmptyState
+                  icon={Bell}
+                  title="No recent activity"
+                  description="Notifications and alerts will appear here."
+                  actionLabel="Open inbox"
+                  actionHref="/dashboard/notifications"
+                  className="border-0"
+                />
               ) : (
-                trips
-                  .filter((t: { status: string }) => t.status === 'ongoing')
-                  .slice(0, 3)
-                  .map((trip: { id: string; boatName: string; fishingZone: string; captainName: string; startTime: string }) => (
-                    <div key={trip.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <Anchor className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{trip.boatName}</p>
-                          <p className="text-xs text-muted-foreground">{trip.fishingZone}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Ongoing
-                        </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Captain: {trip.captainName}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Investment Portfolio Summary */}
-        {hasFullSystemAccess(currentRole as UserRole) && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Investment Portfolio</CardTitle>
-                <CardDescription>
-                  {currentRole === 'investor' ? 'Platform and your investments' : 'Platform-wide investments'}
-                </CardDescription>
-              </div>
-              <Button variant="outline" size="sm">View All</Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {investments.slice(0, 3).map((inv: { id: string; packageName: string; amount: number; expectedReturn: number; dividendsPaid: number; status: string }) => (
-                  <div key={inv.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{inv.packageName}</span>
-                      <Badge variant={inv.status === 'active' ? 'default' : 'secondary'}>
-                        {inv.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        KES {inv.amount.toLocaleString()}
-                      </span>
-                      <span className="text-green-600">
-                        +KES {inv.dividendsPaid.toLocaleString()}
-                      </span>
-                    </div>
-                    <Progress
-                      value={(() => {
-                        const target = Math.max(1, inv.expectedReturn - inv.amount)
-                        return Math.min(100, (inv.dividendsPaid / target) * 100)
-                      })()}
-                      className="h-2"
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Market Activity for Fish Buyers */}
-        {currentRole === 'fish_buyer' && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>Your purchase history</CardDescription>
-              </div>
-              <Button variant="outline" size="sm">View All</Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {orders.slice(0, 4).map((order: { id: string; fishType: string; quantity: number; totalAmount: number; status: string }) => (
-                  <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div>
-                      <p className="font-medium">{order.fishType}</p>
-                      <p className="text-xs text-muted-foreground">{order.quantity}kg</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">KES {order.totalAmount.toLocaleString()}</p>
-                      <Badge
-                        variant="outline"
-                        className={
-                          order.status === 'delivered'
-                            ? 'bg-green-50 text-green-700 border-green-200'
-                            : order.status === 'shipped'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        }
+                <ul className="divide-y">
+                  {recentActivity.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        href={item.action_url || '/dashboard/notifications'}
+                        className="flex gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
                       >
-                        {order.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div
+                          className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                            item.is_read ? 'bg-muted-foreground/30' : 'bg-primary'
+                          }`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{item.title}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {item.message}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {formatRelativeTime(item.created_at)}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
-        )}
+        </section>
+
+        <section className="space-y-3 lg:col-span-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">Your modules</h2>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard/modules">All dashboards</Link>
+              </Button>
+              <Badge variant="outline" className="font-normal">
+                {modules.length} modules
+              </Badge>
+            </div>
+          </div>
+
+          {modules.length === 0 ? (
+            <EmptyState
+              icon={Sparkles}
+              title="No modules available"
+              description="Contact your administrator to request access."
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {modules.map((mod) => {
+                const ModuleIcon = mod.icon
+                const primaryHref = mod.nav[0]?.href ?? '/dashboard'
+
+                return (
+                  <Card
+                    key={mod.id}
+                    className="group overflow-hidden border-border/60 transition-all hover:border-primary/30 hover:shadow-lg"
+                  >
+                    <div className={`h-1 bg-gradient-to-r ${mod.color}`} />
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-md ${mod.color}`}
+                        >
+                          <ModuleIcon className="h-5 w-5 text-white" />
+                        </div>
+                        <Link
+                          href={primaryHref}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          aria-label={`Open ${mod.label}`}
+                        >
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                        </Link>
+                      </div>
+                      <CardTitle className="text-lg">{mod.label}</CardTitle>
+                      <CardDescription>{mod.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2 pt-0">
+                      {mod.nav.slice(0, 4).map((item) => {
+                        const ItemIcon = item.icon
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            <ItemIcon className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{item.title}</span>
+                          </Link>
+                        )
+                      })}
+                      {mod.nav.length > 4 && (
+                        <p className="px-2 text-xs text-muted-foreground">
+                          +{mod.nav.length - 4} more
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )

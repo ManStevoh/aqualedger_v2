@@ -153,7 +153,6 @@ export default function InventoryScanPage() {
           )}
         </CardContent>
       </Card>
-      </div>
     </DashboardPageLayout>
   )
 }

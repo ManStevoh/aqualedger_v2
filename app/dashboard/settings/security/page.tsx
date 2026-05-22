@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +9,7 @@ import { DataTable } from '@/components/dashboard/data-table'
 import { authFetchJson } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { Monitor, Shield, LogOut, ArrowLeft, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -156,7 +156,10 @@ export default function SecuritySessionsPage() {
   }
 
   return (
-    <DashboardPageLayout title="Security & sessions" description="Active logins across devices. Revoke suspicious sessions; your current browser session is kept when using &quot;Revoke all others&quot;." actions={
+    <DashboardPageLayout
+      title="Security & sessions"
+      description="Active logins across devices. Revoke suspicious sessions; your current browser session is kept when using Revoke all others."
+      actions={
         <Button
           variant="destructive"
           className="gap-2"
@@ -166,8 +169,14 @@ export default function SecuritySessionsPage() {
           <LogOut className="h-4 w-4" />
           Revoke all others
         </Button>
-      }>
-
+      }
+    >
+      <Button variant="ghost" size="sm" className="-ml-2 gap-2" asChild>
+        <Link href="/dashboard/settings">
+          <ArrowLeft className="h-4 w-4" />
+          Settings
+        </Link>
+      </Button>
 
       <Card>
         <CardHeader>

@@ -1,6 +1,5 @@
 'use client'
 
-import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -72,10 +71,14 @@ export default function FixedAssetsPage() {
   }
 
   return (
-    <DashboardPageLayout title="Fixed Assets" description="Vessels, cold storage equipment, vehicles — straight-line depreciation" actions={
+    <div className="space-y-6">
+      <div className="flex justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2"><Building2 className="h-8 w-8" />Fixed Assets</h1>
+          <p className="text-muted-foreground">Vessels, cold storage equipment, vehicles — straight-line depreciation</p>
+        </div>
         <Button variant="outline" onClick={depreciate}><RefreshCw className="h-4 w-4 mr-2" />Run depreciation</Button>
-      }>
-
+      </div>
 
       <Card>
         <CardHeader><CardTitle>Register asset</CardTitle></CardHeader>
@@ -104,6 +107,6 @@ export default function FixedAssetsPage() {
           ))}
         </CardContent>
       </Card>
-    </DashboardPageLayout>
+    </div>
   )
 }
