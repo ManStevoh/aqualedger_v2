@@ -4,17 +4,32 @@ import {
   getUserByEmail,
   createSession,
   setAuthCookies,
-  UserRole,
 } from '@/lib/auth'
 import { registerSchema } from '@/lib/validation/schemas'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { logAudit } from '@/lib/audit'
 import { handleApiError } from '@/lib/api-handler'
-
-const SELF_REGISTER_ROLES: UserRole[] = ['investor', 'boat_owner', 'fisherman', 'fish_buyer', 'bmu_official']
+import {
+  businessTypeToUserRole,
+  createTenantWithOwner,
+  type BusinessType,
+} from '@/lib/modules/tenant/onboarding'
+import { assertRecaptcha } from '@/lib/modules/security/recaptcha'
+import { getSignupLocked } from '@/lib/platform/platform-settings'
 
 export async function POST(request: NextRequest) {
   try {
+    if (await getSignupLocked()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Registration is currently disabled',
+          code: 'REGISTRATION_LOCKED',
+        },
+        { status: 403 },
+      )
+    }
+
     const ip = getClientIp(request)
     const rate = checkRateLimit(`register:${ip}`, 5, 60 * 60 * 1000)
     if (!rate.allowed) {
@@ -25,14 +40,10 @@ export async function POST(request: NextRequest) {
     }
 
     const parsed = registerSchema.parse(await request.json())
-    const role = (parsed.role || 'fisherman') as UserRole
+    await assertRecaptcha('register', parsed.recaptchaToken, ip)
 
-    if (!SELF_REGISTER_ROLES.includes(role)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid role', code: 'VALIDATION_ERROR' },
-        { status: 400 },
-      )
-    }
+    const businessType = parsed.businessType as BusinessType
+    const role = businessTypeToUserRole(businessType)
 
     const existingUser = await getUserByEmail(parsed.email)
     if (existingUser) {
@@ -52,6 +63,12 @@ export async function POST(request: NextRequest) {
       initialStatus: 'active',
     })
 
+    const { tenantId, slug } = await createTenantWithOwner(
+      user.id,
+      parsed.organizationName,
+      businessType,
+    )
+
     const userAgent = request.headers.get('user-agent')
     const { accessToken, refreshToken, expiresAt } = await createSession(
       user.id,
@@ -66,7 +83,7 @@ export async function POST(request: NextRequest) {
       action: 'auth.register',
       resourceType: 'user',
       resourceId: user.id,
-      metadata: { role },
+      metadata: { role, businessType, tenantId, organizationName: parsed.organizationName },
       ipAddress: ip,
       userAgent,
     })
@@ -83,6 +100,12 @@ export async function POST(request: NextRequest) {
           role: user.role,
           status: user.status,
         },
+        tenant: {
+          id: tenantId,
+          slug,
+          name: parsed.organizationName,
+        },
+        onboardingRequired: true,
       },
     })
   } catch (error) {

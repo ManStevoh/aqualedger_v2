@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, transaction, buildPagination, buildOrderBy } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { assertTenantMatch, pushTenantCondition } from '@/lib/tenant-scope'
 import type { Connection } from 'mysql2/promise'
 
 interface Order {
@@ -35,7 +36,7 @@ interface OrderItemRow {
 // GET /api/v2/orders - List orders
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('commerce.orders.read')
     const { searchParams } = new URL(request.url)
     
     const page = parseInt(searchParams.get('page') || '1')
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
     
     const conditions: string[] = []
     const params: unknown[] = []
-    
+    pushTenantCondition(conditions, params, 'o', auth.tenantId)
+
     // Filter by user role in order
     if (!hasFullSystemAccess(auth.role)) {
       if (role === 'seller') {
@@ -140,7 +142,7 @@ export async function GET(request: NextRequest) {
 // POST /api/v2/orders - Create order
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('commerce.orders.write')
     const body = await request.json()
     
     const { items, deliveryAddress, deliveryNotes } = body
@@ -161,8 +163,8 @@ export async function POST(request: NextRequest) {
       // Validate all items and calculate totals
       for (const item of items) {
         const [listingRows] = await conn.execute(
-          `SELECT * FROM fish_listings WHERE id = ? AND status = 'available' FOR UPDATE`,
-          [item.listingId]
+          `SELECT * FROM fish_listings WHERE id = ? AND status = 'available' AND tenant_id = ? FOR UPDATE`,
+          [item.listingId, auth.tenantId]
         )
         const listing = (listingRows as { id: string; seller_id: string; available_quantity_kg: number; price_per_kg: number }[])[0]
         
@@ -214,11 +216,11 @@ export async function POST(request: NextRequest) {
       
       await conn.execute(
         `INSERT INTO orders (
-          id, order_number, buyer_id, seller_id, status, subtotal,
+          id, tenant_id, order_number, buyer_id, seller_id, status, subtotal,
           delivery_fee, tax, total, payment_status, delivery_address, delivery_notes
-        ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, 'pending', ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, 'pending', ?, ?)`,
         [
-          orderId, orderNumber, auth.userId, sellerId, subtotal,
+          orderId, auth.tenantId, orderNumber, auth.userId, sellerId, subtotal,
           deliveryFee, tax, total, deliveryAddress || null, deliveryNotes || null
         ]
       )
@@ -256,7 +258,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/v2/orders - Update order status
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('commerce.orders.write')
     const body = await request.json()
     const { id, action, ...updates } = body
     
@@ -268,18 +270,12 @@ export async function PUT(request: NextRequest) {
     }
     
     // Get order
-    const order = await queryOne<Order>(
+    const order = await queryOne<Order & { tenant_id: string }>(
       'SELECT * FROM orders WHERE id = ?',
       [id]
     )
-    
-    if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      )
-    }
-    
+    assertTenantMatch(order, auth.tenantId, 'Order')
+
     // Verify access
     const canUpdate = hasFullSystemAccess(auth.role) ||
                       order.buyer_id === auth.userId || 

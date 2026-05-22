@@ -21,8 +21,8 @@ export function forbidden(message = 'Forbidden'): ApiError {
   return new ApiError(message, 403, 'FORBIDDEN')
 }
 
-export function notFound(message = 'Not found'): ApiError {
-  return new ApiError(message, 404, 'NOT_FOUND')
+export function notFound(message = 'Not found'): never {
+  throw new ApiError(message, 404, 'NOT_FOUND')
 }
 
 export function conflict(message: string): ApiError {
@@ -81,9 +81,59 @@ type RouteHandler = (
   context?: { params: Promise<Record<string, string>> },
 ) => Promise<NextResponse>
 
+const MAINTENANCE_EXEMPT_V2 = new Set([
+  '/api/v2/platform/settings',
+  '/api/v2/platform/health',
+  '/api/v2/platform/impersonate',
+  '/api/v2/platform/recaptcha',
+])
+
+async function assertV2PlatformGuards(request: NextRequest): Promise<void> {
+  const pathname = request.nextUrl.pathname
+  if (!pathname.startsWith('/api/v2/')) return
+
+  const { assertApiModuleEnabled } = await import('@/lib/platform/module-enablement')
+  await assertApiModuleEnabled(pathname)
+
+  if (MAINTENANCE_EXEMPT_V2.has(pathname)) return
+
+  const token = request.cookies.get('access_token')?.value
+  if (!token) return
+
+  const jwt = await import('jsonwebtoken')
+  const secret = process.env.JWT_SECRET
+  const devFallback =
+    process.env.NODE_ENV !== 'production' ? 'dev-only-jwt-secret-not-for-production' : null
+  const resolved =
+    secret && secret.length >= 32 ? secret : devFallback
+  if (!resolved) return
+
+  try {
+    const payload = jwt.verify(token, resolved) as {
+      role?: string
+      impersonatedBy?: string
+    }
+    if (payload.role === 'super_admin' || payload.impersonatedBy) return
+
+    const { getMaintenanceStatus } = await import('@/lib/platform/platform-settings')
+    const maintenance = await getMaintenanceStatus()
+    if (maintenance.enabled) {
+      throw new ApiError(
+        maintenance.message || 'Platform is under maintenance',
+        503,
+        'MAINTENANCE',
+      )
+    }
+  } catch (e) {
+    if (e instanceof ApiError) throw e
+    /* invalid token — route handler will enforce auth */
+  }
+}
+
 export function apiHandler(handler: RouteHandler, route?: string): RouteHandler {
   return async (request, context) => {
     try {
+      await assertV2PlatformGuards(request)
       return await handler(request, context)
     } catch (error) {
       return handleApiError(error, route)

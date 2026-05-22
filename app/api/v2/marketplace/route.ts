@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination, buildOrderBy } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { assertTenantMatch, pushTenantCondition } from '@/lib/tenant-scope'
 
 // GET /api/v2/marketplace - List marketplace listings
 export async function GET(request: NextRequest) {
   try {
+    const auth = await withApiPermission('commerce.listings.read')
     const { searchParams } = new URL(request.url)
     
     const page = parseInt(searchParams.get('page') || '1')
@@ -28,7 +30,8 @@ export async function GET(request: NextRequest) {
     
     const conditions: string[] = []
     const params: unknown[] = []
-    
+    pushTenantCondition(conditions, params, 'fl', auth.tenantId)
+
     if (status && status !== 'all') {
       conditions.push('fl.status = ?')
       params.push(status)
@@ -67,7 +70,7 @@ export async function GET(request: NextRequest) {
     // Exclude expired listings
     conditions.push('(fl.expires_at IS NULL OR fl.expires_at > NOW())')
     
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+    const whereClause = `WHERE ${conditions.join(' AND ')}`
     
     // Get total count
     const [countResult] = await query<{ total: number }>(
@@ -108,8 +111,10 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(available_quantity_kg), 0) as total_available_kg,
         COALESCE(AVG(price_per_kg), 0) as avg_price
        FROM fish_listings fl
-       WHERE fl.status = 'available' 
-       AND (fl.expires_at IS NULL OR fl.expires_at > NOW())`
+       WHERE fl.status = 'available'
+       AND fl.tenant_id = ?
+       AND (fl.expires_at IS NULL OR fl.expires_at > NOW())`,
+      [auth.tenantId],
     )
     
     return NextResponse.json({
@@ -133,7 +138,7 @@ export async function GET(request: NextRequest) {
 // POST /api/v2/marketplace - Create a listing
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireRole(['boat_owner', 'fisherman', 'super_admin', 'investor'])
+    const auth = await withApiPermission('commerce.listings.write')
     const body = await request.json()
     
     const {
@@ -153,8 +158,8 @@ export async function POST(request: NextRequest) {
     let speciesId = speciesIdRaw as string | undefined
     if (!speciesId && typeof fishType === 'string' && fishType.trim()) {
       const sp = await queryOne<{ id: string }>(
-        'SELECT id FROM fish_species WHERE LOWER(name) = LOWER(?) LIMIT 1',
-        [fishType.trim()],
+        'SELECT id FROM fish_species WHERE LOWER(name) = LOWER(?) AND (tenant_id IS NULL OR tenant_id = ?) LIMIT 1',
+        [fishType.trim(), auth.tenantId],
       )
       speciesId = sp?.id
     }
@@ -169,8 +174,8 @@ export async function POST(request: NextRequest) {
 
     // Verify species exists
     const species = await queryOne<{ id: string }>(
-      'SELECT id FROM fish_species WHERE id = ?',
-      [speciesId]
+      'SELECT id FROM fish_species WHERE id = ? AND (tenant_id IS NULL OR tenant_id = ?)',
+      [speciesId, auth.tenantId],
     )
 
     if (!species) {
@@ -191,12 +196,12 @@ export async function POST(request: NextRequest) {
 
     await query(
       `INSERT INTO fish_listings (
-        id, seller_id, species_id, fish_type, quantity_kg, available_quantity_kg,
+        id, tenant_id, seller_id, species_id, fish_type, quantity_kg, available_quantity_kg,
         grade, price_per_kg, location, landing_site_id, storage_method,
         description, expires_at, photos, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'available')`,
       [
-        id, auth.userId, speciesId, fishType, quantityKg, quantityKg,
+        id, auth.tenantId, auth.userId, speciesId, fishType, quantityKg, quantityKg,
         dbGrade, pricePerKg, location || null, landingSiteId || null,
         storageMethod || 'iced', description || null, expiresAt,
         photos ? JSON.stringify(photos) : null
@@ -224,7 +229,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/v2/marketplace - Update a listing
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('commerce.listings.write')
     const body = await request.json()
     const { id, action, ...updates } = body
     
@@ -236,18 +241,12 @@ export async function PUT(request: NextRequest) {
     }
     
     // Get listing and verify ownership
-    const listing = await queryOne<{ id: string; seller_id: string; status: string }>(
-      'SELECT id, seller_id, status FROM fish_listings WHERE id = ?',
+    const listing = await queryOne<{ id: string; seller_id: string; status: string; tenant_id: string }>(
+      'SELECT id, seller_id, status, tenant_id FROM fish_listings WHERE id = ?',
       [id]
     )
-    
-    if (!listing) {
-      return NextResponse.json(
-        { success: false, error: 'Listing not found' },
-        { status: 404 }
-      )
-    }
-    
+    assertTenantMatch(listing, auth.tenantId, 'Listing')
+
     if (!hasFullSystemAccess(auth.role) && listing.seller_id !== auth.userId) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
@@ -319,7 +318,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/v2/marketplace - Delete a listing
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('commerce.listings.write')
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
@@ -330,18 +329,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    const listing = await queryOne<{ id: string; seller_id: string }>(
-      'SELECT id, seller_id FROM fish_listings WHERE id = ?',
+    const listing = await queryOne<{ id: string; seller_id: string; tenant_id: string }>(
+      'SELECT id, seller_id, tenant_id FROM fish_listings WHERE id = ?',
       [id]
     )
-    
-    if (!listing) {
-      return NextResponse.json(
-        { success: false, error: 'Listing not found' },
-        { status: 404 }
-      )
-    }
-    
+    assertTenantMatch(listing, auth.tenantId, 'Listing')
+
     if (!hasFullSystemAccess(auth.role) && listing.seller_id !== auth.userId) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
@@ -349,7 +342,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    await execute('DELETE FROM fish_listings WHERE id = ?', [id])
+    await execute('DELETE FROM fish_listings WHERE id = ? AND tenant_id = ?', [id, auth.tenantId])
     
     return NextResponse.json({
       success: true,

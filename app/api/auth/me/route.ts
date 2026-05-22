@@ -35,6 +35,15 @@ export async function GET() {
       notificationPreferences = null
     }
 
+    let impersonation: { adminUserId: string; adminEmail?: string } | null = null
+    if (auth.impersonatedBy) {
+      const admin = await getUserById(auth.impersonatedBy)
+      impersonation = {
+        adminUserId: auth.impersonatedBy,
+        adminEmail: admin?.email,
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -52,6 +61,7 @@ export async function GET() {
             user.created_at instanceof Date ? user.created_at.toISOString() : String(user.created_at),
           notificationPreferences,
         },
+        impersonation,
       },
     })
   } catch (error) {

@@ -25,18 +25,21 @@ function verifyToken(token: string): JWTPayload | null {
 const PUBLIC_API_ROUTES = new Set([
   '/api/health',
   '/api/auth/login',
+  '/api/auth/login/mfa',
   '/api/auth/register',
   '/api/auth/refresh',
 ])
 
 function requiresApiAuth(pathname: string): boolean {
   if (PUBLIC_API_ROUTES.has(pathname)) return false
+  if (pathname.startsWith('/api/public/')) return false
+  // Share links are token-gated inside the handler
   if (pathname.startsWith('/api/v2/')) return true
   if (pathname === '/api/auth/me' || pathname === '/api/auth/logout') return true
   return false
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const accessToken = request.cookies.get('access_token')?.value
   const payload = accessToken ? verifyToken(accessToken) : null
@@ -79,6 +82,8 @@ export const config = {
     '/login',
     '/register',
     '/api/v2/:path*',
+    '/api/payments/:path*',
+    '/api/public/:path*',
     '/api/auth/me',
     '/api/auth/logout',
   ],

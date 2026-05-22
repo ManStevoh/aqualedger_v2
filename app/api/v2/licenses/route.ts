@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, queryOne, execute, generateId, buildPagination } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
 import { licenseCreateSchema } from '@/lib/validation/schemas'
 import { apiHandler, handleApiError } from '@/lib/api-handler'
 import { logAudit } from '@/lib/audit'
+import { pushTenantCondition, assertTenantMatch } from '@/lib/tenant-scope'
 
 export const GET = apiHandler(async (request: NextRequest) => {
-  const auth = await requireAuth()
+  const auth = await withApiPermission('fishing.licenses.read')
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '50')
@@ -18,6 +19,8 @@ export const GET = apiHandler(async (request: NextRequest) => {
   const pagination = buildPagination(page, limit)
   const conditions: string[] = []
   const params: unknown[] = []
+
+  pushTenantCondition(conditions, params, 'l', auth.tenantId)
 
   if (!hasFullSystemAccess(auth.role)) {
     conditions.push('l.user_id = ?')
@@ -80,7 +83,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
 }, 'v2/licenses')
 
 export const POST = apiHandler(async (request: NextRequest) => {
-  const auth = await requireRole(['super_admin', 'investor', 'bmu_official'])
+  const auth = await withApiPermission('fishing.licenses.write')
   const body = licenseCreateSchema.parse(await request.json())
 
   const licenseNumber =
@@ -91,10 +94,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const issuedDate = body.issuedDate || new Date().toISOString().split('T')[0]
 
   await execute(
-    `INSERT INTO licenses (id, user_id, license_type, license_number, issued_date, expires_date, issuing_authority, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`,
+    `INSERT INTO licenses (id, tenant_id, user_id, license_type, license_number, issued_date, expires_date, issuing_authority, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
     [
       id,
+      auth.tenantId,
       body.userId,
       body.licenseType,
       licenseNumber,
@@ -121,7 +125,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await requireRole(['super_admin', 'investor', 'bmu_official'])
+    const auth = await withApiPermission('fishing.licenses.write')
     const body = await request.json()
     const { licenseId, action, reason } = body as {
       licenseId: string
@@ -135,6 +139,12 @@ export async function PATCH(request: NextRequest) {
         { status: 400 },
       )
     }
+
+    const licenseRow = await queryOne<{ tenant_id: string }>(
+      'SELECT tenant_id FROM licenses WHERE id = ?',
+      [licenseId],
+    )
+    assertTenantMatch(licenseRow, auth.tenantId, 'License')
 
     if (action === 'renew') {
       const expires = new Date()

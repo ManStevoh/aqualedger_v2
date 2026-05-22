@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAppStore } from '@/lib/store'
+import { apiFetch } from '@/lib/client-api'
 import type { User, UserRole } from '@/lib/types'
 
 type MeResponse = {
@@ -39,17 +40,14 @@ function mapMeUser(u: NonNullable<MeResponse['data']>['user']): User {
 }
 
 async function tryRefreshSession(): Promise<boolean> {
-  const res = await fetch('/api/auth/refresh', {
-    method: 'POST',
-    credentials: 'same-origin',
-  })
+  const res = await apiFetch('/auth/refresh', { method: 'POST' })
   return res.ok
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { setCurrentUser, setCurrentRole } = useAppStore()
+  const { setCurrentUser, setCurrentRole, setEnabledModuleIds } = useAppStore()
 
   useEffect(() => {
     if (!pathname?.startsWith('/dashboard')) {
@@ -60,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const load = async () => {
       const fetchMe = () =>
-        fetch('/api/auth/me', { credentials: 'same-origin' }).then((r) => r.json() as Promise<MeResponse>)
+        apiFetch('/auth/me').then((r) => r.json() as Promise<MeResponse>)
 
       let me = await fetchMe()
 
@@ -79,6 +77,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = mapMeUser(me.data.user)
         setCurrentUser(user)
         setCurrentRole(user.role)
+
+        try {
+          const modRes = await apiFetch('/v2/platform/modules').then((r) =>
+            r.json() as Promise<{ success: boolean; data?: { enabledModuleIds: string[] } }>,
+          )
+          if (modRes.success && modRes.data?.enabledModuleIds?.length) {
+            setEnabledModuleIds(modRes.data.enabledModuleIds)
+          } else {
+            setEnabledModuleIds(['platform'])
+          }
+        } catch {
+          setEnabledModuleIds(['platform'])
+        }
+
+        if (pathname !== '/dashboard/onboarding') {
+          try {
+            const onboardingRes = await apiFetch('/v2/tenant/onboarding')
+            if (onboardingRes.ok) {
+              const onboardingJson = (await onboardingRes.json()) as {
+                success?: boolean
+                data?: { isComplete?: boolean }
+              }
+              if (
+                onboardingJson.success &&
+                onboardingJson.data &&
+                onboardingJson.data.isComplete === false
+              ) {
+                router.replace('/dashboard/onboarding')
+                return
+              }
+            }
+          } catch {
+            // Non-blocking — allow dashboard access if onboarding check fails
+          }
+        }
         return
       }
 

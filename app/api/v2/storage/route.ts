@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
+import { pushTenantCondition } from '@/lib/tenant-scope'
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth()
+    const auth = await withApiPermission('coldchain.facilities.read')
     const { searchParams } = new URL(request.url)
     const resource = searchParams.get('type') || 'units'
     const page = parseInt(searchParams.get('page') || '1')
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
 
       const conditions: string[] = []
       const params: unknown[] = []
+      pushTenantCondition(conditions, params, 'sr', auth.tenantId)
       if (facilityId) {
         conditions.push('sr.facility_id = ?')
         params.push(facilityId)
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
         conditions.push('sr.status = ?')
         params.push(status)
       }
-      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+      const where = `WHERE ${conditions.join(' AND ')}`
 
       const [countRow] = await query<{ total: number }>(
         `SELECT COUNT(*) as total FROM storage_records sr ${where}`,
@@ -57,11 +59,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const conditions: string[] = []
     const params: unknown[] = []
+    pushTenantCondition(conditions, params, 'sf', auth.tenantId)
     if (status) {
       conditions.push('sf.status = ?')
       params.push(status)
     }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+    const where = `WHERE ${conditions.join(' AND ')}`
 
     const [countRow] = await query<{ total: number }>(
       `SELECT COUNT(*) as total FROM storage_facilities sf ${where}`,
@@ -103,7 +106,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireRole(['super_admin', 'investor', 'boat_owner'])
+    const auth = await withApiPermission('coldchain.records.write')
     const body = await request.json()
     const name = (body.name as string)?.trim()
     const code = (body.code as string)?.trim()
@@ -119,8 +122,8 @@ export async function POST(request: NextRequest) {
     }
 
     const existing = await queryOne<{ id: string }>(
-      'SELECT id FROM storage_facilities WHERE code = ?',
-      [code],
+      'SELECT id FROM storage_facilities WHERE code = ? AND tenant_id = ?',
+      [code, auth.tenantId],
     )
     if (existing) {
       return NextResponse.json({ success: false, error: 'Facility code already exists' }, { status: 409 })
@@ -129,10 +132,11 @@ export async function POST(request: NextRequest) {
     const id = generateId()
     await execute(
       `INSERT INTO storage_facilities (
-        id, name, code, type, capacity_kg, current_stock_kg, county, status, manager_id, daily_rate_per_kg
-      ) VALUES (?, ?, ?, ?, ?, 0, ?, 'operational', ?, ?)`,
+        id, tenant_id, name, code, type, capacity_kg, current_stock_kg, county, status, manager_id, daily_rate_per_kg
+      ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, 'operational', ?, ?)`,
       [
         id,
+        auth.tenantId,
         name,
         code,
         type,

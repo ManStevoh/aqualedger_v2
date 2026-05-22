@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination, buildOrderBy } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { assertTenantMatch, pushTenantCondition } from '@/lib/tenant-scope'
+import { createTraceabilityLot } from '@/lib/modules/inventory/service'
 
 interface Catch {
   id: string
+  tenant_id: string
   trip_id: string
   species_id: string
   quantity_kg: number
@@ -21,7 +24,7 @@ interface Catch {
 // GET /api/v2/catches - List catches
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.catches.read')
     const { searchParams } = new URL(request.url)
     
     const page = parseInt(searchParams.get('page') || '1')
@@ -41,6 +44,8 @@ export async function GET(request: NextRequest) {
     
     const conditions: string[] = []
     const params: unknown[] = []
+
+    pushTenantCondition(conditions, params, 'c', auth.tenantId)
     
     // Filter by user's access
     if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official') {
@@ -142,7 +147,7 @@ export async function GET(request: NextRequest) {
 // POST /api/v2/catches - Record a catch
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireRole(['boat_owner', 'fisherman', 'bmu_official', 'super_admin', 'investor'])
+    const auth = await withApiPermission('fishing.catches.write')
     const body = await request.json()
     
     const {
@@ -154,6 +159,7 @@ export async function POST(request: NextRequest) {
       storageMethod,
       notes,
       fishType,
+      mscCertified,
     } = body
 
     const quantityKg = qtyRaw ?? body.weight
@@ -177,20 +183,14 @@ export async function POST(request: NextRequest) {
     }
     
     // Verify trip exists and is in progress
-    const trip = await queryOne<{ id: string; status: string; captain_id: string; owner_id: string }>(
-      `SELECT t.id, t.status, t.captain_id, b.owner_id
+    const trip = await queryOne<{ id: string; status: string; captain_id: string; owner_id: string; tenant_id: string }>(
+      `SELECT t.id, t.status, t.captain_id, t.tenant_id, b.owner_id
        FROM fishing_trips t
        LEFT JOIN boats b ON t.boat_id = b.id
-       WHERE t.id = ?`,
-      [tripId]
+       WHERE t.id = ? AND t.tenant_id = ?`,
+      [tripId, auth.tenantId],
     )
-    
-    if (!trip) {
-      return NextResponse.json(
-        { success: false, error: 'Trip not found' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(trip, auth.tenantId, 'Trip')
     
     if (trip.status !== 'ongoing' && trip.status !== 'completed') {
       return NextResponse.json(
@@ -231,11 +231,11 @@ export async function POST(request: NextRequest) {
 
     await query(
       `INSERT INTO catches (
-        id, trip_id, species_id, quantity_kg, grade, unit_price,
+        id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price,
         total_value, storage_method, recorded_by, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id, tripId, resolvedSpeciesId, quantityKg, dbGrade, unitPrice,
+        id, auth.tenantId, tripId, resolvedSpeciesId, quantityKg, dbGrade, unitPrice,
         totalValue, storageMethod || 'iced', auth.userId, notes || null
       ]
     )
@@ -253,6 +253,28 @@ export async function POST(request: NextRequest) {
       'SELECT * FROM catches WHERE id = ?',
       [id]
     )
+
+    if (mscCertified) {
+      const tripMeta = await queryOne<{
+        vessel_name: string | null
+        landing_site_name: string | null
+      }>(
+        `SELECT b.name as vessel_name, ls.name as landing_site_name
+         FROM fishing_trips t
+         JOIN boats b ON t.boat_id = b.id
+         LEFT JOIN landing_sites ls ON t.landing_site_id = ls.id
+         WHERE t.id = ?`,
+        [tripId],
+      )
+      await createTraceabilityLot(auth.tenantId, {
+        catchId: id,
+        speciesName: species.name,
+        vesselName: tripMeta?.vessel_name ?? undefined,
+        landingSite: tripMeta?.landing_site_name ?? undefined,
+        grading: dbGrade as 'A' | 'B' | 'C',
+        mscCertified: true,
+      })
+    }
     
     return NextResponse.json({
       success: true,
@@ -267,7 +289,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/v2/catches - Update a catch record
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.catches.write')
     const body = await request.json()
     const { id, ...updates } = body
     
@@ -284,16 +306,11 @@ export async function PUT(request: NextRequest) {
        FROM catches c
        LEFT JOIN fishing_trips t ON c.trip_id = t.id
        LEFT JOIN boats b ON t.boat_id = b.id
-       WHERE c.id = ?`,
-      [id]
+       WHERE c.id = ? AND c.tenant_id = ?`,
+      [id, auth.tenantId],
     )
     
-    if (!catchRecord) {
-      return NextResponse.json(
-        { success: false, error: 'Catch record not found' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(catchRecord, auth.tenantId, 'Catch')
     
     if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official' &&
         catchRecord.owner_id !== auth.userId && catchRecord.captain_id !== auth.userId) {
@@ -324,19 +341,18 @@ export async function PUT(request: NextRequest) {
     }
     
     if (updateParts.length > 0) {
-      updateParams.push(id)
+      updateParams.push(id, auth.tenantId)
       await execute(
-        `UPDATE catches SET ${updateParts.join(', ')} WHERE id = ?`,
-        updateParams
+        `UPDATE catches SET ${updateParts.join(', ')} WHERE id = ? AND tenant_id = ?`,
+        updateParams,
       )
       
-      // Update trip totals
       await execute(
         `UPDATE fishing_trips SET
-          total_catch_kg = (SELECT COALESCE(SUM(quantity_kg), 0) FROM catches WHERE trip_id = ?),
-          total_revenue = (SELECT COALESCE(SUM(total_value), 0) FROM catches WHERE trip_id = ?)
-        WHERE id = ?`,
-        [catchRecord.trip_id, catchRecord.trip_id, catchRecord.trip_id]
+          total_catch_kg = (SELECT COALESCE(SUM(quantity_kg), 0) FROM catches WHERE trip_id = ? AND tenant_id = ?),
+          total_revenue = (SELECT COALESCE(SUM(total_value), 0) FROM catches WHERE trip_id = ? AND tenant_id = ?)
+        WHERE id = ? AND tenant_id = ?`,
+        [catchRecord.trip_id, auth.tenantId, catchRecord.trip_id, auth.tenantId, catchRecord.trip_id, auth.tenantId],
       )
     }
     
@@ -358,7 +374,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/v2/catches - Delete a catch record
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.catches.write')
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
@@ -375,16 +391,11 @@ export async function DELETE(request: NextRequest) {
        FROM catches c
        LEFT JOIN fishing_trips t ON c.trip_id = t.id
        LEFT JOIN boats b ON t.boat_id = b.id
-       WHERE c.id = ?`,
-      [id]
+       WHERE c.id = ? AND c.tenant_id = ?`,
+      [id, auth.tenantId],
     )
     
-    if (!catchRecord) {
-      return NextResponse.json(
-        { success: false, error: 'Catch record not found' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(catchRecord, auth.tenantId, 'Catch')
     
     if (!hasFullSystemAccess(auth.role) &&
         catchRecord.owner_id !== auth.userId && catchRecord.captain_id !== auth.userId) {
@@ -396,15 +407,14 @@ export async function DELETE(request: NextRequest) {
     
     const tripId = catchRecord.trip_id
     
-    await execute('DELETE FROM catches WHERE id = ?', [id])
+    await execute('DELETE FROM catches WHERE id = ? AND tenant_id = ?', [id, auth.tenantId])
     
-    // Update trip totals
     await execute(
       `UPDATE fishing_trips SET
-        total_catch_kg = (SELECT COALESCE(SUM(quantity_kg), 0) FROM catches WHERE trip_id = ?),
-        total_revenue = (SELECT COALESCE(SUM(total_value), 0) FROM catches WHERE trip_id = ?)
-      WHERE id = ?`,
-      [tripId, tripId, tripId]
+        total_catch_kg = (SELECT COALESCE(SUM(quantity_kg), 0) FROM catches WHERE trip_id = ? AND tenant_id = ?),
+        total_revenue = (SELECT COALESCE(SUM(total_value), 0) FROM catches WHERE trip_id = ? AND tenant_id = ?)
+      WHERE id = ? AND tenant_id = ?`,
+      [tripId, auth.tenantId, tripId, auth.tenantId, tripId, auth.tenantId],
     )
     
     return NextResponse.json({

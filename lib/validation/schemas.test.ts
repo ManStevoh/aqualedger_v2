@@ -26,7 +26,8 @@ describe('registerSchema', () => {
       password: 'SecurePass1',
       firstName: 'Jane',
       lastName: 'Doe',
-      role: 'fisherman',
+      organizationName: 'Lake Fisheries Co-op',
+      businessType: 'fisherman',
     })
     expect(result.success).toBe(true)
   })

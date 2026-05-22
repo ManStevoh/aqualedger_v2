@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
+import { pushTenantCondition } from '@/lib/tenant-scope'
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth()
+    const auth = await withApiPermission('fishing.bmu.read')
     const { searchParams } = new URL(request.url)
     const resource = searchParams.get('resource') || 'bmus'
     const page = parseInt(searchParams.get('page') || '1')
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest) {
       const status = searchParams.get('status')
       const conditions: string[] = []
       const params: unknown[] = []
+      pushTenantCondition(conditions, params, 'l', auth.tenantId)
       if (status) {
         conditions.push('l.status = ?')
         params.push(status === 'valid' ? 'active' : status)
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const conditions: string[] = []
     const params: unknown[] = []
+    pushTenantCondition(conditions, params, 'b', auth.tenantId)
     if (county) {
       conditions.push('b.county = ?')
       params.push(county)
@@ -91,7 +94,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['super_admin', 'investor', 'bmu_official'])
+    const auth = await withApiPermission('fishing.bmu.write')
     const body = await request.json()
     const name = (body.name as string)?.trim()
     const code = (body.code as string)?.trim()
@@ -104,16 +107,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existing = await queryOne<{ id: string }>('SELECT id FROM bmu WHERE code = ?', [code])
+    const existing = await queryOne<{ id: string }>(
+      'SELECT id FROM bmu WHERE code = ? AND tenant_id = ?',
+      [code, auth.tenantId],
+    )
     if (existing) {
       return NextResponse.json({ success: false, error: 'BMU code already exists' }, { status: 409 })
     }
 
     const id = generateId()
     await execute(
-      `INSERT INTO bmu (id, name, code, county, status, total_members, total_boats, registration_date)
-       VALUES (?, ?, ?, ?, 'active', 0, 0, CURDATE())`,
-      [id, name, code, county],
+      `INSERT INTO bmu (id, tenant_id, name, code, county, status, total_members, total_boats, registration_date)
+       VALUES (?, ?, ?, ?, ?, 'active', 0, 0, CURDATE())`,
+      [id, auth.tenantId, name, code, county],
     )
 
     const bmu = await queryOne('SELECT * FROM bmu WHERE id = ?', [id])

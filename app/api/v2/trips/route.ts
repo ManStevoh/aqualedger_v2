@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination, buildOrderBy, transaction } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { assertTenantMatch, pushTenantCondition } from '@/lib/tenant-scope'
 
 interface FishingTrip {
   id: string
+  tenant_id: string
   boat_id: string
   captain_id: string
   landing_site_id: string
@@ -27,7 +29,7 @@ interface FishingTrip {
 // GET /api/v2/trips - List fishing trips
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.trips.read')
     const { searchParams } = new URL(request.url)
     
     const page = parseInt(searchParams.get('page') || '1')
@@ -47,6 +49,8 @@ export async function GET(request: NextRequest) {
     
     const conditions: string[] = []
     const params: unknown[] = []
+
+    pushTenantCondition(conditions, params, 't', auth.tenantId)
     
     // Filter by user's boats for non-admin
     if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official') {
@@ -128,7 +132,7 @@ export async function GET(request: NextRequest) {
 // POST /api/v2/trips - Create a new trip
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireRole(['boat_owner', 'fisherman', 'super_admin', 'investor'])
+    const auth = await withApiPermission('fishing.trips.write')
     const body = await request.json()
     
     const {
@@ -150,18 +154,11 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Verify boat exists and user has access
-    const boat = await queryOne<{ id: string; owner_id: string }>(
-      'SELECT id, owner_id FROM boats WHERE id = ? AND status = "active"',
-      [boatId]
+    const boat = await queryOne<{ id: string; owner_id: string; tenant_id: string }>(
+      'SELECT id, owner_id, tenant_id FROM boats WHERE id = ? AND tenant_id = ? AND status = "active"',
+      [boatId, auth.tenantId],
     )
-    
-    if (!boat) {
-      return NextResponse.json(
-        { success: false, error: 'Boat not found or inactive' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(boat, auth.tenantId, 'Boat')
     
     if (!hasFullSystemAccess(auth.role) && boat.owner_id !== auth.userId) {
       // Check if user is assigned crew
@@ -183,11 +180,11 @@ export async function POST(request: NextRequest) {
     
     await query(
       `INSERT INTO fishing_trips (
-        id, boat_id, captain_id, landing_site_id, departure_time,
+        id, tenant_id, boat_id, captain_id, landing_site_id, departure_time,
         status, fishing_zone, weather_conditions, sea_state, notes
-      ) VALUES (?, ?, ?, ?, ?, 'ongoing', ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, 'ongoing', ?, ?, ?, ?)`,
       [
-        id, boatId, captain, landingSiteId || null, departureTime,
+        id, auth.tenantId, boatId, captain, landingSiteId || null, departureTime,
         fishingZone || null, weatherConditions || null, seaState || null, notes || null
       ]
     )
@@ -210,7 +207,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/v2/trips - Update/complete a trip
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.trips.write')
     const body = await request.json()
     const { id, action, ...updates } = body
     
@@ -226,16 +223,11 @@ export async function PUT(request: NextRequest) {
       `SELECT t.*, b.owner_id
        FROM fishing_trips t
        LEFT JOIN boats b ON t.boat_id = b.id
-       WHERE t.id = ?`,
-      [id]
+       WHERE t.id = ? AND t.tenant_id = ?`,
+      [id, auth.tenantId],
     )
     
-    if (!trip) {
-      return NextResponse.json(
-        { success: false, error: 'Trip not found' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(trip, auth.tenantId, 'Trip')
     
     if (!hasFullSystemAccess(auth.role) && trip.owner_id !== auth.userId && trip.captain_id !== auth.userId) {
       return NextResponse.json(
@@ -254,8 +246,8 @@ export async function PUT(request: NextRequest) {
           return_time = ?,
           fuel_used_liters = ?,
           fuel_cost = ?
-        WHERE id = ?`,
-        [returnTime || new Date().toISOString(), fuelUsedLiters || 0, fuelCost || 0, id],
+        WHERE id = ? AND tenant_id = ?`,
+        [returnTime || new Date().toISOString(), fuelUsedLiters || 0, fuelCost || 0, id, auth.tenantId],
       )
       
       // Calculate total catch and revenue from catches table
@@ -263,13 +255,13 @@ export async function PUT(request: NextRequest) {
         `UPDATE fishing_trips t SET
           total_catch_kg = (SELECT COALESCE(SUM(quantity_kg), 0) FROM catches WHERE trip_id = ?),
           total_revenue = (SELECT COALESCE(SUM(total_value), 0) FROM catches WHERE trip_id = ?)
-        WHERE id = ?`,
-        [id, id, id]
+        WHERE id = ? AND tenant_id = ?`,
+        [id, id, id, auth.tenantId]
       )
     } else if (action === 'cancel') {
       await execute(
-        `UPDATE fishing_trips SET status = 'cancelled' WHERE id = ?`,
-        [id]
+        `UPDATE fishing_trips SET status = 'cancelled' WHERE id = ? AND tenant_id = ?`,
+        [id, auth.tenantId]
       )
     } else {
       // Regular update
@@ -291,8 +283,9 @@ export async function PUT(request: NextRequest) {
       
       if (updateParts.length > 0) {
         updateParams.push(id)
+        updateParams.push(auth.tenantId)
         await execute(
-          `UPDATE fishing_trips SET ${updateParts.join(', ')} WHERE id = ?`,
+          `UPDATE fishing_trips SET ${updateParts.join(', ')} WHERE id = ? AND tenant_id = ?`,
           updateParams
         )
       }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { assertTenantMatch, pushTenantCondition } from '@/lib/tenant-scope'
 
 const typeMap: Record<string, string> = {
   scheduled: 'routine',
@@ -15,7 +16,7 @@ const typeMap: Record<string, string> = {
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.boats.read')
     const { searchParams } = new URL(request.url)
     const boatId = searchParams.get('boatId')
     const status = searchParams.get('status')
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest) {
 
     const conditions: string[] = []
     const params: unknown[] = []
+
+    pushTenantCondition(conditions, params, 'm', auth.tenantId)
 
     if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official') {
       conditions.push('b.owner_id = ?')
@@ -75,7 +78,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.boats.write')
     const body = await request.json()
     const boatId = body.boatId as string
     const rawType = (body.type as string) || 'routine'
@@ -87,13 +90,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Boat and description required' }, { status: 400 })
     }
 
-    const boat = await queryOne<{ id: string; owner_id: string }>(
-      'SELECT id, owner_id FROM boats WHERE id = ?',
+    const boat = await queryOne<{ id: string; owner_id: string; tenant_id: string }>(
+      'SELECT id, owner_id, tenant_id FROM boats WHERE id = ?',
       [boatId],
     )
-    if (!boat) {
-      return NextResponse.json({ success: false, error: 'Boat not found' }, { status: 404 })
-    }
+    assertTenantMatch(boat, auth.tenantId, 'Boat')
     if (!hasFullSystemAccess(auth.role) && boat.owner_id !== auth.userId) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
@@ -101,9 +102,9 @@ export async function POST(request: NextRequest) {
     const maintenanceType = typeMap[rawType] || rawType
     const id = generateId()
     await execute(
-      `INSERT INTO boat_maintenance (id, boat_id, maintenance_type, description, cost, maintenance_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'scheduled')`,
-      [id, boatId, maintenanceType, description, cost, scheduledDate],
+      `INSERT INTO boat_maintenance (id, tenant_id, boat_id, maintenance_type, description, cost, maintenance_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')`,
+      [id, boat.tenant_id, boatId, maintenanceType, description, cost, scheduledDate],
     )
 
     const row = await queryOne(

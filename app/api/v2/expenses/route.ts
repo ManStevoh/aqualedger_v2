@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { pushTenantCondition } from '@/lib/tenant-scope'
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('accounting.expenses.read')
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
     const status = searchParams.get('status')
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
 
     const conditions: string[] = []
     const params: unknown[] = []
+    pushTenantCondition(conditions, params, 'e', auth.tenantId)
 
     if (!hasFullSystemAccess(auth.role)) {
       conditions.push('e.user_id = ?')
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
       params.push(boatId)
     }
 
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+    const where = `WHERE ${conditions.join(' AND ')}`
 
     const [countRow] = await query<{ total: number }>(
       `SELECT COUNT(*) as total FROM expenses e ${where}`,
@@ -82,7 +84,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('accounting.expenses.write')
     const body = await request.json()
     let category = body.category as string
     const description = body.description as string
@@ -115,9 +117,9 @@ export async function POST(request: NextRequest) {
 
     const id = generateId()
     await execute(
-      `INSERT INTO expenses (id, user_id, boat_id, trip_id, category, description, amount, expense_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [id, auth.userId, boatId || null, tripId || null, category, description, amount, expenseDate]
+      `INSERT INTO expenses (id, tenant_id, user_id, boat_id, trip_id, category, description, amount, expense_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [id, auth.tenantId, auth.userId, boatId || null, tripId || null, category, description, amount, expenseDate]
     )
 
     const row = await queryOne('SELECT * FROM expenses WHERE id = ?', [id])

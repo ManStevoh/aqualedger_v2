@@ -3,30 +3,38 @@ import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId } from '@/lib/db'
 import {
   requireAuth,
-  requireRole,
   hashPassword,
   verifyPassword,
   validatePassword,
   type UserRole,
 } from '@/lib/auth'
+import { withApiPermission, withApiPermissionAny } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
 
 export async function GET(request: NextRequest) {
   try {
-    await requireRole(['super_admin', 'investor'])
+    const auth = await withApiPermissionAny(['platform.tenants.manage', 'tenant.members.manage'])
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 200)
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1)
     const offset = (page - 1) * limit
 
-    const [countRow] = await query<{ total: number }>('SELECT COUNT(*) as total FROM users', [])
+    const [countRow] = await query<{ total: number }>(
+      `SELECT COUNT(*) as total
+       FROM users u
+       INNER JOIN tenant_members tm ON tm.user_id = u.id AND tm.tenant_id = ?`,
+      [auth.tenantId],
+    )
     const total = countRow?.total || 0
 
     const users = await query(
-      `SELECT id, email, first_name, last_name, phone, role, status, avatar_url, created_at, last_login
-       FROM users
-       ORDER BY created_at DESC
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.role, u.status, u.avatar_url, u.created_at, u.last_login
+       FROM users u
+       INNER JOIN tenant_members tm ON tm.user_id = u.id AND tm.tenant_id = ?
+       ORDER BY u.created_at DESC
        LIMIT ${limit} OFFSET ${offset}`,
+      [auth.tenantId],
     )
 
     return NextResponse.json({
@@ -40,17 +48,49 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireAuth()
     const body = await request.json()
-    const targetId = (body.userId as string) || (body.id as string) || auth.userId
+    const targetId = (body.userId as string) || (body.id as string)
+    const status = body.status as string | undefined
 
-    if (targetId !== auth.userId && !hasFullSystemAccess(auth.role)) {
+    if (status != null) {
+      if (status !== 'active' && status !== 'suspended') {
+        return NextResponse.json(
+          { success: false, error: 'Status must be active or suspended' },
+          { status: 400 },
+        )
+      }
+
+      const adminAuth = await withApiPermission('platform.tenants.manage')
+      const resolvedTargetId = targetId || adminAuth.userId
+
+      const member = await queryOne<{ user_id: string }>(
+        `SELECT tm.user_id FROM tenant_members tm
+         WHERE tm.tenant_id = ? AND tm.user_id = ?`,
+        [adminAuth.tenantId, resolvedTargetId],
+      )
+      if (!member) {
+        return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 })
+      }
+
+      await execute(`UPDATE users SET status = ? WHERE id = ?`, [status, resolvedTargetId])
+      await execute(
+        `UPDATE tenant_members SET status = ? WHERE tenant_id = ? AND user_id = ?`,
+        [status, adminAuth.tenantId, resolvedTargetId],
+      )
+
+      return NextResponse.json({ success: true, message: 'User status updated' })
+    }
+
+    const auth = await requireAuth()
+    const profileTargetId = targetId || auth.userId
+
+    if (profileTargetId !== auth.userId && !hasFullSystemAccess(auth.role)) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
     const creds = await queryOne<{ password_hash: string }>(
       'SELECT password_hash FROM users WHERE id = ?',
-      [targetId],
+      [profileTargetId],
     )
     if (!creds) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 })
@@ -58,7 +98,7 @@ export async function PUT(request: NextRequest) {
 
     const newPassword = body.password as string | undefined
     const currentPassword = body.currentPassword as string | undefined
-    const isAdminResettingOtherUser = hasFullSystemAccess(auth.role) && targetId !== auth.userId
+    const isAdminResettingOtherUser = hasFullSystemAccess(auth.role) && profileTargetId !== auth.userId
 
     if (newPassword) {
       if (!isAdminResettingOtherUser) {
@@ -114,7 +154,7 @@ export async function PUT(request: NextRequest) {
       notifPrefs != null &&
       typeof notifPrefs === 'object' &&
       !Array.isArray(notifPrefs) &&
-      targetId === auth.userId
+      profileTargetId === auth.userId
     ) {
       sets.push('notification_preferences = ?')
       params.push(JSON.stringify(notifPrefs))
@@ -129,7 +169,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No valid fields to update' }, { status: 400 })
     }
 
-    params.push(targetId)
+    params.push(profileTargetId)
     await execute(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, params)
 
     return NextResponse.json({ success: true, message: 'User updated' })
@@ -140,7 +180,7 @@ export async function PUT(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['super_admin', 'investor'])
+    const auth = await withApiPermission('platform.tenants.manage')
     const body = await request.json()
     const email = (body.email as string)?.trim().toLowerCase()
     const password = body.password as string
@@ -158,11 +198,18 @@ export async function POST(request: NextRequest) {
 
     const hash = await hashPassword(password)
     const id = generateId()
+    const memberRole = legacyRoleToMemberRole(role)
 
     await execute(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`,
       [id, email, hash, firstName, lastName, phone, role],
+    )
+
+    await execute(
+      `INSERT INTO tenant_members (id, tenant_id, user_id, role, status)
+       VALUES (?, ?, ?, ?, 'active')`,
+      [generateId(), auth.tenantId, id, memberRole],
     )
 
     await execute(

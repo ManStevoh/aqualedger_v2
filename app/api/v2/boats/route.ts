@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, buildPagination, buildOrderBy } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
+import { withApiPermission } from '@/lib/platform/api-auth'
+import { assertTenantMatch, pushTenantCondition } from '@/lib/tenant-scope'
 
 interface Boat {
   id: string
+  tenant_id: string
   owner_id: string
   registration_number: string
   name: string
@@ -25,7 +27,7 @@ interface Boat {
 // GET /api/v2/boats - List all boats (with filters)
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.boats.read')
     const { searchParams } = new URL(request.url)
     
     const page = parseInt(searchParams.get('page') || '1')
@@ -44,6 +46,8 @@ export async function GET(request: NextRequest) {
     let whereClause = ''
     const params: unknown[] = []
     const conditions: string[] = []
+
+    pushTenantCondition(conditions, params, 'b', auth.tenantId)
     
     // Filter by owner for non-admin users
     if (!hasFullSystemAccess(auth.role)) {
@@ -106,7 +110,7 @@ export async function GET(request: NextRequest) {
 // POST /api/v2/boats - Create a new boat
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireRole(['boat_owner', 'super_admin', 'investor'])
+    const auth = await withApiPermission('fishing.boats.write')
     const body = await request.json()
     
     const {
@@ -134,10 +138,10 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check for duplicate registration number
+    // Check for duplicate registration number within tenant
     const existing = await queryOne<{ id: string }>(
-      'SELECT id FROM boats WHERE registration_number = ?',
-      [registrationNumber]
+      'SELECT id FROM boats WHERE tenant_id = ? AND registration_number = ?',
+      [auth.tenantId, registrationNumber]
     )
     
     if (existing) {
@@ -157,11 +161,12 @@ export async function POST(request: NextRequest) {
 
     await query(
       `INSERT INTO boats (
-        id, owner_id, registration_number, name, type, length_meters, capacity_kg,
+        id, tenant_id, owner_id, registration_number, name, type, length_meters, capacity_kg,
         engine_type, engine_power_hp, year_built, status, gps_enabled
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       [
         id,
+        auth.tenantId,
         ownerId,
         registrationNumber,
         name,
@@ -193,7 +198,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/v2/boats - Update a boat
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.boats.write')
     const body = await request.json()
     const { id, ...updates } = body
     
@@ -204,18 +209,11 @@ export async function PUT(request: NextRequest) {
       )
     }
     
-    // Check ownership
     const boat = await queryOne<Boat>(
-      'SELECT * FROM boats WHERE id = ?',
-      [id]
+      'SELECT * FROM boats WHERE id = ? AND tenant_id = ?',
+      [id, auth.tenantId],
     )
-    
-    if (!boat) {
-      return NextResponse.json(
-        { success: false, error: 'Boat not found' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(boat, auth.tenantId, 'Boat')
     
     if (!hasFullSystemAccess(auth.role) && boat.owner_id !== auth.userId) {
       return NextResponse.json(
@@ -249,11 +247,11 @@ export async function PUT(request: NextRequest) {
       )
     }
     
-    updateParams.push(id)
+    updateParams.push(id, auth.tenantId)
     
     await execute(
-      `UPDATE boats SET ${updateParts.join(', ')} WHERE id = ?`,
-      updateParams
+      `UPDATE boats SET ${updateParts.join(', ')} WHERE id = ? AND tenant_id = ?`,
+      updateParams,
     )
     
     const updatedBoat = await queryOne<Boat>(
@@ -274,7 +272,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/v2/boats - Delete a boat
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('fishing.boats.write')
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
@@ -285,18 +283,11 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    // Check ownership
     const boat = await queryOne<Boat>(
-      'SELECT * FROM boats WHERE id = ?',
-      [id]
+      'SELECT * FROM boats WHERE id = ? AND tenant_id = ?',
+      [id, auth.tenantId],
     )
-    
-    if (!boat) {
-      return NextResponse.json(
-        { success: false, error: 'Boat not found' },
-        { status: 404 }
-      )
-    }
+    assertTenantMatch(boat, auth.tenantId, 'Boat')
     
     if (!hasFullSystemAccess(auth.role) && boat.owner_id !== auth.userId) {
       return NextResponse.json(
@@ -305,10 +296,9 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    // Soft delete - set status to decommissioned
     await execute(
-      `UPDATE boats SET status = 'decommissioned' WHERE id = ?`,
-      [id]
+      `UPDATE boats SET status = 'decommissioned' WHERE id = ? AND tenant_id = ?`,
+      [id, auth.tenantId],
     )
     
     return NextResponse.json({

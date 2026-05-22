@@ -1,16 +1,34 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
+import { ThemeProvider } from '@/components/providers/theme-provider'
+import { ServiceWorkerRegister } from '@/components/service-worker-register'
+import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const sans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans-app',
+  display: 'swap',
+})
+const mono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono-app',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: {
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: APP_TAGLINE,
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: APP_NAME,
+  },
   icons: {
     icon: [
       {
@@ -36,10 +54,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
-        {children}
-        <Toaster richColors position="top-center" />
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
+      <body className="font-sans antialiased min-h-screen">
+        <ThemeProvider>
+          {children}
+          <Toaster
+            richColors
+            position="top-center"
+            toastOptions={{
+              classNames: {
+                toast: 'glass-panel shadow-lg',
+              },
+            }}
+          />
+        </ThemeProvider>
+        {process.env.NODE_ENV === 'production' && <ServiceWorkerRegister />}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

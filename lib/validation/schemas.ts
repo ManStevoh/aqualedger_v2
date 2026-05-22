@@ -9,9 +9,19 @@ export const userRoleSchema = z.enum([
   'bmu_official',
 ])
 
+export const businessTypeSchema = z.enum([
+  'fisherman',
+  'cooperative',
+  'processor',
+  'market',
+  'exporter',
+])
+
 export const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().optional().default(false),
+  recaptchaToken: z.string().min(1).optional(),
 })
 
 export const registerSchema = z.object({
@@ -29,9 +39,12 @@ export const registerSchema = z.object({
     .regex(/^\+?[0-9]{10,15}$/, 'Invalid phone number format')
     .optional()
     .or(z.literal('')),
+  organizationName: z.string().min(2, 'Organization name is required').max(200),
+  businessType: businessTypeSchema,
   role: userRoleSchema
     .refine((r) => r !== 'super_admin', 'Invalid role')
     .optional(),
+  recaptchaToken: z.string().min(1).optional(),
 })
 
 export const boatCreateSchema = z.object({
@@ -86,4 +99,17 @@ export const licenseCreateSchema = z.object({
   issuedDate: z.string().optional(),
   expiresDate: z.string().min(1),
   issuingAuthority: z.string().optional(),
+})
+
+export const inventoryBatchCreateSchema = z.object({
+  sku: z.string().min(1).max(80),
+  productName: z.string().min(1).max(200),
+  batchCode: z.string().min(1).max(80),
+  quantityKg: z.number().positive('Quantity must be positive'),
+  speciesId: z.string().uuid().optional().nullable(),
+  storageType: z.enum(['fresh', 'frozen', 'dried']).default('fresh'),
+  expiryDate: z.string().optional().nullable(),
+  sourceType: z.enum(['catch', 'purchase', 'transfer', 'adjustment']).default('catch'),
+  sourceId: z.string().uuid().optional().nullable(),
+  status: z.enum(['available', 'reserved', 'depleted', 'spoiled']).optional(),
 })

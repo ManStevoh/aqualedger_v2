@@ -25,6 +25,8 @@ export interface JWTPayload {
   userId: string
   email: string
   role: UserRole
+  /** Set when a super_admin is impersonating another user */
+  impersonatedBy?: string
   iat?: number
   exp?: number
 }
@@ -55,6 +57,7 @@ function getJwtSecretOrThrow(): string {
 }
 const JWT_EXPIRES_IN = '15m' // Access token expires in 15 minutes
 const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+const REFRESH_TOKEN_REMEMBER_ME = 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
 const SALT_ROUNDS = 12
 
 // Password hashing
@@ -151,7 +154,9 @@ export async function updateUserLastLogin(userId: string): Promise<void> {
 export async function createSession(
   userId: string,
   ipAddress?: string,
-  userAgent?: string
+  userAgent?: string,
+  rememberMe = false,
+  impersonatedBy?: string,
 ): Promise<{ accessToken: string; refreshToken: string; expiresAt: Date }> {
   const user = await getUserById(userId)
   if (!user) throw new Error('User not found')
@@ -160,10 +165,13 @@ export async function createSession(
     userId: user.id,
     email: user.email,
     role: user.role,
+    ...(impersonatedBy ? { impersonatedBy } : {}),
   })
   
   const refreshToken = generateRefreshToken()
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN)
+  const expiresAt = new Date(
+    Date.now() + (rememberMe ? REFRESH_TOKEN_REMEMBER_ME : REFRESH_TOKEN_EXPIRES_IN),
+  )
   
   // Store refresh token in database
   await query(
@@ -207,16 +215,18 @@ export async function deleteAllUserSessions(userId: string): Promise<void> {
 export async function setAuthCookies(
   accessToken: string,
   refreshToken: string,
-  expiresAt: Date
+  expiresAt: Date,
+  options?: { rememberMe?: boolean },
 ): Promise<void> {
   const cookieStore = await cookies()
+  const rememberMe = options?.rememberMe ?? false
   
   cookieStore.set('access_token', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 15 * 60, // 15 minutes
+    maxAge: rememberMe ? 60 * 60 : 15 * 60,
   })
   
   cookieStore.set('refresh_token', refreshToken, {
@@ -224,6 +234,7 @@ export async function setAuthCookies(
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
+    maxAge: rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60,
     expires: expiresAt,
   })
 }
@@ -232,6 +243,25 @@ export async function clearAuthCookies(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete('access_token')
   cookieStore.delete('refresh_token')
+  cookieStore.delete('admin_refresh_token')
+}
+
+/** Preserve super-admin refresh token while impersonating another user */
+export async function setAdminRefreshCookie(refreshToken: string, expiresAt: Date): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.set('admin_refresh_token', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    expires: expiresAt,
+    maxAge: 7 * 24 * 60 * 60,
+  })
+}
+
+export async function getAdminRefreshToken(): Promise<string | null> {
+  const cookieStore = await cookies()
+  return cookieStore.get('admin_refresh_token')?.value ?? null
 }
 
 export async function getAuthFromCookies(): Promise<JWTPayload | null> {

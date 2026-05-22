@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth()
+    await withApiPermission('analytics.dashboard.read')
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
 

@@ -21,6 +21,7 @@ import type {
   UserRole,
 } from './types'
 import { hasFullSystemAccess } from './platform-access'
+import { apiPath, resolveFetchUrl } from './config/urls'
 
 export { authFetchJson } from './auth-fetch'
 
@@ -54,6 +55,8 @@ function mapGradeToUi(g: string): Catch['grade'] {
 }
 
 function mapGradeToDb(g: string): string {
+  const upper = g.toUpperCase()
+  if (['A', 'B', 'C', 'reject'].includes(upper)) return upper
   const m: Record<string, string> = { premium: 'A', export: 'B', local: 'C' }
   return m[g] || g
 }
@@ -692,7 +695,7 @@ export function useMaintenance(filters?: Record<string, string>) {
 }
 
 export async function createInvestment(body: { packageId: string; amount: number; investorId?: string }) {
-  const res = await fetch('/api/v2/investments', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/investments')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -707,7 +710,7 @@ export async function createTrip(body: {
   crew?: string[]
   fishingZone: string
 }) {
-  const res = await fetch('/api/v2/trips', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/trips')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -722,7 +725,7 @@ export async function createTrip(body: {
 }
 
 export async function completeTrip(tripId: string) {
-  const res = await fetch('/api/v2/trips', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/trips')), {
     method: 'PUT',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -737,8 +740,9 @@ export async function logCatch(body: {
   weight: number
   grade: string
   pricePerKg: number
+  mscCertified?: boolean
 }) {
-  const res = await fetch('/api/v2/catches', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/catches')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -748,6 +752,7 @@ export async function logCatch(body: {
       weight: body.weight,
       grade: mapGradeToDb(body.grade),
       pricePerKg: body.pricePerKg,
+      mscCertified: body.mscCertified ?? false,
     }),
   })
   return res.json() as Promise<{ success: boolean; error?: string }>
@@ -763,7 +768,7 @@ export async function createListing(body: {
   location: string
   landingSite: string
 }) {
-  const res = await fetch('/api/v2/marketplace', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/marketplace')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -785,7 +790,7 @@ export async function placeOrder(body: {
   quantity: number
   deliveryAddress: string
 }) {
-  const res = await fetch('/api/v2/orders', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/orders')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -798,7 +803,7 @@ export async function placeOrder(body: {
 }
 
 export async function updateOrderStatus(orderId: string, action: string) {
-  const res = await fetch('/api/v2/orders', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/orders')), {
     method: 'PUT',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -813,7 +818,7 @@ export async function walletTransaction(body: {
   amount: number
   description?: string
 }) {
-  const res = await fetch('/api/v2/wallet', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/wallet')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -834,7 +839,7 @@ export async function recordExpense(body: {
   tripId?: string
   date?: string
 }) {
-  const res = await fetch('/api/v2/expenses', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/expenses')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -858,7 +863,7 @@ export async function scheduleMaintenance(body: {
   technicianName: string
   scheduledDate: string
 }) {
-  const res = await fetch('/api/v2/maintenance', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/maintenance')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -882,7 +887,7 @@ export async function createBoat(body: {
   engineType?: string
   enginePowerHp?: number
 }) {
-  const res = await fetch('/api/v2/boats', {
+  const res = await fetch(resolveFetchUrl(apiPath('/v2/boats')), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -950,11 +955,48 @@ export async function createLandingSite(body: {
   )
 }
 
+export interface ExecutiveSummaryData {
+  fleetCount: number
+  activeFleetCount: number
+  ordersCount: number
+  revenueTotal: number
+  coldAlertsCount: number
+  openColdAlertsCount: number
+}
+
+export function useExecutiveSummary() {
+  return useSWR('/api/v2/analytics?type=executive-summary', async (url) => {
+    const raw = await authFetchJson<{ success: boolean; data?: ExecutiveSummaryData }>(url)
+    return raw.data ?? null
+  })
+}
+
+export interface NotificationItem {
+  id: string
+  type: string
+  title: string
+  message: string
+  action_url?: string | null
+  is_read: boolean
+  created_at: string
+}
+
+export interface NotificationsResponse {
+  items: NotificationItem[]
+  unreadCount: number
+}
+
 export function useNotifications(_userId?: string, unreadOnly = false) {
   const params = new URLSearchParams()
-  params.set('limit', '50')
-  if (unreadOnly) params.set('unread', '1')
-  return useSWR(`/api/v2/notifications?${params}`, swrFetcher)
+  params.set('limit', unreadOnly ? '10' : '50')
+  if (unreadOnly) params.set('unreadOnly', 'true')
+  return useSWR(`/api/v2/notifications?${params}`, async (url) => {
+    const raw = await authFetchJson<{
+      success: boolean
+      data?: NotificationsResponse
+    }>(url)
+    return raw.data ?? { items: [], unreadCount: 0 }
+  })
 }
 
 export function useColdStorageInventory() {

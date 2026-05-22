@@ -1,13 +1,18 @@
+import { apiPath, resolveFetchUrl } from '@/lib/config/urls'
+
 /** Cookie-authenticated JSON fetch with one refresh retry on 401 */
 
 async function tryRefreshSession(): Promise<boolean> {
-  const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' })
+  const res = await fetch(resolveFetchUrl(apiPath('/auth/refresh')), {
+    method: 'POST',
+    credentials: 'same-origin',
+  })
   return res.ok
 }
 
 export async function authFetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   const run = () =>
-    fetch(input, { ...init, credentials: 'same-origin' }).then(async (res) => ({
+    fetch(resolveFetchUrl(input), { ...init, credentials: 'same-origin' }).then(async (res) => ({
       res,
       json: (await res.json()) as T,
     }))

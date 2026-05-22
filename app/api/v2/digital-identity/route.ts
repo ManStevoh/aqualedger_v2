@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { queryOne } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { apiHandler } from '@/lib/api-handler'
 
 /** KYC / digital identity derived from user profile */
 export const GET = apiHandler(async () => {
-  const auth = await requireAuth()
+  const auth = await withApiPermission('tenant.settings.read')
 
   const user = await queryOne<{
     id: string

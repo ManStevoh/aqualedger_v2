@@ -1,159 +1,192 @@
 'use client'
 
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  LayoutDashboard,
-  Wallet,
-  TrendingUp,
-  Ship,
-  Anchor,
-  Fish,
-  ShoppingCart,
-  Users,
-  FileText,
-  Settings,
-  BarChart3,
-  Wrench,
-  Snowflake,
-  Building2,
-  Shield,
-  DollarSign,
-  MapPin,
-  X,
-  CloudRain,
-  CreditCard,
-  Bell,
-} from 'lucide-react'
+import { ChevronDown, Fish, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { useAppStore } from '@/lib/store'
-import type { UserRole } from '@/lib/types'
-
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  roles: UserRole[]
-}
-
-const navItems: NavItem[] = [
-  // Common
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'investor', 'boat_owner', 'fisherman', 'fish_buyer', 'bmu_official'] },
-  
-  // Investor
-  { title: 'Portfolio', href: '/dashboard/portfolio', icon: TrendingUp, roles: ['investor'] },
-  { title: 'Investments', href: '/dashboard/investments', icon: DollarSign, roles: ['investor', 'super_admin'] },
-  { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet, roles: ['investor', 'boat_owner', 'fish_buyer', 'super_admin'] },
-  
-  // Boat Owner & Fisherman
-  { title: 'Fleet', href: '/dashboard/fleet', icon: Ship, roles: ['boat_owner', 'super_admin', 'investor'] },
-  { title: 'Trips', href: '/dashboard/trips', icon: Anchor, roles: ['boat_owner', 'fisherman', 'super_admin', 'investor'] },
-  { title: 'Catches', href: '/dashboard/catches', icon: Fish, roles: ['boat_owner', 'fisherman', 'super_admin', 'investor'] },
-  { title: 'Maintenance', href: '/dashboard/maintenance', icon: Wrench, roles: ['boat_owner', 'super_admin', 'investor'] },
-  
-  // Marketplace
-  { title: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingCart, roles: ['boat_owner', 'fish_buyer', 'super_admin', 'investor'] },
-  { title: 'Orders', href: '/dashboard/orders', icon: FileText, roles: ['fish_buyer', 'boat_owner', 'super_admin', 'investor'] },
-  
-  // Cold Storage
-  { title: 'Cold Storage', href: '/dashboard/storage', icon: Snowflake, roles: ['boat_owner', 'fish_buyer', 'super_admin', 'investor'] },
-  
-  // AI & Climate Features
-  { title: 'Credit Score', href: '/dashboard/credit-score', icon: CreditCard, roles: ['fisherman', 'boat_owner', 'super_admin', 'investor'] },
-  { title: 'Climate Alerts', href: '/dashboard/climate', icon: CloudRain, roles: ['fisherman', 'boat_owner', 'super_admin', 'bmu_official', 'investor'] },
-  
-  // BMU Official
-  { title: 'BMU Management', href: '/dashboard/bmu', icon: Building2, roles: ['bmu_official', 'super_admin', 'investor'] },
-  { title: 'Licenses', href: '/dashboard/licenses', icon: Shield, roles: ['bmu_official', 'super_admin', 'investor'] },
-  { title: 'Landing Sites', href: '/dashboard/landing-sites', icon: MapPin, roles: ['bmu_official', 'super_admin', 'investor'] },
-  
-  // Admin
-  { title: 'Admin Console', href: '/dashboard/admin', icon: Shield, roles: ['super_admin', 'investor'] },
-  { title: 'Users', href: '/dashboard/users', icon: Users, roles: ['super_admin', 'investor', 'bmu_official'] },
-  { title: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, roles: ['super_admin', 'investor', 'boat_owner'] },
-  { title: 'Notifications', href: '/dashboard/notifications', icon: Bell, roles: ['super_admin', 'investor', 'boat_owner', 'fisherman', 'fish_buyer', 'bmu_official'] },
-  { title: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['super_admin', 'investor', 'boat_owner', 'fisherman', 'fish_buyer', 'bmu_official'] },
-]
+import { APP_NAME } from '@/lib/constants'
+import { getNavForRole } from '@/lib/platform/modules'
+import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
 
 export function DashboardSidebar() {
   const pathname = usePathname()
-  const { currentRole, sidebarOpen, setSidebarOpen } = useAppStore()
+  const { currentRole, sidebarOpen, setSidebarOpen, navSearchQuery, enabledModuleIds, modulesLoaded } =
+    useAppStore()
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(currentRole))
+  const modules = useMemo(() => {
+    const memberRole = legacyRoleToMemberRole(currentRole)
+    const all = getNavForRole(memberRole, currentRole, modulesLoaded ? enabledModuleIds : ['platform'])
+    const q = navSearchQuery.trim().toLowerCase()
+    if (!q) return all
+
+    return all
+      .map((mod) => ({
+        ...mod,
+        nav: mod.nav.filter(
+          (item) =>
+            item.title.toLowerCase().includes(q) ||
+            mod.label.toLowerCase().includes(q) ||
+            item.href.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((mod) => mod.nav.length > 0)
+  }, [currentRole, navSearchQuery, enabledModuleIds, modulesLoaded])
+
+  const [openModules, setOpenModules] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    const activeModule = modules.find((mod) =>
+      mod.nav.some(
+        (item) =>
+          pathname === item.href ||
+          (item.href !== '/dashboard' && pathname.startsWith(item.href)),
+      ),
+    )
+    if (activeModule) {
+      setOpenModules((prev) => ({ ...prev, [activeModule.id]: true }))
+    }
+  }, [pathname, modules])
+
+  const toggleModule = (id: string) => {
+    setOpenModules((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
 
   return (
     <>
-      {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 h-full w-64 border-r bg-sidebar transition-transform lg:static lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed left-0 top-0 z-50 flex h-full w-[17.5rem] flex-col border-r border-sidebar-border/80 bg-sidebar/95 shadow-2xl shadow-black/5 backdrop-blur-xl transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:shadow-none',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+        <div className="flex h-[4.25rem] shrink-0 items-center justify-between border-b border-sidebar-border/60 px-4">
+          <Link href="/dashboard" className="group flex items-center gap-3">
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/25 transition-transform group-hover:scale-[1.02]">
               <Fish className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-sidebar-foreground">AquaLedger</span>
+            <div className="min-w-0">
+              <span className="block truncate text-[15px] font-bold tracking-tight text-sidebar-foreground">
+                {APP_NAME}
+              </span>
+              <span className="block text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/45">
+                Enterprise
+              </span>
+            </div>
           </Link>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden"
+            className="lg:hidden text-sidebar-foreground/70"
           >
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-4rem)] px-3 py-4">
-          <nav className="space-y-1">
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
-              
+        <ScrollArea className="flex-1 px-3 py-4">
+          <nav className="space-y-1" aria-label="Main navigation">
+            {modules.map((mod) => {
+              const ModuleIcon = mod.icon
+              const isModuleActive = mod.nav.some(
+                (item) =>
+                  pathname === item.href ||
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href)),
+              )
+              const isOpen = openModules[mod.id] ?? isModuleActive
+
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                  )}
+                <Collapsible
+                  key={mod.id}
+                  open={isOpen}
+                  onOpenChange={() => toggleModule(mod.id)}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.title}
-                </Link>
+                  <CollapsibleTrigger
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors',
+                      'text-sidebar-foreground/50 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+                      isModuleActive && 'text-sidebar-foreground',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br shadow-sm',
+                        mod.color,
+                      )}
+                    >
+                      <ModuleIcon className="h-3.5 w-3.5 text-white" />
+                    </span>
+                    <span className="flex-1 truncate">{mod.label}</span>
+                    <ChevronDown
+                      className={cn(
+                        'h-3.5 w-3.5 shrink-0 opacity-50 transition-transform duration-200',
+                        isOpen && 'rotate-180',
+                      )}
+                    />
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent className="space-y-0.5 pb-2 pl-1 pt-1">
+                    {mod.nav.map((item) => {
+                      const Icon = item.icon
+                      const isActive =
+                        pathname === item.href ||
+                        (item.href !== '/dashboard' && pathname.startsWith(item.href))
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={cn(
+                            'group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all',
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-sidebar-border/80'
+                              : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 shrink-0 transition-colors',
+                              isActive ? 'text-primary' : 'opacity-60 group-hover:opacity-100',
+                            )}
+                          />
+                          <span className="truncate">{item.title}</span>
+                          {item.badge && (
+                            <span className="ml-auto rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                              {item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      )
+                    })}
+                  </CollapsibleContent>
+                </Collapsible>
               )
             })}
           </nav>
-
-          <div className="mt-6 px-3">
-            <div className="rounded-lg bg-sidebar-accent/50 p-4">
-              <h4 className="text-sm font-semibold text-sidebar-foreground">Need Help?</h4>
-              <p className="mt-1 text-xs text-sidebar-foreground/70">
-                Contact support for assistance with the platform.
-              </p>
-              <Button size="sm" className="mt-3 w-full" variant="secondary">
-                Get Support
-              </Button>
-            </div>
-          </div>
         </ScrollArea>
+
+        <div className="shrink-0 border-t border-sidebar-border/60 p-4">
+          <p className="text-[11px] leading-relaxed text-sidebar-foreground/40">
+            Maritime ERP · Catch to cash · Cold chain compliant
+          </p>
+        </div>
       </aside>
     </>
   )

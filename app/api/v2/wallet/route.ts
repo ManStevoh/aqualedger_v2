@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { query, queryOne, execute, generateId, transaction, buildPagination, buildOrderBy } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { withApiPermission } from '@/lib/platform/api-auth'
 import { logAudit } from '@/lib/audit'
+import { getUserById } from '@/lib/auth'
+import { initiateStkPush } from '@/lib/modules/integrations/mpesa'
 import type { Connection } from 'mysql2/promise'
 
 interface Wallet {
@@ -31,7 +33,7 @@ interface Transaction {
 // GET /api/v2/wallet - Get wallet info and transactions
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('accounting.wallet.read')
     const { searchParams } = new URL(request.url)
     
     const action = searchParams.get('action') || 'balance'
@@ -39,17 +41,17 @@ export async function GET(request: NextRequest) {
     if (action === 'balance') {
       // Get wallet balance
       const wallet = await queryOne<Wallet>(
-        'SELECT * FROM wallets WHERE user_id = ?',
-        [auth.userId]
+        'SELECT * FROM wallets WHERE user_id = ? AND tenant_id = ?',
+        [auth.userId, auth.tenantId]
       )
       
       if (!wallet) {
         // Create wallet if doesn't exist
         const walletId = generateId()
         await query(
-          `INSERT INTO wallets (id, user_id, balance, currency, status)
-           VALUES (?, ?, 0, 'KES', 'active')`,
-          [walletId, auth.userId]
+          `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
+           VALUES (?, ?, ?, 0, 'KES', 'active')`,
+          [walletId, auth.tenantId, auth.userId]
         )
         
         return NextResponse.json({
@@ -84,8 +86,8 @@ export async function GET(request: NextRequest) {
       
       // Get wallet ID
       const wallet = await queryOne<{ id: string }>(
-        'SELECT id FROM wallets WHERE user_id = ?',
-        [auth.userId]
+        'SELECT id FROM wallets WHERE user_id = ? AND tenant_id = ?',
+        [auth.userId, auth.tenantId]
       )
       
       if (!wallet) {
@@ -153,8 +155,8 @@ export async function GET(request: NextRequest) {
     if (action === 'summary') {
       // Get wallet summary
       const wallet = await queryOne<{ id: string; balance: number }>(
-        'SELECT id, balance FROM wallets WHERE user_id = ?',
-        [auth.userId]
+        'SELECT id, balance FROM wallets WHERE user_id = ? AND tenant_id = ?',
+        [auth.userId, auth.tenantId]
       )
       
       if (!wallet) {
@@ -207,9 +209,9 @@ export async function GET(request: NextRequest) {
 // POST /api/v2/wallet - Perform wallet operations
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth()
+    const auth = await withApiPermission('accounting.wallet.write')
     const body = await request.json()
-    const { action, amount, description, paymentMethod, reference } = body
+    const { action, amount, description, paymentMethod, reference, phoneNumber } = body
     
     if (!action) {
       return NextResponse.json(
@@ -224,13 +226,41 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    if (action === 'deposit' && paymentMethod === 'mpesa') {
+      const user = await getUserById(auth.userId)
+      const phone = (phoneNumber as string | undefined)?.trim() || user?.phone
+      if (!phone) {
+        return NextResponse.json(
+          { success: false, error: 'Phone number required for M-Pesa. Add one in your profile or enter it here.' },
+          { status: 400 },
+        )
+      }
+      const stk = await initiateStkPush({
+        tenantId: auth.tenantId,
+        amount,
+        phoneNumber: phone,
+        description: description || 'Wallet deposit',
+        metadata: {
+          purpose: 'wallet_deposit',
+          user_id: auth.userId,
+        },
+      })
+      return NextResponse.json({
+        success: true,
+        message: stk.simulated
+          ? 'M-Pesa deposit completed (sandbox simulation)'
+          : 'STK push sent — approve on your phone to complete deposit',
+        data: { stk, pending: !stk.simulated },
+      })
+    }
     
     // Process transaction
     const result = await transaction(async (conn: Connection) => {
       // Get wallet with lock
       const [walletRows] = await conn.execute(
-        'SELECT * FROM wallets WHERE user_id = ? FOR UPDATE',
-        [auth.userId]
+        'SELECT * FROM wallets WHERE user_id = ? AND tenant_id = ? FOR UPDATE',
+        [auth.userId, auth.tenantId]
       )
       const wallet = (walletRows as Wallet[])[0]
       

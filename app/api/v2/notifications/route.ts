@@ -1,98 +1,87 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { handleApiError } from '@/lib/api-handler'
-import { query, execute, generateId, buildPagination } from '@/lib/db'
-import { requireAuth, requireRole } from '@/lib/auth'
+import { NextRequest } from 'next/server'
+import { z } from 'zod'
+import { apiHandler, jsonOk } from '@/lib/api-handler'
+import { requirePermission } from '@/lib/platform/access'
+import {
+  listNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '@/lib/modules/notifications/service'
+import { dispatchNotification } from '@/lib/notifications/dispatch'
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await requireAuth()
-    const { searchParams } = new URL(request.url)
-    const unreadOnly = searchParams.get('unreadOnly') === 'true'
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
-    const pagination = buildPagination(page, limit)
+const listQuerySchema = z.object({
+  unreadOnly: z.enum(['true', 'false']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+})
 
-    const conditions = ['n.user_id = ?']
-    const params: unknown[] = [auth.userId]
-    if (unreadOnly) {
-      conditions.push('n.is_read = FALSE')
-    }
-    const where = `WHERE ${conditions.join(' AND ')}`
+const createSchema = z.object({
+  userId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  message: z.string().min(1),
+  type: z.enum(['success', 'info', 'warning', 'error']).optional(),
+  link: z.string().max(500).optional(),
+  emitDomainEvent: z.boolean().optional(),
+})
 
-    const [countRow] = await query<{ total: number }>(
-      `SELECT COUNT(*) as total FROM notifications n ${where}`,
-      params
-    )
-    const total = countRow?.total || 0
+const patchSchema = z.object({
+  id: z.string().uuid().optional(),
+  markAllRead: z.boolean().optional(),
+})
 
-    const [unreadRow] = await query<{ c: number }>(
-      `SELECT COUNT(*) as c FROM notifications n WHERE n.user_id = ? AND n.is_read = FALSE`,
-      [auth.userId]
-    )
+export const GET = apiHandler(async (request: NextRequest) => {
+  const ctx = await requirePermission('notifications.read')
+  const { searchParams } = new URL(request.url)
+  const parsed = listQuerySchema.parse({
+    unreadOnly: searchParams.get('unreadOnly') ?? undefined,
+    page: searchParams.get('page') ?? undefined,
+    limit: searchParams.get('limit') ?? undefined,
+  })
 
-    const items = await query(
-      `SELECT * FROM notifications n ${where}
-       ORDER BY n.created_at DESC
-       ${pagination.clause}`,
-      params
-    )
+  const result = await listNotifications(ctx.tenantId, ctx.userId, {
+    unreadOnly: parsed.unreadOnly === 'true',
+    page: parsed.page,
+    limit: parsed.limit,
+  })
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        items,
-        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-        unreadCount: unreadRow?.c || 0,
-      },
-    })
-  } catch (error) {
-    return handleApiError(error, 'v2/notifications')
+  return jsonOk(result)
+}, 'v2/notifications')
+
+export const POST = apiHandler(async (request: NextRequest) => {
+  const ctx = await requirePermission('notifications.send')
+  const body = await request.json()
+  const input = createSchema.parse(body)
+
+  const result = await dispatchNotification({
+    tenantId: ctx.tenantId,
+    userId: input.userId,
+    title: input.title,
+    message: input.message,
+    type: input.type,
+    link: input.link,
+    emitDomainEvent: input.emitDomainEvent,
+    aggregateType: 'notification',
+    aggregateId: input.userId,
+    eventType: 'notification.sent',
+  })
+
+  return jsonOk(result, 201)
+}, 'v2/notifications')
+
+export const PATCH = apiHandler(async (request: NextRequest) => {
+  const ctx = await requirePermission('notifications.read')
+  const body = await request.json()
+  const input = patchSchema.parse(body)
+
+  if (input.markAllRead) {
+    await markAllNotificationsRead(ctx.tenantId, ctx.userId)
+    return jsonOk({ markedAllRead: true })
   }
-}
 
-export async function POST(request: NextRequest) {
-  try {
-    await requireRole(['super_admin', 'investor', 'bmu_official'])
-    const body = await request.json()
-    const { userId, title, message, type, link } = body
-    if (!userId || !title || !message) {
-      return NextResponse.json({ success: false, error: 'userId, title, message required' }, { status: 400 })
-    }
-    const id = generateId()
-    await execute(
-      `INSERT INTO notifications (id, user_id, type, title, message, action_url)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, userId, type || 'info', title, message, link || null]
-    )
-    return NextResponse.json({ success: true, data: { id } }, { status: 201 })
-  } catch (error) {
-    return handleApiError(error, 'v2/notifications')
+  if (!input.id) {
+    throw new Error('id required when markAllRead is false')
   }
-}
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = await requireAuth()
-    const body = await request.json()
-    const { id, markAllRead } = body
-
-    if (markAllRead) {
-      await execute(`UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = ? AND is_read = FALSE`, [
-        auth.userId,
-      ])
-      return NextResponse.json({ success: true })
-    }
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'id required' }, { status: 400 })
-    }
-
-    await execute(
-      `UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = ? AND user_id = ?`,
-      [id, auth.userId]
-    )
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    return handleApiError(error, 'v2/notifications')
-  }
-}
+  await markNotificationRead(ctx.tenantId, ctx.userId, input.id)
+  return jsonOk({ id: input.id, read: true })
+}, 'v2/notifications')

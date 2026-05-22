@@ -10,6 +10,12 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { logAudit } from '@/lib/audit'
 import { handleApiError } from '@/lib/api-handler'
 import { logger } from '@/lib/logger'
+import { recordLoginAlert } from '@/lib/modules/auth/sessions'
+import { resolveUserTenantId } from '@/lib/modules/tenant/service'
+import { getMfaStatus } from '@/lib/modules/auth/mfa'
+import { signMfaChallengeToken } from '@/lib/modules/auth/mfa-challenge'
+import { getMaintenanceStatus } from '@/lib/platform/platform-settings'
+import { assertRecaptcha } from '@/lib/modules/security/recaptcha'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = loginSchema.parse(await request.json())
+    await assertRecaptcha('login', body.recaptchaToken, ip)
     const user = await getUserByEmail(body.email)
     if (!user) {
       return NextResponse.json(
@@ -53,14 +60,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const maintenance = await getMaintenanceStatus()
+    if (maintenance.enabled && user.role !== 'super_admin') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: maintenance.message || 'The system is under maintenance. Please try again later.',
+          code: 'MAINTENANCE',
+        },
+        { status: 503 },
+      )
+    }
+
+    const rememberMe = body.rememberMe ?? false
+    const mfa = await getMfaStatus(user.id)
+    if (mfa.enabled) {
+      const mfaChallenge = signMfaChallengeToken(user.id, rememberMe)
+      return NextResponse.json({
+        success: true,
+        mfaRequired: true,
+        data: {
+          mfaChallenge,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+          },
+        },
+      })
+    }
+
     const userAgent = request.headers.get('user-agent')
     const { accessToken, refreshToken, expiresAt } = await createSession(
       user.id,
       ip !== 'unknown' ? ip : undefined,
       userAgent || undefined,
+      rememberMe,
     )
 
-    await setAuthCookies(accessToken, refreshToken, expiresAt)
+    await setAuthCookies(accessToken, refreshToken, expiresAt, { rememberMe })
 
     await logAudit({
       userId: user.id,
@@ -69,7 +108,20 @@ export async function POST(request: NextRequest) {
       resourceId: user.id,
       ipAddress: ip,
       userAgent,
+      metadata: { rememberMe },
     })
+
+    try {
+      const tenantId = await resolveUserTenantId(user.id)
+      await recordLoginAlert({
+        userId: user.id,
+        tenantId,
+        ipAddress: ip !== 'unknown' ? ip : undefined,
+        userAgent: userAgent || undefined,
+      })
+    } catch (alertErr) {
+      logger.warn('Login alert not recorded', { userId: user.id, error: alertErr })
+    }
 
     logger.info('User logged in', { userId: user.id, route: 'auth/login' })
 
