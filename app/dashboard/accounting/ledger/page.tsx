@@ -26,6 +26,10 @@ import { StatCard } from '@/components/dashboard/stat-card'
 import { BookOpen, Plus, Scale, Receipt, FileText, Percent } from 'lucide-react'
 import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
+import { ACCOUNTING_WORKSPACE_NAV, WorkspaceNav } from '@/components/dashboard/workspace-nav'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface GlAccount {
   id: string
@@ -86,6 +90,9 @@ interface ArInvoice {
 }
 
 export default function LedgerPage() {
+  const meta = useDashboardPageMeta({
+    description: 'Chart of accounts, journal entries, AP/AR, and tax codes',
+  })
   const [accounts, setAccounts] = useState<GlAccount[]>([])
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([])
@@ -362,16 +369,18 @@ export default function LedgerPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">General Ledger</h1>
-          <p className="text-muted-foreground">Chart of accounts, journal entries, AP/AR, and tax codes</p>
-        </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Post Entry
-        </Button>
-      </div>
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+        actions={
+          <Button className="gap-2" onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Post Entry
+          </Button>
+        }
+      />
+      <WorkspaceNav items={ACCOUNTING_WORKSPACE_NAV} />
 
       {!loading && accounts.length < 28 && (
         <Card className="border-dashed">
@@ -421,29 +430,33 @@ export default function LedgerPage() {
         </TabsList>
 
         <TabsContent value="ledger" className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <Select value={accountTypeFilter} onValueChange={setAccountTypeFilter}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Account type" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                <SelectItem value="asset">Asset</SelectItem>
-                <SelectItem value="liability">Liability</SelectItem>
-                <SelectItem value="equity">Equity</SelectItem>
-                <SelectItem value="revenue">Revenue</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={entryStatusFilter} onValueChange={setEntryStatusFilter}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Entry status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="posted">Posted</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input type="date" className="w-[160px]" value={fromDate} onChange={(e) => setFromDate(e.target.value)} placeholder="From" />
-            <Input type="date" className="w-[160px]" value={toDate} onChange={(e) => setToDate(e.target.value)} placeholder="To" />
-          </div>
+          <ListPageToolbar
+            filters={
+              <>
+                <Select value={accountTypeFilter} onValueChange={setAccountTypeFilter}>
+                  <SelectTrigger className="w-[140px]"><SelectValue placeholder="Account type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="asset">Asset</SelectItem>
+                    <SelectItem value="liability">Liability</SelectItem>
+                    <SelectItem value="equity">Equity</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="expense">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={entryStatusFilter} onValueChange={setEntryStatusFilter}>
+                  <SelectTrigger className="w-[140px]"><SelectValue placeholder="Entry status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="posted">Posted</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input type="date" className="w-[160px]" value={fromDate} onChange={(e) => setFromDate(e.target.value)} placeholder="From" />
+                <Input type="date" className="w-[160px]" value={toDate} onChange={(e) => setToDate(e.target.value)} placeholder="To" />
+              </>
+            }
+          />
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -519,29 +532,33 @@ export default function LedgerPage() {
         </TabsContent>
 
         <TabsContent value="ap" className="mt-4 space-y-4">
-          <Select value={apStatusFilter} onValueChange={setApStatusFilter}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="void">Void</SelectItem>
-            </SelectContent>
-          </Select>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
-                  Accounts Payable
-                </CardTitle>
-                <CardDescription>Supplier invoices (AP)</CardDescription>
-              </div>
+          <ListPageToolbar
+            filters={
+              <Select value={apStatusFilter} onValueChange={setApStatusFilter}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="void">Void</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            actions={
               <Button size="sm" className="gap-2" onClick={() => setApOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New AP Invoice
               </Button>
+            }
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Accounts Payable
+              </CardTitle>
+              <CardDescription>Supplier invoices (AP)</CardDescription>
             </CardHeader>
             <CardContent>
               <table className="w-full text-sm">
@@ -578,30 +595,34 @@ export default function LedgerPage() {
         </TabsContent>
 
         <TabsContent value="ar" className="mt-4 space-y-4">
-          <Select value={arStatusFilter} onValueChange={setArStatusFilter}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="void">Void</SelectItem>
-            </SelectContent>
-          </Select>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Accounts Receivable
-                </CardTitle>
-                <CardDescription>Customer invoices (AR)</CardDescription>
-              </div>
+          <ListPageToolbar
+            filters={
+              <Select value={arStatusFilter} onValueChange={setArStatusFilter}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="void">Void</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            actions={
               <Button size="sm" className="gap-2" onClick={() => setArOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New AR Invoice
               </Button>
+            }
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Accounts Receivable
+              </CardTitle>
+              <CardDescription>Customer invoices (AR)</CardDescription>
             </CardHeader>
             <CardContent>
               <table className="w-full text-sm">
@@ -635,20 +656,22 @@ export default function LedgerPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tax" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Percent className="h-5 w-5" />
-                  Tax Codes
-                </CardTitle>
-                <CardDescription>VAT and withholding tax rates</CardDescription>
-              </div>
+        <TabsContent value="tax" className="mt-4 space-y-4">
+          <ListPageToolbar
+            actions={
               <Button size="sm" className="gap-2" onClick={() => setTaxOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Add Tax Code
               </Button>
+            }
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="h-5 w-5" />
+                Tax Codes
+              </CardTitle>
+              <CardDescription>VAT and withholding tax rates</CardDescription>
             </CardHeader>
             <CardContent>
               <table className="w-full text-sm">

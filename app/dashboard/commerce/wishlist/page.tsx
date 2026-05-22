@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -101,18 +102,10 @@ export default function CommerceWishlistPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Wishlist</h1>
-        <p className="text-muted-foreground">
-          Saved marketplace listings. Browse{' '}
-          <Link href="/dashboard/marketplace" className="text-primary underline-offset-4 hover:underline">
-            Marketplace
-          </Link>{' '}
-          to add more.
-        </p>
-      </div>
-
+    <DashboardPageLayout
+      title="Wishlist"
+      description="Saved listings for quick reorder"
+    >
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -187,6 +180,6 @@ export default function CommerceWishlistPage() {
           />
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

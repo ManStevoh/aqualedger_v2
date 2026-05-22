@@ -121,8 +121,8 @@ async function seed() {
       const boatId = randomUUID()
       boatIds.push(boatId)
       await connection.execute(
-        `INSERT IGNORE INTO boats (id, owner_id, registration_number, name, type, capacity_kg, status, gps_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, 'active', TRUE)`,
+        `INSERT IGNORE INTO boats (id, tenant_id, owner_id, registration_number, name, type, capacity_kg, status, gps_enabled)
+         VALUES (?, 'tenant-default-0001', ?, ?, ?, ?, ?, 'active', TRUE)`,
         [boatId, boatOwner.id, boat.regNum, boat.name, boat.type, boat.capacity]
       )
     }

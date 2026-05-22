@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,7 +39,18 @@ interface RecaptchaAdminState {
   minScore: number
   protectLogin: boolean
   protectRegister: boolean
+  protectGuestCheckout: boolean
   hostnameAllowlist: string[]
+}
+
+interface RecaptchaAuditRow {
+  id: string
+  outcome: string
+  recaptchaAction: string
+  code?: string
+  score?: number
+  ipAddress?: string
+  createdAt: string
 }
 
 const DEFAULT: RecaptchaAdminState = {
@@ -50,6 +62,7 @@ const DEFAULT: RecaptchaAdminState = {
   minScore: 0.5,
   protectLogin: true,
   protectRegister: true,
+  protectGuestCheckout: true,
   hostnameAllowlist: [],
 }
 
@@ -63,6 +76,7 @@ export default function PlatformSecurityPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [recentEvents, setRecentEvents] = useState<RecaptchaAuditRow[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -71,6 +85,7 @@ export default function PlatformSecurityPage() {
         success: boolean
         data?: {
           recaptcha: RecaptchaAdminState
+          recentEvents?: RecaptchaAuditRow[]
           testKeys?: { siteKey: string; secretKey: string }
         }
         error?: string
@@ -82,6 +97,7 @@ export default function PlatformSecurityPage() {
       setRecaptcha(res.data.recaptcha)
       setHostnameText(res.data.recaptcha.hostnameAllowlist.join('\n'))
       if (res.data.testKeys) setTestKeys(res.data.testKeys)
+      setRecentEvents(res.data.recentEvents ?? [])
     } catch {
       toast.error('Network error')
     } finally {
@@ -129,10 +145,7 @@ export default function PlatformSecurityPage() {
       }
       toast.success('reCAPTCHA settings saved')
       setSecretKeyInput('')
-      if (res.data?.recaptcha) {
-        setRecaptcha(res.data.recaptcha)
-        setHostnameText(res.data.recaptcha.hostnameAllowlist.join('\n'))
-      }
+      await load()
     } catch {
       toast.error('Network error')
     } finally {
@@ -195,22 +208,13 @@ export default function PlatformSecurityPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ShieldCheck className="h-7 w-7" />
-            Security &amp; reCAPTCHA
-          </h1>
-          <p className="text-muted-foreground">
-            Google reCAPTCHA v3 (invisible) or v2 (checkbox) — GDPR-ready bot protection for auth
-          </p>
-        </div>
+    <DashboardPageLayout title="Security &amp; reCAPTCHA" description="Google reCAPTCHA v3 (invisible) or v2 (checkbox) — GDPR-ready bot protection for auth" actions={
         <Button className="gap-2" onClick={save} disabled={saving || loading}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? 'Saving…' : 'Save changes'}
         </Button>
-      </div>
+      }>
+
 
       <AdminHubNav />
 
@@ -257,8 +261,7 @@ export default function PlatformSecurityPage() {
                     value={recaptcha.version}
                     onValueChange={(v) =>
                       setRecaptcha((p) => ({ ...p, version: v as RecaptchaVersion }))
-                    }
-                  >
+                    }>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -332,7 +335,7 @@ export default function PlatformSecurityPage() {
                 )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
                   <Label htmlFor="protect-login">Protect login</Label>
                   <Switch
@@ -350,6 +353,16 @@ export default function PlatformSecurityPage() {
                     checked={recaptcha.protectRegister}
                     onCheckedChange={(checked) =>
                       setRecaptcha((p) => ({ ...p, protectRegister: checked }))
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                  <Label htmlFor="protect-checkout">Guest checkout</Label>
+                  <Switch
+                    id="protect-checkout"
+                    checked={recaptcha.protectGuestCheckout}
+                    onCheckedChange={(checked) =>
+                      setRecaptcha((p) => ({ ...p, protectGuestCheckout: checked }))
                     }
                   />
                 </div>
@@ -378,7 +391,9 @@ export default function PlatformSecurityPage() {
                 Verify configuration
               </CardTitle>
               <CardDescription>
-                Submit a token from login/register after enabling protection, or use test keys.
+                Submit a token from login/register after enabling protection. With Google test keys in
+                dev, use token <code className="text-xs">google-sandbox-pass</code> or run{' '}
+                <code className="text-xs">node scripts/test-recaptcha-flow.mjs</code>.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 sm:flex-row">
@@ -391,6 +406,57 @@ export default function PlatformSecurityPage() {
               <Button type="button" variant="outline" onClick={runTest} disabled={testing}>
                 {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Test token'}
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Recent verification events</CardTitle>
+              <CardDescription>Audit trail for login, registration, and guest checkout</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No events yet.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50 text-left">
+                        <th className="p-2 font-medium">Time</th>
+                        <th className="p-2 font-medium">Action</th>
+                        <th className="p-2 font-medium">Outcome</th>
+                        <th className="p-2 font-medium">Score</th>
+                        <th className="p-2 font-medium">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentEvents.map((ev) => (
+                        <tr key={ev.id} className="border-b last:border-0">
+                          <td className="p-2 whitespace-nowrap text-muted-foreground">
+                            {new Date(ev.createdAt).toLocaleString()}
+                          </td>
+                          <td className="p-2">{ev.recaptchaAction}</td>
+                          <td className="p-2">
+                            <span
+                              className={
+                                ev.outcome === 'pass'
+                                  ? 'text-green-600'
+                                  : ev.outcome === 'fail'
+                                    ? 'text-destructive'
+                                    : 'text-amber-600'
+                              }>
+                              {ev.outcome}
+                              {ev.code ? ` (${ev.code})` : ''}
+                            </span>
+                          </td>
+                          <td className="p-2">{ev.score != null ? ev.score.toFixed(2) : '—'}</td>
+                          <td className="p-2 font-mono text-xs">{ev.ipAddress ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -429,6 +495,6 @@ export default function PlatformSecurityPage() {
           </Card>
         </div>
       )}
-    </div>
+    </DashboardPageLayout>
   )
 }

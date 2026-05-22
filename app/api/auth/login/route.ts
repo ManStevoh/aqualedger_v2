@@ -29,7 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = loginSchema.parse(await request.json())
-    await assertRecaptcha('login', body.recaptchaToken, ip)
+    await assertRecaptcha('login', body.recaptchaToken, ip, {
+      userAgent: request.headers.get('user-agent') || undefined,
+    })
     const user = await getUserByEmail(body.email)
     if (!user) {
       return NextResponse.json(

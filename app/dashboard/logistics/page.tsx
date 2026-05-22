@@ -1,11 +1,13 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import {
   Dialog,
   DialogContent,
@@ -207,30 +209,11 @@ export default function LogisticsPage() {
   const inTransit = deliveries.filter((d) => d.status === 'in_transit' || d.status === 'assigned').length
   const delivered = deliveries.filter((d) => d.status === 'delivered').length
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'delivered': return 'bg-green-100 text-green-800'
-      case 'in_transit':
-      case 'assigned': return 'bg-blue-100 text-blue-800'
-      case 'failed': return 'bg-red-100 text-red-800'
-      case 'cancelled': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-yellow-100 text-yellow-800'
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Logistics</h1>
-          <p className="text-muted-foreground">Deliveries, status history, and proof of delivery</p>
-        </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4" />
-          New Delivery
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Logistics"
+      description="Deliveries, status history, and proof of delivery"
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard title="Total" value={deliveries.length} icon={<Truck className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Pending" value={pending} icon={<Clock className="h-4 w-4 text-muted-foreground" />} loading={loading} />
@@ -269,9 +252,7 @@ export default function LogisticsPage() {
                       {d.scheduled_at ? String(d.scheduled_at).slice(0, 16).replace('T', ' ') : '—'}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge className={statusColor(d.status)}>
-                        {d.status.replace('_', ' ')}
-                      </Badge>
+                      <StatusBadge status={d.status} />
                     </td>
                   </tr>
                 ))}
@@ -369,7 +350,7 @@ export default function LogisticsPage() {
                   {events.map((ev) => (
                     <li key={ev.id} className="rounded-md border p-2">
                       <div className="flex justify-between">
-                        <Badge className={statusColor(ev.status)}>{ev.status.replace('_', ' ')}</Badge>
+                        <StatusBadge status={ev.status} />
                         <span className="text-muted-foreground text-xs">
                           {String(ev.created_at).slice(0, 16).replace('T', ' ')}
                         </span>
@@ -387,6 +368,6 @@ export default function LogisticsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

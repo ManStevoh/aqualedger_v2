@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -77,19 +78,12 @@ export default function PlatformHealthPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <HeartPulse className="h-7 w-7" />
-            Platform health
-          </h1>
-          <p className="text-muted-foreground">Service status and dependency checks</p>
-        </div>
+    <DashboardPageLayout title="Platform health" description="Service status and dependency checks" actions={
         <Button variant="outline" onClick={load} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
         </Button>
-      </div>
+      }>
+
 
       <AdminHubNav />
 
@@ -133,6 +127,6 @@ export default function PlatformHealthPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

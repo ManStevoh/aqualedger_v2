@@ -1,11 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -22,20 +24,44 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatCard } from '@/components/dashboard/stat-card'
-import { TrendingUp, ShoppingCart, DollarSign, Filter, Plus, CheckCircle2 } from 'lucide-react'
+import { TrendingUp, ShoppingCart, DollarSign, Filter, Plus, CheckCircle2, Star, MessageSquare } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAppStore } from '@/lib/store'
-import { useFishListings, createListing, placeOrder, useFishSpecies } from '@/lib/api'
+import { useFishListings, createListing, placeOrder, useFishSpecies, authFetchJson } from '@/lib/api'
 import type { FishListing } from '@/lib/types'
 import { toast } from 'sonner'
+
+interface ListingReviewSummary {
+  avg: number
+  count: number
+}
+
+function StarDisplay({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          className={`h-3.5 w-3.5 ${n <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`}
+        />
+      ))}
+      <span className="ml-1 text-xs text-muted-foreground">{rating.toFixed(1)}</span>
+    </div>
+  )
+}
 
 export default function MarketplacePage() {
   const { currentUser } = useAppStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [showListDialog, setShowListDialog] = useState(false)
   const [showBuyDialog, setShowBuyDialog] = useState(false)
+  const [showReviewDialog, setShowReviewDialog] = useState(false)
   const [selectedListing, setSelectedListing] = useState<FishListing | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [reviewSummaries, setReviewSummaries] = useState<Record<string, ListingReviewSummary>>({})
+
+  const [reviewRating, setReviewRating] = useState('5')
+  const [reviewComment, setReviewComment] = useState('')
 
   const [listFishType, setListFishType] = useState('')
   const [listQty, setListQty] = useState('')
@@ -50,6 +76,34 @@ export default function MarketplacePage() {
   const { data: speciesList = [] } = useFishSpecies()
 
   const items = listingsData?.data?.items || []
+
+  const fetchReviewSummaries = useCallback(async () => {
+    try {
+      const res = await authFetchJson<{
+        success: boolean
+        data?: { reviews: { listing_id: string; rating: number }[] }
+      }>('/api/v2/commerce/reviews?limit=500')
+      if (!res.success || !res.data?.reviews) return
+      const map: Record<string, { sum: number; count: number }> = {}
+      for (const r of res.data.reviews) {
+        const cur = map[r.listing_id] || { sum: 0, count: 0 }
+        cur.sum += r.rating
+        cur.count += 1
+        map[r.listing_id] = cur
+      }
+      const summaries: Record<string, ListingReviewSummary> = {}
+      for (const [id, v] of Object.entries(map)) {
+        summaries[id] = { avg: v.sum / v.count, count: v.count }
+      }
+      setReviewSummaries(summaries)
+    } catch {
+      setReviewSummaries({})
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchReviewSummaries()
+  }, [fetchReviewSummaries, items.length])
 
   const listingTrend = useMemo(() => {
     const byDay = new Map<string, { kg: number; count: number; priceSum: number }>()
@@ -83,19 +137,6 @@ export default function MarketplacePage() {
   const soldItems = items.filter((i) => i.status === 'sold').length
   const totalValue = items.reduce((sum, item) => sum + item.availableQuantity * item.pricePerKg, 0)
   const avgPrice = totalListings > 0 ? totalValue / totalListings : 0
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available':
-        return 'bg-green-100 text-green-800'
-      case 'sold':
-        return 'bg-blue-100 text-blue-800'
-      case 'reserved':
-        return 'bg-yellow-100 text-yellow-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   const handleCreateListing = async () => {
     if (!currentUser) {
@@ -143,6 +184,43 @@ export default function MarketplacePage() {
     setShowBuyDialog(true)
   }
 
+  const openReview = (item: FishListing) => {
+    setSelectedListing(item)
+    setReviewRating('5')
+    setReviewComment('')
+    setShowReviewDialog(true)
+  }
+
+  const handleSubmitReview = async () => {
+    if (!selectedListing || !currentUser) return
+    setSubmitting(true)
+    try {
+      const res = await authFetchJson<{ success: boolean; error?: string }>(
+        '/api/v2/commerce/reviews',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            listingId: selectedListing.id,
+            rating: Number(reviewRating),
+            comment: reviewComment.trim() || null,
+          }),
+        },
+      )
+      if (!res.success) {
+        toast.error(res.error || 'Could not submit review')
+        return
+      }
+      toast.success('Review submitted')
+      setShowReviewDialog(false)
+      await fetchReviewSummaries()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handlePlaceOrder = async () => {
     if (!currentUser || !selectedListing) return
     const qty = Number(buyQty)
@@ -179,25 +257,14 @@ export default function MarketplacePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Fish Marketplace</h1>
-          <p className="text-muted-foreground">Buy and sell fish — listings from the database</p>
-        </div>
-        <Button
-          className="gap-2"
-          onClick={() => setShowListDialog(true)}
-          disabled={
-            !currentUser ||
-            !['boat_owner', 'fisherman', 'super_admin', 'investor'].includes(currentUser.role)
-          }
-        >
-          <Plus className="w-4 h-4" />
-          List catch
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Fish Marketplace"
+      description="Buy and sell fish — listings from the database"
+    >
+      <DashboardPageLayout
+      title="Fish Marketplace"
+      description="Buy and sell fish — listings from the database"
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active listings"
@@ -295,6 +362,7 @@ export default function MarketplacePage() {
                   <th className="text-left py-3 px-4 font-medium">Price/kg</th>
                   <th className="text-left py-3 px-4 font-medium">Total</th>
                   <th className="text-left py-3 px-4 font-medium">Seller</th>
+                  <th className="text-left py-3 px-4 font-medium">Reviews</th>
                   <th className="text-left py-3 px-4 font-medium">Landing site</th>
                   <th className="text-left py-3 px-4 font-medium">Status</th>
                   <th className="text-left py-3 px-4 font-medium">Action</th>
@@ -303,7 +371,7 @@ export default function MarketplacePage() {
               <tbody>
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="py-8 text-center text-muted-foreground">
                       {isLoading ? 'Loading…' : 'No listings found'}
                     </td>
                   </tr>
@@ -319,20 +387,37 @@ export default function MarketplacePage() {
                         KES {(item.availableQuantity * item.pricePerKg).toLocaleString()}
                       </td>
                       <td className="py-3 px-4">{item.sellerName}</td>
+                      <td className="py-3 px-4">
+                        {reviewSummaries[item.id] ? (
+                          <div className="space-y-1">
+                            <StarDisplay rating={reviewSummaries[item.id].avg} />
+                            <span className="text-xs text-muted-foreground">
+                              {reviewSummaries[item.id].count} review{reviewSummaries[item.id].count !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No reviews</span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-muted-foreground">{item.landingSite || item.location}</td>
                       <td className="py-3 px-4">
-                        <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
+                        <StatusBadge status={item.status} />
                       </td>
                       <td className="py-3 px-4">
-                        {item.status === 'available' ? (
-                          <Button variant="ghost" size="sm" onClick={() => openBuy(item)}>
-                            Buy
+                        <div className="flex gap-1">
+                          {item.status === 'available' ? (
+                            <Button variant="ghost" size="sm" onClick={() => openBuy(item)}>
+                              Buy
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" disabled>
+                              View
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => openReview(item)}>
+                            <MessageSquare className="h-4 w-4" />
                           </Button>
-                        ) : (
-                          <Button variant="ghost" size="sm" disabled>
-                            View
-                          </Button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -440,6 +525,44 @@ export default function MarketplacePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review {selectedListing?.fishType}</DialogTitle>
+            <DialogDescription>Share feedback on this listing</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label>Rating</Label>
+              <Select value={reviewRating} onValueChange={setReviewRating}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[5, 4, 3, 2, 1].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} star{n !== 1 ? 's' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Comment (optional)</Label>
+              <Textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Fresh catch, fast delivery…"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReviewDialog(false)}>Cancel</Button>
+            <Button onClick={handleSubmitReview} disabled={submitting || !currentUser}>
+              {submitting ? 'Submitting…' : 'Submit review'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+    </DashboardPageLayout>
   )
 }

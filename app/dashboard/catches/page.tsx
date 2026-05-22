@@ -1,12 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Fish, DollarSign, Scale, Star, Plus, Filter } from 'lucide-react'
+import { Fish, DollarSign, Scale, Star, Plus, Filter, Award } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
+import { StatusBadge } from '@/components/dashboard/status-badge'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ExportCsvButton } from '@/components/dashboard/export-csv-button'
 import {
   Dialog,
   DialogContent,
@@ -38,22 +44,39 @@ import {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
-const gradeColors: Record<string, string> = {
-  premium: 'bg-green-100 text-green-700 border-green-200',
-  export: 'bg-blue-100 text-blue-700 border-blue-200',
-  local: 'bg-gray-100 text-gray-700 border-gray-200',
+function displayGrade(grade: string): string {
+  const g = grade.toUpperCase()
+  if (g === 'A' || grade === 'premium') return 'A'
+  if (g === 'B' || grade === 'export') return 'B'
+  if (g === 'C' || grade === 'local') return 'C'
+  return grade
+}
+
+/** Map catch grade to status strings aligned with resolveGradeTone semantics */
+function gradeStatusForBadge(grade: string): string {
+  const d = displayGrade(grade)
+  if (d === 'A') return 'premium'
+  if (d === 'B') return 'export'
+  return 'local'
 }
 
 export default function CatchesPage() {
+  const meta = useDashboardPageMeta({
+    title: 'Catch Management',
+    description: 'Log, track, and sell your fish catches',
+  })
   const [showLogDialog, setShowLogDialog] = useState(false)
+  const [gradeFilter, setGradeFilter] = useState<string>('all')
   const [selectedTrip, setSelectedTrip] = useState('')
   const [fishType, setFishType] = useState('')
   const [weight, setWeight] = useState('')
-  const [grade, setGrade] = useState('')
+  const [grade, setGrade] = useState('B')
   const [pricePerKg, setPricePerKg] = useState('')
+  const [mscCertified, setMscCertified] = useState(false)
   const [isLogging, setIsLogging] = useState(false)
 
-  const { data: catchesData, isLoading, mutate } = useCatches()
+  const catchFilters = gradeFilter !== 'all' ? { grade: gradeFilter } : undefined
+  const { data: catchesData, isLoading, mutate } = useCatches(catchFilters)
   const { data: tripsData } = useTrips()
   const { data: speciesList = [] } = useFishSpecies()
   const { data: distributionData } = useCatchDistribution()
@@ -65,7 +88,7 @@ export default function CatchesPage() {
 
   const totalWeight = catches.reduce((sum: number, c: Catch) => sum + c.weight, 0)
   const totalValue = catches.reduce((sum: number, c: Catch) => sum + c.totalValue, 0)
-  const premiumCatch = catches.filter((c: Catch) => c.grade === 'premium').reduce((sum: number, c: Catch) => sum + c.weight, 0)
+  const premiumCatch = catches.filter((c: Catch) => displayGrade(c.grade) === 'A').reduce((sum: number, c: Catch) => sum + c.weight, 0)
   const avgPrice = catches.length > 0 ? totalValue / totalWeight : 0
 
   const handleLogCatch = async () => {
@@ -79,6 +102,7 @@ export default function CatchesPage() {
         weight: Number(weight),
         grade,
         pricePerKg: Number(pricePerKg),
+        mscCertified,
       })
       if (!json.success) {
         toast.error(json.error || 'Could not log catch')
@@ -90,8 +114,9 @@ export default function CatchesPage() {
       setSelectedTrip('')
       setFishType('')
       setWeight('')
-      setGrade('')
+      setGrade('B')
       setPricePerKg('')
+      setMscCertified(false)
     } catch {
       toast.error('Network error')
     } finally {
@@ -119,9 +144,10 @@ export default function CatchesPage() {
       key: 'grade',
       header: 'Grade',
       cell: (item: Catch) => (
-        <Badge variant="outline" className={gradeColors[item.grade]}>
-          {item.grade}
-        </Badge>
+        <StatusBadge
+          status={gradeStatusForBadge(item.grade)}
+          label={`Grade ${displayGrade(item.grade)}`}
+        />
       ),
     },
     {
@@ -152,18 +178,17 @@ export default function CatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catch Management</h1>
-          <p className="text-muted-foreground">
-            Log, track, and sell your fish catches
-          </p>
-        </div>
-        <Button onClick={() => setShowLogDialog(true)} disabled={ongoingTrips.length === 0}>
-          <Plus className="mr-2 h-4 w-4" />
-          Log Catch
-        </Button>
-      </div>
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+        actions={
+          <Button onClick={() => setShowLogDialog(true)} disabled={ongoingTrips.length === 0}>
+            <Plus className="mr-2 h-4 w-4" />
+            Log Catch
+          </Button>
+        }
+      />
 
       <StatCardGrid>
         <StatCard
@@ -183,7 +208,7 @@ export default function CatchesPage() {
           loading={isLoading}
         />
         <StatCard
-          title="Premium Grade"
+          title="Grade A"
           value={`${(premiumCatch / 1000).toFixed(1)}T`}
           icon={<Star className="h-4 w-4 text-muted-foreground" />}
           description={`${((premiumCatch / totalWeight) * 100 || 0).toFixed(0)}% of total`}
@@ -249,9 +274,10 @@ export default function CatchesPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-green-600">KES {c.totalValue.toLocaleString()}</p>
-                    <Badge variant="outline" className={gradeColors[c.grade]}>
-                      {c.grade}
-                    </Badge>
+                    <StatusBadge
+                      status={gradeStatusForBadge(c.grade)}
+                      label={`Grade ${displayGrade(c.grade)}`}
+                    />
                   </div>
                 </div>
               ))}
@@ -260,15 +286,66 @@ export default function CatchesPage() {
         </Card>
       </div>
 
-      {/* All Catches Table */}
-      <DataTable
-        title="All Catches"
-        description="Complete catch history"
-        columns={columns}
-        data={catches}
-        loading={isLoading}
-        emptyMessage="No catches logged yet"
+      <ListPageToolbar
+        filters={
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="h-9 w-[160px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Grade filter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All grades</SelectItem>
+              <SelectItem value="A">Grade A</SelectItem>
+              <SelectItem value="B">Grade B</SelectItem>
+              <SelectItem value="C">Grade C</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+        actions={
+          <ExportCsvButton
+            data={catches.map((c) => ({
+              fishType: c.fishType,
+              weight: c.weight,
+              grade: displayGrade(c.grade),
+              pricePerKg: c.pricePerKg,
+              totalValue: c.totalValue,
+            }))}
+            filename="catches"
+            columns={[
+              { key: 'fishType', label: 'Species' },
+              { key: 'weight', label: 'Weight (kg)' },
+              { key: 'grade', label: 'Grade' },
+              { key: 'pricePerKg', label: 'Price/kg' },
+              { key: 'totalValue', label: 'Total value' },
+            ]}
+          />
+        }
       />
+
+      {!isLoading && catches.length === 0 ? (
+        <EmptyState
+          icon={Fish}
+          title="No catches logged yet"
+          description={
+            gradeFilter !== 'all'
+              ? 'No catches match this grade filter. Try another grade or log a new catch.'
+              : ongoingTrips.length === 0
+                ? 'Start an ongoing trip before logging catches.'
+                : 'Log your first catch from an active fishing trip.'
+          }
+          actionLabel={ongoingTrips.length > 0 ? 'Log Catch' : undefined}
+          onAction={ongoingTrips.length > 0 ? () => setShowLogDialog(true) : undefined}
+        />
+      ) : (
+        <DataTable
+          title="All Catches"
+          description="Complete catch history"
+          columns={columns}
+          data={catches}
+          loading={isLoading}
+          emptyMessage="No catches logged yet"
+        />
+      )}
 
       {/* Log Catch Dialog */}
       <Dialog open={showLogDialog} onOpenChange={setShowLogDialog}>
@@ -323,15 +400,15 @@ export default function CatchesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Grade</Label>
+                <Label>Grade (A/B/C)</Label>
                 <Select value={grade} onValueChange={setGrade}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select grade" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="export">Export Quality</SelectItem>
-                    <SelectItem value="local">Local Market</SelectItem>
+                    <SelectItem value="A">Grade A — Premium</SelectItem>
+                    <SelectItem value="B">Grade B — Export</SelectItem>
+                    <SelectItem value="C">Grade C — Local</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -343,6 +420,22 @@ export default function CatchesPage() {
                   value={pricePerKg}
                   onChange={(e) => setPricePerKg(e.target.value)}
                 />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox
+                id="msc"
+                checked={mscCertified}
+                onCheckedChange={(v) => setMscCertified(v === true)}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="msc" className="flex items-center gap-2 cursor-pointer">
+                  <Award className="h-4 w-4 text-emerald-600" />
+                  MSC certified catch
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Creates a traceability lot flagged for Marine Stewardship Council compliance
+                </p>
               </div>
             </div>
             {weight && pricePerKg && (

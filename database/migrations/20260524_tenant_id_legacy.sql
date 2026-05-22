@@ -8,11 +8,16 @@ ALTER TABLE boats ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36) NULL AFTER id;
 UPDATE boats SET tenant_id = @default_tenant WHERE tenant_id IS NULL;
 ALTER TABLE boats MODIFY tenant_id VARCHAR(36) NOT NULL;
 ALTER TABLE boats ADD INDEX IF NOT EXISTS idx_boats_tenant (tenant_id);
--- Per-tenant registration uniqueness
-SET @idx_exists = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'boats' AND index_name = 'registration_number');
+-- Per-tenant registration uniqueness (drop global unique — index name varies by MySQL version)
+SET @idx_exists = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'boats' AND index_name = 'registration_number' AND non_unique = 0);
 SET @sql = IF(@idx_exists > 0, 'ALTER TABLE boats DROP INDEX registration_number', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-ALTER TABLE boats ADD UNIQUE KEY uk_tenant_registration (tenant_id, registration_number);
+SET @idx2 = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'boats' AND index_name = 'idx_registration_number');
+SET @sql = IF(@idx2 > 0, 'ALTER TABLE boats DROP INDEX idx_registration_number', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @uk = (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'boats' AND index_name = 'uk_tenant_registration');
+SET @sql = IF(@uk = 0, 'ALTER TABLE boats ADD UNIQUE KEY uk_tenant_registration (tenant_id, registration_number)', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- Fishing trips
 ALTER TABLE fishing_trips ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36) NULL AFTER id;

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { authFetchJson } from '@/lib/api'
@@ -21,9 +22,11 @@ export default function SalesForecastPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Sales forecasting</h1>
-      <p className="text-muted-foreground">Pipeline-weighted forecast · Win rate {(winRate * 100).toFixed(0)}%</p>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <DashboardPageLayout
+      title="Sales forecasting"
+      description="Pipeline-weighted forecast · Win rate {(winRate * 100).toFixed(0)}%"
+    >
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {months.map((m) => (
           <Card key={m.month}>
             <CardHeader><CardTitle>{m.month}</CardTitle></CardHeader>
@@ -34,6 +37,6 @@ export default function SalesForecastPage() {
           </Card>
         ))}
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }

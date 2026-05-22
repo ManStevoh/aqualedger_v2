@@ -13,9 +13,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { authFetchJson } from '@/lib/api'
 import { updateProfile } from '@/lib/api'
-import { CheckCircle2, Loader2, Rocket, Settings2, UserCircle2 } from 'lucide-react'
+import Link from 'next/link'
+import {
+  CheckCircle2,
+  Loader2,
+  Rocket,
+  Settings2,
+  UserCircle2,
+  Smartphone,
+  Ship,
+  Users,
+  Store,
+  Shield,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -48,6 +61,14 @@ export default function OnboardingPage() {
   const [county, setCounty] = useState('')
   const [currency, setCurrency] = useState('KES')
   const [timezone, setTimezone] = useState('Africa/Nairobi')
+  const [mpesaStatus, setMpesaStatus] = useState<{
+    mode: string
+    configured: boolean
+    callbackUrl: string
+    testPhone: string | null
+  } | null>(null)
+  const [mpesaTesting, setMpesaTesting] = useState(false)
+  const [mfaEnabled, setMfaEnabled] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -77,6 +98,24 @@ export default function OnboardingPage() {
       })
       .finally(() => setLoading(false))
   }, [router])
+
+  useEffect(() => {
+    if (activeStep !== 3) return
+    Promise.all([
+      authFetchJson<{
+        success: boolean
+        data?: { mode: string; configured: boolean; callbackUrl: string; testPhone: string | null }
+      }>('/api/v2/integrations/mpesa/status'),
+      authFetchJson<{ success: boolean; data?: { mfa?: { enabled: boolean } } }>(
+        '/api/v2/auth/mfa',
+      ),
+    ])
+      .then(([mpesaRes, mfaRes]) => {
+        if (mpesaRes.success && mpesaRes.data) setMpesaStatus(mpesaRes.data)
+        if (mfaRes.success && mfaRes.data?.mfa) setMfaEnabled(mfaRes.data.mfa.enabled)
+      })
+      .catch(() => {})
+  }, [activeStep])
 
   const patchOnboarding = async (payload: {
     step?: number
@@ -123,7 +162,7 @@ export default function OnboardingPage() {
       const res = await authFetchJson<{ success: boolean; error?: string }>('/api/v2/tenant', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ defaultCurrency: currency }),
+        body: JSON.stringify({ defaultCurrency: currency, timezone }),
       })
       if (!res.success) {
         toast.error(res.error || 'Failed to save settings')
@@ -162,15 +201,13 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome to AquaERP</h1>
-        <p className="mt-1 text-muted-foreground">
-          Complete these steps to set up{' '}
-          {onboarding?.business_type ? onboarding.business_type.replace('_', ' ') : 'your organization'}
-        </p>
-      </div>
-
+    <DashboardPageLayout
+      title="Welcome to AquaERP"
+      description={`Complete these steps to set up ${
+        onboarding?.business_type ? onboarding.business_type.replace('_', ' ') : 'your organization'
+      }`}
+    >
+      <div className="mx-auto max-w-3xl space-y-8">
       <div className="flex justify-center gap-4">
         {STEPS.map(({ num, title, icon: Icon, desc }) => {
           const done = onboarding?.completed_steps.includes(num)
@@ -273,6 +310,26 @@ export default function OnboardingPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Button variant="outline" className="justify-start gap-2" asChild>
+                <Link href="/dashboard/fleet">
+                  <Ship className="h-4 w-4" />
+                  Add a boat
+                </Link>
+              </Button>
+              <Button variant="outline" className="justify-start gap-2" asChild>
+                <Link href="/dashboard/team">
+                  <Users className="h-4 w-4" />
+                  Invite team
+                </Link>
+              </Button>
+              <Button variant="outline" className="justify-start gap-2" asChild>
+                <Link href="/dashboard/commerce/storefront">
+                  <Store className="h-4 w-4" />
+                  Storefront
+                </Link>
+              </Button>
+            </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setActiveStep(1)}>
                 Back
@@ -306,8 +363,79 @@ export default function OnboardingPage() {
                 Business type: {onboarding?.business_type ?? '—'}
               </li>
             </ul>
+            {mpesaStatus && (
+              <Card className="border-dashed">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    M-Pesa ({mpesaStatus.mode})
+                  </CardTitle>
+                  <CardDescription>
+                    {mpesaStatus.configured
+                      ? 'Daraja credentials detected. Send a sandbox STK to your test phone.'
+                      : 'Stub mode — set MPESA_* in .env for live Daraja. See docs/MPESA_SANDBOX.md'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground break-all">
+                    Callback: {mpesaStatus.callbackUrl}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={mpesaTesting}
+                    onClick={async () => {
+                      setMpesaTesting(true)
+                      try {
+                        const res = await authFetchJson<{
+                          success: boolean
+                          data?: { message?: string }
+                          error?: string
+                        }>('/api/v2/integrations', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'test', provider: 'mpesa' }),
+                        })
+                        if (res.success) {
+                          toast.success(res.data?.message || 'STK test sent')
+                        } else {
+                          toast.error(res.error || 'Test failed')
+                        }
+                      } catch {
+                        toast.error('Network error')
+                      } finally {
+                        setMpesaTesting(false)
+                      }
+                    }}
+                  >
+                    {mpesaTesting ? 'Sending…' : 'Send sandbox STK test'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+            <Card className="border-dashed">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Two-factor authentication
+                </CardTitle>
+                <CardDescription>
+                  {mfaEnabled
+                    ? 'MFA is enabled for your account.'
+                    : 'Recommended for tenant owners — enroll with Google Authenticator or similar.'}
+                </CardDescription>
+              </CardHeader>
+              {!mfaEnabled && (
+                <CardContent>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/dashboard/settings/security">Set up MFA</Link>
+                  </Button>
+                </CardContent>
+              )}
+            </Card>
             <p className="text-sm text-muted-foreground">
-              You can invite team members and configure modules from Organization settings anytime.
+              Optional: test M-Pesa and MFA now, or finish and configure later under Settings.
             </p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setActiveStep(2)}>
@@ -320,6 +448,7 @@ export default function OnboardingPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </DashboardPageLayout>
   )
 }

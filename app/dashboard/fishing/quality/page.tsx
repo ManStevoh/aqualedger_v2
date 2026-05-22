@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,9 +39,11 @@ export default function QualityInspectionPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Landing quality inspection</h1>
-      <p className="text-muted-foreground">EU grade A/B/C · reject spoiled catch before market</p>
-      <Card>
+      <DashboardPageLayout
+      title="Landing quality inspection"
+      description="EU grade A/B/C · reject spoiled catch before market"
+    >
+            <Card>
         <CardHeader><CardTitle>New inspection</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div><Label>Trip ID</Label><Input value={tripId} onChange={(e) => setTripId(e.target.value)} /></div>
@@ -70,6 +73,6 @@ export default function QualityInspectionPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

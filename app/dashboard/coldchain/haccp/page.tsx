@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -143,18 +144,10 @@ export default function HaccpPage() {
   const passed = checklists.filter((c) => c.overall_pass).length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">HACCP checklists</h1>
-          <p className="text-muted-foreground">Codex Alimentarius daily food-safety inspections</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowDialog(true)}>
-          <Plus className="w-4 h-4" />
-          New checklist
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="HACCP checklists"
+      description="Codex Alimentarius daily food-safety inspections"
+    >
       <div className="flex gap-4 items-end">
         <div className="space-y-2 max-w-xs">
           <Label>Filter by facility</Label>
@@ -269,6 +262,6 @@ export default function HaccpPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

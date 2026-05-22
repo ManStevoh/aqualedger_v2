@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Smartphone, Banknote } from 'lucide-react'
 import { toast } from 'sonner'
 import { publicApiFetch } from '@/lib/client-api'
+import { useRecaptcha } from '@/components/security/use-recaptcha'
+import { RecaptchaNotice } from '@/components/security/recaptcha-notice'
 
 type DeliverySlot = {
   id: string
@@ -31,6 +33,7 @@ export default function StoreCheckoutPage() {
   const [slots, setSlots] = useState<DeliverySlot[]>([])
   const [slotId, setSlotId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa')
+  const recaptcha = useRecaptcha('guest_checkout')
 
   useEffect(() => {
     publicApiFetch(`/store/${slug}/delivery-slots`)
@@ -65,6 +68,24 @@ export default function StoreCheckoutPage() {
     }
     setSubmitting(true)
     try {
+      let recaptchaToken: string | undefined
+      if (recaptcha.active) {
+        if (!recaptcha.ready) {
+          toast.error('Security check is loading. Please wait.')
+          return
+        }
+        recaptchaToken = await recaptcha.getToken()
+        if (!recaptchaToken) {
+          toast.error(
+            recaptcha.isV2
+              ? 'Please complete the security check.'
+              : 'Security verification failed.',
+          )
+          recaptcha.reset()
+          return
+        }
+      }
+
       const res = await publicApiFetch(`/store/${slug}/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,6 +97,7 @@ export default function StoreCheckoutPage() {
           deliveryAddress: address || undefined,
           deliverySlotId: slotId || undefined,
           paymentMethod,
+          recaptchaToken,
         }),
       })
       const data = await res.json()
@@ -109,6 +131,7 @@ export default function StoreCheckoutPage() {
       router.push(`/store/${slug}?ordered=${order.orderNumber}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Checkout failed')
+      recaptcha.reset()
     } finally {
       setSubmitting(false)
     }
@@ -197,12 +220,19 @@ export default function StoreCheckoutPage() {
           </label>
         </fieldset>
 
+        {recaptcha.active && recaptcha.isV2 && (
+          <div ref={recaptcha.v2ContainerRef} className="flex justify-center" />
+        )}
+
         <p className="text-xs text-slate-500">
           By placing this order you agree to our terms. VAT included where applicable.
         </p>
+
+        {recaptcha.active && <RecaptchaNotice />}
+
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || (recaptcha.active && !recaptcha.ready)}
           className="w-full rounded-lg bg-sky-600 py-3 text-white font-medium min-h-[44px] disabled:opacity-60"
         >
           {submitting

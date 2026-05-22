@@ -10,7 +10,9 @@ import {
 
 vi.mock('@/lib/db', () => ({
   queryOne: vi.fn(),
+  query: vi.fn().mockResolvedValue([]),
   execute: vi.fn(),
+  generateId: vi.fn(() => 'audit-test-id'),
 }))
 
 import { queryOne } from '@/lib/db'
@@ -23,6 +25,7 @@ const baseConfig = {
   minScore: 0.5,
   protectLogin: true,
   protectRegister: true,
+  protectGuestCheckout: true,
   hostnameAllowlist: [] as string[],
 }
 
@@ -45,6 +48,10 @@ describe('recaptcha', () => {
 
     it('returns true for login when configured', () => {
       expect(isRecaptchaRequired(baseConfig, 'login')).toBe(true)
+    })
+
+    it('returns true for guest checkout when enabled', () => {
+      expect(isRecaptchaRequired(baseConfig, 'guest_checkout')).toBe(true)
     })
   })
 

@@ -35,6 +35,7 @@ export type AuditAction =
   | 'platform.tenant.provision'
   | 'platform.broadcast'
   | 'platform.tenant.purge'
+  | 'security.recaptcha'
 
 export async function logAudit(params: {
   userId?: string | null

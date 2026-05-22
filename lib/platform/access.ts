@@ -1,8 +1,9 @@
+import { headers } from 'next/headers'
 import { queryOne } from '@/lib/db'
 import { requireAuth, type JWTPayload, type UserRole } from '@/lib/auth'
 import { forbidden } from '@/lib/api-handler'
 import { type TenantMemberRole, type TenantContext } from '@/lib/tenant'
-import { resolveUserTenantId } from '@/lib/modules/tenant/service'
+import { resolveActiveTenantId } from '@/lib/platform/tenant-resolve'
 import {
   hasPermission,
   legacyRoleToMemberRole,
@@ -28,7 +29,13 @@ export async function getTenantMemberRole(
 
 export async function getAuthContext(): Promise<AuthContext> {
   const auth = await requireAuth()
-  const tenantId = await resolveUserTenantId(auth.userId)
+  const hdrs = await headers()
+  const tenantSlug = hdrs.get('x-tenant-slug')
+  const tenantIdHeader = hdrs.get('x-tenant-id')
+  const tenantId = await resolveActiveTenantId(auth.userId, auth.role, {
+    tenantSlug,
+    tenantIdHeader,
+  })
   const memberRole = await getTenantMemberRole(auth.userId, tenantId, auth.role)
   return { ...auth, tenantId, memberRole }
 }

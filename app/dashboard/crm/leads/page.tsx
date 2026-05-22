@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -33,6 +34,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, UserCircle, Loader2, LayoutGrid, List } from 'lucide-react'
 import { toast } from 'sonner'
 import { LeadKanban } from '@/components/crm/lead-kanban'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface Lead {
   id: string
@@ -56,6 +61,9 @@ const STAGE_COLORS: Record<string, string> = {
 }
 
 export default function LeadsPage() {
+  const meta = useDashboardPageMeta({
+    description: 'Track sales pipeline and opportunities',
+  })
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [showDialog, setShowDialog] = useState(false)
@@ -68,6 +76,7 @@ export default function LeadsPage() {
   const [stage, setStage] = useState('new')
   const [estimatedValue, setEstimatedValue] = useState('')
   const [view, setView] = useState<'board' | 'table'>('board')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchLeads = useCallback(async () => {
     setLoading(true)
@@ -107,9 +116,20 @@ export default function LeadsPage() {
       .reduce((sum, l) => sum + Number(l.estimated_value), 0)
   }, [leads])
 
-  const filteredLeads = stageFilter
-    ? leads.filter((l) => l.stage === stageFilter)
-    : leads
+  const filteredLeads = useMemo(() => {
+    let list = stageFilter ? leads.filter((l) => l.stage === stageFilter) : leads
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (l) =>
+          l.name.toLowerCase().includes(q) ||
+          (l.email?.toLowerCase().includes(q) ?? false) ||
+          (l.phone?.toLowerCase().includes(q) ?? false) ||
+          (l.source?.toLowerCase().includes(q) ?? false),
+      )
+    }
+    return list
+  }, [leads, stageFilter, searchQuery])
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -152,13 +172,6 @@ export default function LeadsPage() {
     }
   }
 
-  const stageVariant = (s: string) => {
-    if (s === 'won') return 'default'
-    if (s === 'lost') return 'destructive'
-    if (s === 'qualified') return 'secondary'
-    return 'outline'
-  }
-
   const stageLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
   const handleStageChange = async (leadId: string, newStage: string) => {
@@ -185,16 +198,17 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
-          <p className="text-muted-foreground">Track sales pipeline and opportunities</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add Lead
-        </Button>
-      </div>
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+        actions={
+          <Button className="gap-2" onClick={() => setShowDialog(true)}>
+            <Plus className="h-4 w-4" />
+            Add Lead
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
         {PIPELINE_STAGES.map((s) => (
@@ -227,16 +241,30 @@ export default function LeadsPage() {
       </div>
 
       <Tabs value={view} onValueChange={(v) => setView(v as 'board' | 'table')}>
-        <TabsList>
-          <TabsTrigger value="board" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Board
-          </TabsTrigger>
-          <TabsTrigger value="table" className="gap-2">
-            <List className="h-4 w-4" />
-            Table
-          </TabsTrigger>
-        </TabsList>
+        <ListPageToolbar
+          searchValue={view === 'table' ? searchQuery : undefined}
+          onSearchChange={view === 'table' ? setSearchQuery : undefined}
+          searchPlaceholder="Search leads…"
+          filters={
+            stageFilter ? (
+              <Button variant="ghost" size="sm" onClick={() => setStageFilter(null)}>
+                Clear stage filter
+              </Button>
+            ) : undefined
+          }
+          views={
+            <TabsList>
+              <TabsTrigger value="board" className="gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Board
+              </TabsTrigger>
+              <TabsTrigger value="table" className="gap-2">
+                <List className="h-4 w-4" />
+                Table
+              </TabsTrigger>
+            </TabsList>
+          }
+        />
 
         <TabsContent value="board" className="mt-4">
           <Card>
@@ -251,7 +279,13 @@ export default function LeadsPage() {
                   Loading…
                 </div>
               ) : leads.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">No leads — add one to get started</div>
+                <EmptyState
+                  icon={UserCircle}
+                  title="No leads yet"
+                  description="Add your first lead to start tracking the pipeline."
+                  actionLabel="Add Lead"
+                  onAction={() => setShowDialog(true)}
+                />
               ) : (
                 <LeadKanban
                   leads={leads}
@@ -283,14 +317,17 @@ export default function LeadsPage() {
                   Loading leads…
                 </div>
               ) : filteredLeads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <UserCircle className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                  <p className="font-medium">No leads yet</p>
-                  <Button className="mt-4 gap-2" onClick={() => setShowDialog(true)}>
-                    <Plus className="h-4 w-4" />
-                    Add Lead
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={UserCircle}
+                  title={searchQuery.trim() ? 'No matching leads' : 'No leads yet'}
+                  description={
+                    searchQuery.trim()
+                      ? 'Try a different search or clear filters.'
+                      : 'Add your first lead to start tracking the pipeline.'
+                  }
+                  actionLabel={searchQuery.trim() ? undefined : 'Add Lead'}
+                  onAction={searchQuery.trim() ? undefined : () => setShowDialog(true)}
+                />
               ) : (
                 <Table>
                   <TableHeader>
@@ -312,12 +349,7 @@ export default function LeadsPage() {
                         <TableCell>{l.phone || '—'}</TableCell>
                         <TableCell>{l.source || '—'}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={stageVariant(l.stage)}
-                            className={STAGE_COLORS[l.stage]?.split(' ').slice(0, 2).join(' ')}
-                          >
-                            {stageLabel(l.stage)}
-                          </Badge>
+                          <StatusBadge status={l.stage} label={stageLabel(l.stage)} />
                         </TableCell>
                         <TableCell>
                           {new Intl.NumberFormat('en-KE', {

@@ -21,6 +21,7 @@ const patchSchema = z.object({
     .optional(),
   name: z.string().min(1).max(200).optional(),
   defaultCurrency: z.string().length(3).optional(),
+  timezone: z.string().max(64).optional(),
 })
 
 export const GET = apiHandler(async () => {

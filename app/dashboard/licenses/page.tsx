@@ -1,9 +1,11 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -184,20 +186,14 @@ export default function LicensesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">License Management</h1>
-          <p className="text-muted-foreground">
-            Manage fishing, boat, and trading licenses
-          </p>
-        </div>
-        <Button onClick={() => setShowIssueDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Issue New License
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="License Management"
+      description="Manage fishing, boat, and trading licenses"
+    >
+      <DashboardPageLayout
+      title="License Management"
+      description="Manage fishing, boat, and trading licenses"
+    >
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
@@ -424,5 +420,6 @@ export default function LicensesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardPageLayout>
   )
 }

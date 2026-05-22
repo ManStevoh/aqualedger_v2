@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,32 +43,45 @@ export default function ClockInPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-md mx-auto">
-      <div className="text-center">
-        <Clock className="h-12 w-12 mx-auto text-primary mb-2" />
-        <h1 className="text-2xl font-bold">Clock In / Out</h1>
-        <p className="text-muted-foreground">{today} · {now}</p>
+    <DashboardPageLayout
+      title="Clock In / Out"
+      description={`${today} · ${now}`}
+    >
+      <div className="max-w-md mx-auto space-y-4">
+        <div className="text-center">
+          <Clock className="h-12 w-12 mx-auto text-primary mb-2" />
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Employee</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Select yourself</Label>
+              <Select value={employeeId} onValueChange={setEmployeeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button size="lg" onClick={() => clock('in')}>
+                Clock In
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => clock('out')}>
+                Clock Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <Card>
-        <CardHeader><CardTitle>Employee</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Select yourself</Label>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger><SelectValue placeholder="Employee" /></SelectTrigger>
-              <SelectContent>
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Button size="lg" onClick={() => clock('in')}>Clock In</Button>
-            <Button size="lg" variant="outline" onClick={() => clock('out')}>Clock Out</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

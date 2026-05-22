@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PublicRecaptchaConfig } from '@/lib/modules/security/recaptcha'
 
-export type RecaptchaClientAction = 'login' | 'register'
+export type RecaptchaClientAction = 'login' | 'register' | 'guest_checkout'
 
 declare global {
   interface Window {
@@ -55,7 +55,8 @@ export function useRecaptcha(action: RecaptchaClientAction) {
   const active =
     config?.enabled &&
     ((action === 'login' && config.protectLogin) ||
-      (action === 'register' && config.protectRegister))
+      (action === 'register' && config.protectRegister) ||
+      (action === 'guest_checkout' && config.protectGuestCheckout))
 
   useEffect(() => {
     let cancelled = false

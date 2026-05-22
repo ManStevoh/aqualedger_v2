@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -116,26 +117,10 @@ export default function WorkflowsSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Workflow automation</h1>
-          <p className="text-muted-foreground">
-            Domain event rules and notification actions
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={processPending} disabled={processing}>
-            <Play className="h-4 w-4" />
-            {processing ? 'Processing…' : 'Process pending'}
-          </Button>
-          <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add rule
-          </Button>
-        </div>
-      </div>
-
+    <DashboardPageLayout
+      title="Workflow automation"
+      description="Domain event rules and notification actions"
+    >
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -205,6 +190,6 @@ export default function WorkflowsSettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,7 +13,6 @@ import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
 import { useRecaptcha } from '@/components/security/use-recaptcha'
 import { RecaptchaNotice } from '@/components/security/recaptcha-notice'
 import {
-  Anchor,
   Building2,
   Eye,
   EyeOff,
@@ -29,6 +29,18 @@ const ROLE_HINTS = [
   { icon: Store, label: 'Markets', hint: 'Sell & fulfill orders' },
   { icon: Truck, label: 'Exporters', hint: 'Traceability & logistics' },
 ]
+
+function BrandMark({ size = 'md' }: { size?: 'md' | 'lg' }) {
+  const box = size === 'lg' ? 'h-12 w-12' : 'h-11 w-11'
+  const icon = size === 'lg' ? 'h-7 w-7' : 'h-6 w-6'
+  return (
+    <div
+      className={`flex ${box} items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/25`}
+    >
+      <Fish className={`${icon} text-primary-foreground`} />
+    </div>
+  )
+}
 
 function LoginForm() {
   const router = useRouter()
@@ -126,229 +138,220 @@ function LoginForm() {
     <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1fr_420px]">
       <div className="hidden flex-col justify-center lg:flex">
         <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-500/20">
-            <Anchor className="h-6 w-6 text-white" />
-          </div>
+          <BrandMark />
           <div>
-            <p className="text-xl font-semibold tracking-tight text-white">{APP_NAME}</p>
-            <p className="text-sm text-slate-400">{APP_TAGLINE}</p>
+            <p className="text-xl font-semibold tracking-tight text-foreground">{APP_NAME}</p>
+            <p className="text-sm text-muted-foreground">{APP_TAGLINE}</p>
           </div>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Maritime commerce, simplified.
         </h1>
-        <p className="mt-3 max-w-md text-slate-400">
+        <p className="mt-3 max-w-md text-muted-foreground">
           One platform for fishing operations, cold chain, marketplace, and finance — built for
           Africa&apos;s blue economy.
         </p>
         <div className="mt-8 grid grid-cols-2 gap-3">
           {ROLE_HINTS.map(({ icon: Icon, label, hint }) => (
-            <div
-              key={label}
-              className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm"
-            >
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                <Icon className="h-4 w-4 text-cyan-400" />
+            <div key={label} className="rounded-xl border border-border bg-card p-3 shadow-sm">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Icon className="h-4 w-4 text-primary" />
                 {label}
               </div>
-              <p className="mt-1 text-xs text-slate-500">{hint}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-8 shadow-2xl shadow-black/40 backdrop-blur-xl">
-        <div className="mb-6 text-center lg:hidden">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600">
-            <Anchor className="h-7 w-7 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-white">{APP_NAME}</h2>
-        </div>
-
-        <div className="mb-6 space-y-1">
-          <h2 className="text-xl font-semibold text-white">
-            {mfaRequired ? 'Two-factor authentication' : 'Sign in'}
-          </h2>
-          <p className="text-sm text-slate-400">
-            {mfaRequired
-              ? `Enter the 6-digit code from your authenticator app for ${mfaEmail}`
-              : 'Welcome back — enter your credentials'}
-          </p>
-        </div>
-
-        {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
-          >
-            {error}
-          </div>
-        )}
-
-        {mfaRequired ? (
-          <form onSubmit={handleMfaSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="mfaToken" className="text-slate-300">
-                Verification code
-              </Label>
-              <Input
-                id="mfaToken"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                required
-                value={mfaToken}
-                onChange={(e) => {
-                  setMfaToken(e.target.value.replace(/\s/g, ''))
-                  if (error) setError(null)
-                }}
-                className="border-white/10 bg-slate-900/80 text-center text-lg tracking-widest text-white"
-                placeholder="000000"
-                maxLength={8}
-              />
-              <p className="text-xs text-slate-500">You can also use a one-time backup code.</p>
+      <Card className="border-border bg-card shadow-sm">
+        <CardHeader className="space-y-4 pb-0 text-center lg:text-left">
+          <div className="flex flex-col items-center gap-3 lg:hidden">
+            <BrandMark size="lg" />
+            <div>
+              <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
+              <CardDescription>{APP_TAGLINE}</CardDescription>
             </div>
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500"
-              disabled={submitting || mfaToken.length < 4}
-            >
-              {submitting ? 'Verifying…' : 'Verify and sign in'}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-slate-400"
-              onClick={() => {
-                setMfaRequired(false)
-                setMfaChallenge('')
-                setMfaToken('')
-              }}
-            >
-              ← Back to sign in
-            </Button>
-          </form>
-        ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-300">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                if (error) setError(null)
-              }}
-              className="border-white/10 bg-slate-900/80 text-white placeholder:text-slate-500"
-              placeholder="you@company.com"
-            />
           </div>
+          <div className="space-y-1">
+            <CardTitle className="text-xl">
+              {mfaRequired ? 'Two-factor authentication' : 'Sign in'}
+            </CardTitle>
+            <CardDescription>
+              {mfaRequired
+                ? `Enter the 6-digit code from your authenticator app for ${mfaEmail}`
+                : 'Welcome back — enter your credentials'}
+            </CardDescription>
+          </div>
+        </CardHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-slate-300">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  if (error) setError(null)
-                }}
-                className="border-white/10 bg-slate-900/80 pr-10 text-white placeholder:text-slate-500"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+        <CardContent className="space-y-4">
+          {error && (
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {error}
+            </div>
+          )}
+
+          {mfaRequired ? (
+            <form onSubmit={handleMfaSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mfaToken">Verification code</Label>
+                <Input
+                  id="mfaToken"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  value={mfaToken}
+                  onChange={(e) => {
+                    setMfaToken(e.target.value.replace(/\s/g, ''))
+                    if (error) setError(null)
+                  }}
+                  className="text-center text-lg tracking-widest"
+                  placeholder="000000"
+                  maxLength={8}
+                />
+                <p className="text-xs text-muted-foreground">
+                  You can also use a one-time backup code.
+                </p>
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={submitting || mfaToken.length < 4}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
+                {submitting ? 'Verifying…' : 'Verify and sign in'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setMfaRequired(false)
+                  setMfaChallenge('')
+                  setMfaToken('')
+                }}
+              >
+                ← Back to sign in
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (error) setError(null)
+                  }}
+                  placeholder="you@company.com"
+                />
+              </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="rememberMe"
-              checked={rememberMe}
-              onCheckedChange={(checked) => setRememberMe(checked === true)}
-            />
-            <Label htmlFor="rememberMe" className="cursor-pointer text-sm text-slate-400">
-              Remember me for 30 days
-            </Label>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      if (error) setError(null)
+                    }}
+                    className="pr-10"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
 
-          {recaptcha.active && recaptcha.isV2 && (
-            <div ref={recaptcha.v2ContainerRef} className="flex justify-center" />
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
+                <Label htmlFor="rememberMe" className="cursor-pointer text-sm text-muted-foreground">
+                  Remember me for 30 days
+                </Label>
+              </div>
+
+              {recaptcha.active && recaptcha.isV2 && (
+                <div ref={recaptcha.v2ContainerRef} className="flex justify-center" />
+              )}
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={submitting || (recaptcha.active && !recaptcha.ready)}
+              >
+                {submitting ? 'Signing in…' : 'Sign in'}
+              </Button>
+
+              {recaptcha.active && (
+                <div className="pt-1">
+                  <RecaptchaNotice />
+                </div>
+              )}
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <span className="relative flex justify-center bg-card px-2 text-xs text-muted-foreground">
+                  or
+                </span>
+              </div>
+
+              <Button type="button" variant="outline" className="w-full" asChild>
+                <a href="/api/auth/oauth/google">Continue with Google</a>
+              </Button>
+            </form>
           )}
 
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500"
-            disabled={submitting || (recaptcha.active && !recaptcha.ready)}
-          >
-            {submitting ? 'Signing in…' : 'Sign in'}
-          </Button>
-
-          {recaptcha.active && (
-            <div className="pt-1">
-              <RecaptchaNotice />
-            </div>
-          )}
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-white/10" />
-            </div>
-            <span className="relative flex justify-center text-xs text-slate-500">or</span>
-          </div>
-
-          <Button type="button" variant="outline" className="w-full border-white/10 bg-slate-900/50" asChild>
-            <a href="/api/auth/oauth/google">Continue with Google</a>
-          </Button>
-        </form>
-        )}
-
-        <p className="mt-6 text-center text-sm text-slate-400">
-          No account?{' '}
-          <Link href="/register" className="font-medium text-cyan-400 hover:text-cyan-300">
-            Create one
-          </Link>
-        </p>
-        <p className="mt-2 text-center text-sm">
-          <Link href="/" className="text-slate-500 hover:text-slate-300">
-            ← Back to home
-          </Link>
-        </p>
-      </div>
+          <p className="text-center text-sm text-muted-foreground">
+            No account?{' '}
+            <Link href="/register" className="font-medium text-primary hover:text-primary/80">
+              Create one
+            </Link>
+          </p>
+          <p className="text-center text-sm">
+            <Link href="/" className="text-muted-foreground hover:text-foreground">
+              ← Back to home
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/10 blur-3xl" />
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
       <Suspense
         fallback={
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-950/70 p-8 text-center text-slate-400 backdrop-blur-xl">
-            Loading…
-          </div>
+          <Card className="w-full max-w-md border-border bg-card">
+            <CardContent className="py-8 text-center text-muted-foreground">Loading…</CardContent>
+          </Card>
         }
       >
         <LoginForm />

@@ -5,6 +5,7 @@ import {
 } from '@/lib/config/external-apis'
 import { apiPath, appUrl, getAppBaseUrlFromRequest } from '@/lib/config/urls'
 import { queryOne, execute, generateId } from '@/lib/db'
+import { getSignupLocked } from '@/lib/platform/platform-settings'
 import jwt from 'jsonwebtoken'
 import type { JWTPayload } from '@/lib/auth'
 
@@ -60,6 +61,9 @@ export async function GET(request: NextRequest) {
   )
 
   if (!user) {
+    if (await getSignupLocked()) {
+      return NextResponse.redirect(appUrl('/login?error=signup_locked', base))
+    }
     return NextResponse.redirect(
       appUrl(`/register?email=${encodeURIComponent(profile.email)}&oauth=google`, base),
     )

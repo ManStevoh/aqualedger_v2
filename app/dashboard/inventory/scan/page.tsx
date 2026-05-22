@@ -1,12 +1,13 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authFetchJson } from '@/lib/api'
-import { ScanLine, Camera, CameraOff } from 'lucide-react'
+import { Camera, CameraOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function InventoryScanPage() {
@@ -98,11 +99,11 @@ export default function InventoryScanPage() {
   useEffect(() => () => stopCamera(), [stopCamera])
 
   return (
-    <div className="p-6 max-w-lg mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <ScanLine className="h-7 w-7" />
-        <h1 className="text-2xl font-bold">Barcode / QR scan</h1>
-      </div>
+    <DashboardPageLayout
+      title="Barcode / QR scan"
+      description="GS1-compatible lookup · USB/Bluetooth scanners · camera when BarcodeDetector is supported"
+    >
+      <div className="max-w-lg mx-auto">
       <Card>
         <CardHeader>
           <CardTitle>Scan inventory</CardTitle>
@@ -152,6 +153,7 @@ export default function InventoryScanPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardPageLayout>
   )
 }

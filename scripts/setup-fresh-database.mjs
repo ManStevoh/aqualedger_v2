@@ -58,6 +58,13 @@ const migrations = [
   'database/migrations/20260603_hardware_iot.sql',
   'database/migrations/20260604_default_chart_of_accounts.sql',
   'database/migrations/20260605_ai_enablement.sql',
+  'database/migrations/20260606_vertical_modules.sql',
+  'database/migrations/20260607_platform_module_flags.sql',
+  'database/migrations/20260608_platform_settings.sql',
+  'database/migrations/20260609_platform_recaptcha.sql',
+  'database/migrations/20260610_boats_tenant_fixup.sql',
+  'database/migrations/20260611_wallets_tenant_backfill.sql',
+  'database/migrations/20260612_suggested_features.sql',
 ]
 
 async function runSqlFile(conn, rel, dbName) {

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -51,8 +52,10 @@ export default function OrderReturnsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Returns & refunds</h1>
+    <DashboardPageLayout
+      title="Returns & refunds"
+      description="Create return requests and approve refunds for commerce orders"
+    >
       <Card>
         <CardHeader><CardTitle>New return</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -96,6 +99,6 @@ export default function OrderReturnsPage() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

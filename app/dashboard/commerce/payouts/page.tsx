@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -159,167 +160,11 @@ export default function CommercePayoutsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Vendor payouts</h1>
-        <p className="text-muted-foreground">
-          Commission ledger and payout processing for marketplace vendors
-        </p>
-      </div>
-
-      <StatCardGrid>
-        <StatCard
-          title="Payable commissions"
-          value={`KES ${payableTotal.toLocaleString()}`}
-          description={`${commissions.filter((c) => c.status === 'payable').length} records`}
-          icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Payouts"
-          value={String(payouts.length)}
-          description="All payout batches"
-          icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />}
-        />
-      </StatCardGrid>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
-            Commissions
-          </CardTitle>
-          <CardDescription>Earned from confirmed orders</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="payable">Payable</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="void">Void</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button className="gap-2" onClick={() => setShowDialog(true)}>
-              <Plus className="h-4 w-4" />
-              Create payout
-            </Button>
-          </div>
-
-          <DataTable
-            loading={loading}
-            data={commissions}
-            emptyMessage="No commissions for this filter"
-            columns={[
-              { key: 'vendor_name', header: 'Vendor', cell: (row) => row.vendor_name || row.vendor_id },
-              { key: 'order_number', header: 'Order', cell: (row) => row.order_number || row.order_id },
-              {
-                key: 'order_amount',
-                header: 'Order total',
-                cell: (row) => `KES ${Number(row.order_amount).toLocaleString()}`,
-              },
-              {
-                key: 'commission_amount',
-                header: 'Commission',
-                cell: (row) =>
-                  `${Number(row.commission_rate).toFixed(1)}% — KES ${Number(row.commission_amount).toLocaleString()}`,
-              },
-              {
-                key: 'status',
-                header: 'Status',
-                cell: (row) => <Badge variant="secondary">{row.status}</Badge>,
-              },
-              {
-                key: 'created_at',
-                header: 'Created',
-                cell: (row) => new Date(row.created_at).toLocaleDateString(),
-              },
-            ]}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payout batches</CardTitle>
-          <CardDescription>Processing and paid vendor payouts</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            loading={loading}
-            data={payouts}
-            emptyMessage="No payouts yet"
-            columns={[
-              { key: 'payout_number', header: 'Payout #' },
-              { key: 'vendor_name', header: 'Vendor', cell: (row) => row.vendor_name || row.vendor_id },
-              {
-                key: 'amount',
-                header: 'Amount',
-                cell: (row) => `${row.currency} ${Number(row.amount).toLocaleString()}`,
-              },
-              {
-                key: 'status',
-                header: 'Status',
-                cell: (row) => (
-                  <Badge variant={row.status === 'paid' ? 'default' : 'secondary'}>
-                    {row.status}
-                  </Badge>
-                ),
-              },
-              {
-                key: 'paid_at',
-                header: 'Paid at',
-                cell: (row) =>
-                  row.paid_at ? new Date(row.paid_at).toLocaleString() : '—',
-              },
-              {
-                key: 'actions',
-                header: '',
-                cell: (row) =>
-                  row.status !== 'paid' ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={markingId === row.id}
-                      onClick={() => handleMarkPaid(row.id)}
-                    >
-                      Mark paid
-                    </Button>
-                  ) : null,
-              },
-            ]}
-          />
-        </CardContent>
-      </Card>
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create payout</DialogTitle>
-            <DialogDescription>
-              Bundles all payable commissions for the selected vendor
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-2">
-              <Label>Vendor</Label>
-              <Select value={vendorId} onValueChange={setVendorId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vendor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vendors.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.shop_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
+    <DashboardPageLayout
+      title="Vendor payouts"
+      description="Commission ledger and payout processing for marketplace vendors"
+    >
+      <div className="space-y-2">
               <Label>Currency</Label>
               <Input value="KES" disabled />
             </div>
@@ -334,6 +179,6 @@ export default function CommercePayoutsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

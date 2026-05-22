@@ -1,4 +1,6 @@
 import { apiHandler, jsonOk } from '@/lib/api-handler'
+
+export const runtime = 'nodejs'
 import { getRecaptchaConfig, toPublicConfig } from '@/lib/modules/security/recaptcha'
 
 /** Public site key + feature flags for login/register pages (no secrets). */

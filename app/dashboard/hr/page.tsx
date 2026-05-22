@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { StatCard } from '@/components/dashboard/stat-card'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { WorkspaceNav, HR_WORKSPACE_NAV } from '@/components/dashboard/workspace-nav'
+import { StatusBadge } from '@/components/dashboard/status-badge'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { Users, UserPlus, Briefcase, DollarSign } from 'lucide-react'
 import { authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
@@ -31,6 +35,10 @@ interface Employee {
 }
 
 export default function HRPage() {
+  const meta = useDashboardPageMeta({
+    title: 'Human Resources',
+    description: 'Employee directory and records',
+  })
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
@@ -107,16 +115,18 @@ export default function HRPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Human Resources</h1>
-          <p className="text-muted-foreground">Employee directory and records</p>
-        </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
-          <UserPlus className="w-4 h-4" />
-          Add Employee
-        </Button>
-      </div>
+      <WorkspaceNav items={HR_WORKSPACE_NAV} />
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+        actions={
+          <Button className="gap-2" onClick={() => setAddOpen(true)}>
+            <UserPlus className="w-4 h-4" />
+            Add Employee
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard title="Total Staff" value={employees.length} icon={<Users className="h-4 w-4 text-muted-foreground" />} loading={loading} />
@@ -158,16 +168,21 @@ export default function HRPage() {
                       {e.salary != null ? `KES ${Number(e.salary).toLocaleString()}` : '—'}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant={e.status === 'active' ? 'default' : 'secondary'}>
-                        {e.status.replace('_', ' ')}
-                      </Badge>
+                      <StatusBadge status={e.status} />
                     </td>
                   </tr>
                 ))}
                 {employees.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
-                      No employees yet
+                    <td colSpan={7} className="p-0">
+                      <EmptyState
+                        icon={Users}
+                        title="No employees yet"
+                        description="Add your first team member to run payroll and attendance."
+                        actionLabel="Add employee"
+                        onAction={() => setAddOpen(true)}
+                        className="border-0 bg-transparent"
+                      />
                     </td>
                   </tr>
                 )}

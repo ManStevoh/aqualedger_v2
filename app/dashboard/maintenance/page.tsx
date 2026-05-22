@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Wrench, Calendar, DollarSign, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,12 +28,6 @@ import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { useMaintenance, useBoats, scheduleMaintenance } from '@/lib/api'
 import { toast } from 'sonner'
 import type { MaintenanceRecord, Boat } from '@/lib/types'
-
-const statusColors: Record<string, string> = {
-  scheduled: 'bg-blue-100 text-blue-700 border-blue-200',
-  in_progress: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  completed: 'bg-green-100 text-green-700 border-green-200',
-}
 
 const typeColors: Record<string, string> = {
   scheduled: 'bg-blue-100 text-blue-700',
@@ -286,9 +280,7 @@ function MaintenanceList({ records }: { records: MaintenanceRecord[] }) {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{record.boatName}</h3>
-                    <Badge variant="outline" className={statusColors[record.status]}>
-                      {record.status.replace('_', ' ')}
-                    </Badge>
+                    <StatusBadge status={record.status} />
                   </div>
                   <p className="text-sm text-muted-foreground">{record.description}</p>
                   <p className="text-xs text-muted-foreground mt-1">

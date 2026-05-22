@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -130,18 +131,10 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">CRM Campaigns</h1>
-          <p className="text-muted-foreground">Email, SMS, WhatsApp, and in-app outreach</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowDialog(true)}>
-          <Plus className="h-4 w-4" />
-          New Campaign
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="CRM Campaigns"
+      description="Email, SMS, WhatsApp, and in-app outreach"
+    >
       <div className="flex flex-wrap gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px]">
@@ -259,6 +252,6 @@ export default function CampaignsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

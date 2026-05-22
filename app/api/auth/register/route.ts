@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     const parsed = registerSchema.parse(await request.json())
-    await assertRecaptcha('register', parsed.recaptchaToken, ip)
+    await assertRecaptcha('register', parsed.recaptchaToken, ip, {
+      userAgent: request.headers.get('user-agent') || undefined,
+    })
 
     const businessType = parsed.businessType as BusinessType
     const role = businessTypeToUserRole(businessType)

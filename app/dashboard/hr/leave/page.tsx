@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,7 +24,7 @@ import {
 import { DataTable } from '@/components/dashboard/data-table'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
-import { Calendar, Check, X } from 'lucide-react'
+import { Calendar, Check, X, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Employee {
@@ -141,39 +142,31 @@ export default function HRLeavePage() {
   const approved = requests.filter((r) => r.status === 'approved').length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leave management</h1>
-          <p className="text-muted-foreground">Submit and approve employee leave requests</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>New request</Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Leave management"
+      description="Submit and approve employee leave requests"
+      actions={
+        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" />
+          New request
+        </Button>
+      }
+    >
       <StatCardGrid>
-        <StatCard title="Total" value={requests.length} loading={loading} icon={<Calendar className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Pending" value={pending} loading={loading} icon={<Calendar className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Approved" value={approved} loading={loading} icon={<Check className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard
-          title="Rejected"
-          value={requests.filter((r) => r.status === 'rejected').length}
-          loading={loading}
-          icon={<X className="h-4 w-4 text-muted-foreground" />}
-        />
+        <StatCard title="Pending" value={pending} icon={<Calendar className="h-4 w-4" />} loading={loading} />
+        <StatCard title="Approved" value={approved} loading={loading} />
       </StatCardGrid>
 
-      <div className="flex items-center gap-3 max-w-xs">
-        <Label>Status</Label>
+      <div className="flex gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger>
-            <SelectValue />
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -184,66 +177,43 @@ export default function HRLeavePage() {
         data={requests}
         emptyMessage="No leave requests"
         columns={[
-          { key: 'employee_name', header: 'Employee', cell: (row) => row.employee_name ?? '—' },
+          { key: 'employee_name', header: 'Employee' },
+          { key: 'leave_type', header: 'Type' },
           {
-            key: 'leave_type',
-            header: 'Type',
-            cell: (row) => <Badge variant="outline">{row.leave_type}</Badge>,
-          },
-          {
-            key: 'start_date',
-            header: 'From',
-            cell: (row) => String(row.start_date).split('T')[0],
-          },
-          {
-            key: 'end_date',
-            header: 'To',
-            cell: (row) => String(row.end_date).split('T')[0],
+            key: 'dates',
+            header: 'Dates',
+            cell: (row) => `${String(row.start_date).slice(0, 10)} → ${String(row.end_date).slice(0, 10)}`,
           },
           { key: 'days', header: 'Days' },
           {
             key: 'status',
             header: 'Status',
-            cell: (row) => (
-              <Badge
-                variant={
-                  row.status === 'approved'
-                    ? 'default'
-                    : row.status === 'rejected'
-                      ? 'destructive'
-                      : 'secondary'
-                }
-              >
-                {row.status}
-              </Badge>
-            ),
+            cell: (row) => <Badge variant="outline">{row.status}</Badge>,
           },
           {
             key: 'actions',
-            header: 'Actions',
+            header: '',
             cell: (row) =>
               row.status === 'pending' ? (
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => handleApprove(row.id, true)}>
-                    Approve
+                    <Check className="h-3 w-3" />
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => handleApprove(row.id, false)}>
-                    Reject
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
-              ) : (
-                '—'
-              ),
+              ) : null,
           },
         ]}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New leave request</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 py-2">
             <div className="space-y-2">
               <Label>Employee</Label>
               <Select value={employeeId} onValueChange={setEmployeeId}>
@@ -303,6 +273,6 @@ export default function HRLeavePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

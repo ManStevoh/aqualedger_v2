@@ -33,6 +33,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, ClipboardList, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { ListPageToolbar } from '@/components/dashboard/list-page-toolbar'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { PROCUREMENT_WORKSPACE_NAV, WorkspaceNav } from '@/components/dashboard/workspace-nav'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface SupplierOption {
   id: string
@@ -78,6 +83,9 @@ interface Rfq {
 }
 
 function ProcurementOrdersContent() {
+  const meta = useDashboardPageMeta({
+    description: 'Purchase orders, goods receipt, PRs, and RFQs',
+  })
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') || 'orders'
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -344,10 +352,12 @@ function ProcurementOrdersContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Procurement</h1>
-        <p className="text-muted-foreground">Purchase orders, goods receipt, PRs, and RFQs</p>
-      </div>
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+      />
+      <WorkspaceNav items={PROCUREMENT_WORKSPACE_NAV} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -358,12 +368,14 @@ function ProcurementOrdersContent() {
         </TabsList>
 
         <TabsContent value="orders" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button className="gap-2" onClick={() => setShowOrderDialog(true)}>
-              <Plus className="h-4 w-4" />
-              New Order
-            </Button>
-          </div>
+          <ListPageToolbar
+            actions={
+              <Button className="gap-2" onClick={() => setShowOrderDialog(true)}>
+                <Plus className="h-4 w-4" />
+                New Order
+              </Button>
+            }
+          />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -381,7 +393,13 @@ function ProcurementOrdersContent() {
                   Loading…
                 </div>
               ) : orders.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">No purchase orders yet</p>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No purchase orders yet"
+                  description="Create a purchase order to start procurement."
+                  actionLabel="New Order"
+                  onAction={() => setShowOrderDialog(true)}
+                />
               ) : (
                 <Table>
                   <TableHeader>
@@ -415,12 +433,14 @@ function ProcurementOrdersContent() {
         </TabsContent>
 
         <TabsContent value="grn" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button className="gap-2" onClick={() => setShowGrnDialog(true)}>
-              <Plus className="h-4 w-4" />
-              Post GRN
-            </Button>
-          </div>
+          <ListPageToolbar
+            actions={
+              <Button className="gap-2" onClick={() => setShowGrnDialog(true)}>
+                <Plus className="h-4 w-4" />
+                Post GRN
+              </Button>
+            }
+          />
           <Card>
             <CardHeader>
               <CardTitle>Goods Receipt Notes</CardTitle>
@@ -428,7 +448,13 @@ function ProcurementOrdersContent() {
             </CardHeader>
             <CardContent>
               {receipts.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">No goods receipts yet</p>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No goods receipts yet"
+                  description="Post a GRN against an open purchase order."
+                  actionLabel="Post GRN"
+                  onAction={() => setShowGrnDialog(true)}
+                />
               ) : (
                 <Table>
                   <TableHeader>
@@ -458,29 +484,39 @@ function ProcurementOrdersContent() {
         </TabsContent>
 
         <TabsContent value="pr" className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Select value={prStatusFilter} onValueChange={setPrStatusFilter}>
-              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button className="gap-2" onClick={() => setShowPrDialog(true)}>
-              <Plus className="h-4 w-4" />
-              New PR
-            </Button>
-          </div>
+          <ListPageToolbar
+            filters={
+              <Select value={prStatusFilter} onValueChange={setPrStatusFilter}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            actions={
+              <Button className="gap-2" onClick={() => setShowPrDialog(true)}>
+                <Plus className="h-4 w-4" />
+                New PR
+              </Button>
+            }
+          />
           <Card>
             <CardHeader>
               <CardTitle>Purchase Requests</CardTitle>
             </CardHeader>
             <CardContent>
               {requests.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">No purchase requests yet</p>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No purchase requests yet"
+                  description="Submit a purchase request for approval."
+                  actionLabel="New PR"
+                  onAction={() => setShowPrDialog(true)}
+                />
               ) : (
                 <Table>
                   <TableHeader>
@@ -539,19 +575,27 @@ function ProcurementOrdersContent() {
         </TabsContent>
 
         <TabsContent value="rfq" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button className="gap-2" onClick={() => setShowRfqDialog(true)}>
-              <Plus className="h-4 w-4" />
-              New RFQ
-            </Button>
-          </div>
+          <ListPageToolbar
+            actions={
+              <Button className="gap-2" onClick={() => setShowRfqDialog(true)}>
+                <Plus className="h-4 w-4" />
+                New RFQ
+              </Button>
+            }
+          />
           <Card>
             <CardHeader>
               <CardTitle>Requests for Quotation</CardTitle>
             </CardHeader>
             <CardContent>
               {rfqs.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">No RFQs yet</p>
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No RFQs yet"
+                  description="Create a request for quotation from suppliers."
+                  actionLabel="New RFQ"
+                  onAction={() => setShowRfqDialog(true)}
+                />
               ) : (
                 <Table>
                   <TableHeader>

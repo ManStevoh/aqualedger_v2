@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -62,13 +63,11 @@ export default function TraceabilityPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Traceability</h1>
-        <p className="text-muted-foreground">Boat → catch → auction → buyer chain (EU 1379/2013)</p>
-      </div>
-
-      <Card>
+    <DashboardPageLayout
+      title="Traceability"
+      description="Boat → catch → auction → buyer chain (EU 1379/2013)"
+    >
+            <Card>
         <CardHeader>
           <CardTitle>Search by lot code</CardTitle>
           <CardDescription>GS1-style lot ID from landing, storage, or sales</CardDescription>
@@ -204,6 +203,6 @@ export default function TraceabilityPage() {
           )}
         </div>
       )}
-    </div>
+    </DashboardPageLayout>
   )
 }

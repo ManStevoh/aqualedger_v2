@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -35,7 +37,7 @@ import { AdminHubNav } from '@/components/dashboard/admin-hub-nav'
 import { authFetchJson } from '@/lib/api'
 import { useAppStore } from '@/lib/store'
 import type { TenantPlan, TenantStatus } from '@/lib/tenant'
-import { Building2, Shield, Loader2, Plus, Download, Trash2 } from 'lucide-react'
+import { Building2, Shield, Loader2, Plus, Download, Trash2, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface PlatformTenant {
@@ -51,6 +53,13 @@ interface PlatformTenant {
 }
 
 const PLANS: TenantPlan[] = ['trial', 'starter', 'professional', 'enterprise']
+
+interface TenantFeatureFlag {
+  flagKey: string
+  label: string
+  description: string
+  enabled: boolean
+}
 
 function formatKes(n: number) {
   return new Intl.NumberFormat('en-KE', {
@@ -81,6 +90,11 @@ export default function PlatformTenantsPage() {
   const [purgeTarget, setPurgeTarget] = useState<PlatformTenant | null>(null)
   const [purgeSlugInput, setPurgeSlugInput] = useState('')
   const [purging, setPurging] = useState(false)
+  const [flagsTarget, setFlagsTarget] = useState<PlatformTenant | null>(null)
+  const [flagsList, setFlagsList] = useState<TenantFeatureFlag[]>([])
+  const [flagsDraft, setFlagsDraft] = useState<Record<string, boolean>>({})
+  const [flagsLoading, setFlagsLoading] = useState(false)
+  const [flagsSaving, setFlagsSaving] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -188,6 +202,67 @@ export default function PlatformTenantsPage() {
     setPurgeSlugInput('')
   }
 
+  const openFlagsDialog = async (tenant: PlatformTenant) => {
+    setFlagsTarget(tenant)
+    setFlagsDraft({})
+    setFlagsLoading(true)
+    try {
+      const res = await authFetchJson<{
+        success: boolean
+        data?: { flags: TenantFeatureFlag[] }
+        error?: string
+      }>(`/api/v2/platform/tenants/${tenant.id}/flags`)
+      if (!res.success) {
+        toast.error(res.error || 'Failed to load feature flags')
+        setFlagsTarget(null)
+        return
+      }
+      const list = res.data?.flags ?? []
+      setFlagsList(list)
+      setFlagsDraft(Object.fromEntries(list.map((f) => [f.flagKey, f.enabled])))
+    } catch {
+      toast.error('Network error')
+      setFlagsTarget(null)
+    } finally {
+      setFlagsLoading(false)
+    }
+  }
+
+  const closeFlagsDialog = () => {
+    setFlagsTarget(null)
+    setFlagsList([])
+    setFlagsDraft({})
+  }
+
+  const saveFlags = async () => {
+    if (!flagsTarget) return
+    setFlagsSaving(true)
+    try {
+      const flags = Object.entries(flagsDraft).map(([flagKey, enabled]) => ({
+        flagKey,
+        enabled,
+      }))
+      const res = await authFetchJson<{ success: boolean; error?: string }>(
+        `/api/v2/platform/tenants/${flagsTarget.id}/flags`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flags }),
+        },
+      )
+      if (!res.success) {
+        toast.error(res.error || 'Save failed')
+        return
+      }
+      toast.success(`Feature flags updated for ${flagsTarget.slug}`)
+      closeFlagsDialog()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setFlagsSaving(false)
+    }
+  }
+
   const purgeTenantData = async () => {
     if (!purgeTarget) return
     if (purgeSlugInput !== purgeTarget.slug) {
@@ -231,16 +306,7 @@ export default function PlatformTenantsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-7 w-7" />
-            Tenants
-          </h1>
-          <p className="text-muted-foreground">Provision, manage plans, and export tenant data</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <DashboardPageLayout title="Tenants" description="Provision, manage plans, and export tenant data" actions={<><Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -300,7 +366,7 @@ export default function PlatformTenantsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </>}>
 
       <AdminHubNav />
 
@@ -333,6 +399,50 @@ export default function PlatformTenantsPage() {
               onClick={purgeTenantData}
             >
               {purging ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={flagsTarget !== null} onOpenChange={(open) => !open && closeFlagsDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Feature flags</DialogTitle>
+            <DialogDescription>
+              Per-tenant overrides for {flagsTarget?.name} ({flagsTarget?.slug}). Disabled flags hide
+              mapped modules even when enabled platform-wide.
+            </DialogDescription>
+          </DialogHeader>
+          {flagsLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground py-6 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading flags…
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              {flagsList.map((flag) => (
+                <div key={flag.flagKey} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                  <div>
+                    <p className="font-medium">{flag.label}</p>
+                    <p className="text-sm text-muted-foreground">{flag.description}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">{flag.flagKey}</p>
+                  </div>
+                  <Switch
+                    checked={flagsDraft[flag.flagKey] ?? flag.enabled}
+                    onCheckedChange={(checked) =>
+                      setFlagsDraft((prev) => ({ ...prev, [flag.flagKey]: checked }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeFlagsDialog} disabled={flagsSaving}>
+              Cancel
+            </Button>
+            <Button disabled={flagsSaving || flagsLoading} onClick={saveFlags}>
+              {flagsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save flags'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -404,6 +514,14 @@ export default function PlatformTenantsPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => openFlagsDialog(tenant)}
+                            title="Feature flags"
+                          >
+                            <SlidersHorizontal className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => exportTenant(tenant.id)}
                             title="Export JSON"
                           >
@@ -443,6 +561,6 @@ export default function PlatformTenantsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

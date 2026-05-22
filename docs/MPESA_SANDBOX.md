@@ -1,5 +1,13 @@
 # M-Pesa Daraja (sandbox & production)
 
+## Quick wire (local)
+
+```bash
+npm run mpesa:wire    # sets MPESA_ENV + MPESA_CALLBACK_URL from NEXT_PUBLIC_APP_URL
+# Add Daraja keys to .env, then:
+npm run mpesa:check
+```
+
 ## Environment
 
 ```env

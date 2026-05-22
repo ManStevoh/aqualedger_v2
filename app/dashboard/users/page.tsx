@@ -1,9 +1,10 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -50,6 +51,31 @@ export default function UsersPage() {
   const [newLastName, setNewLastName] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [newRole, setNewRole] = useState<UserRole>('fisherman')
+  const [profileUser, setProfileUser] = useState<User | null>(null)
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null)
+
+  const updateUserStatus = async (user: User, status: 'active' | 'suspended') => {
+    setStatusUpdating(user.id)
+    try {
+      const res = await fetch('/api/v2/users', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, status }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        toast.error(data.error || 'Failed to update status')
+        return
+      }
+      toast.success(status === 'suspended' ? 'User suspended' : 'User reactivated')
+      await fetchUsers()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setStatusUpdating(null)
+    }
+  }
 
   useEffect(() => {
     fetchUsers()
@@ -113,15 +139,6 @@ export default function UsersPage() {
     return colors[role] || 'bg-muted'
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      suspended: 'bg-red-100 text-red-800'
-    }
-    return colors[status] || 'bg-muted'
-  }
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -177,20 +194,14 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage all users across the platform
-          </p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="User Management"
+      description="Manage all users across the platform"
+    >
+      <DashboardPageLayout
+      title="User Management"
+      description="Manage all users across the platform"
+    >
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
@@ -294,9 +305,7 @@ export default function UsersPage() {
                       <td className="py-3 px-4">{user.region || '-'}</td>
                       <td className="py-3 px-4">{user.phone}</td>
                       <td className="py-3 px-4">
-                        <Badge className={getStatusColor(user.status)}>
-                          {user.status}
-                        </Badge>
+                        <StatusBadge status={user.status} />
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -309,11 +318,22 @@ export default function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View Profile</DropdownMenuItem>
-                            <DropdownMenuItem>Edit User</DropdownMenuItem>
-                            <DropdownMenuItem>View Activity</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              {user.status === 'suspended' ? 'Reactivate' : 'Suspend User'}
+                            <DropdownMenuItem onClick={() => setProfileUser(user)}>View Profile</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              disabled={statusUpdating === user.id}
+                              onClick={() =>
+                                updateUserStatus(
+                                  user,
+                                  user.status === 'suspended' ? 'active' : 'suspended',
+                                )
+                              }
+                            >
+                              {statusUpdating === user.id
+                                ? 'Updating…'
+                                : user.status === 'suspended'
+                                  ? 'Reactivate'
+                                  : 'Suspend User'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -326,6 +346,27 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!profileUser} onOpenChange={(open) => !open && setProfileUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{profileUser?.name}</DialogTitle>
+            <DialogDescription>{profileUser?.email}</DialogDescription>
+          </DialogHeader>
+          {profileUser && (
+            <div className="space-y-2 text-sm">
+              <p><span className="text-muted-foreground">Role:</span> {profileUser.role}</p>
+              <p><span className="text-muted-foreground">Phone:</span> {profileUser.phone || '—'}</p>
+              <p><span className="text-muted-foreground">Region:</span> {profileUser.region || '—'}</p>
+              <p><span className="text-muted-foreground">Status:</span> {profileUser.status}</p>
+              <p><span className="text-muted-foreground">Joined:</span> {profileUser.createdAt}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfileUser(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-md">
@@ -385,5 +426,6 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardPageLayout>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -41,11 +42,8 @@ export default function RecruitmentPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><UserCircle className="h-8 w-8" />Recruitment</h1>
-        <p className="text-muted-foreground">Open roles and applicant pipeline</p>
-      </div>
+    <DashboardPageLayout title="Recruitment" description="Open roles and applicant pipeline">
+
 
       <Card>
         <CardHeader><CardTitle>Post job</CardTitle></CardHeader>
@@ -79,6 +77,6 @@ export default function RecruitmentPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }

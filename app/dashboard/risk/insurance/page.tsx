@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -181,120 +182,11 @@ export default function InsurancePage() {
     new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Insurance & claims</h1>
-          <p className="text-muted-foreground">Hull, liability, and cargo cover for fleet operations</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setClaimDialog(true)}>
-            <Plus className="h-4 w-4" />
-            File claim
-          </Button>
-          <Button className="gap-2" onClick={() => setPolicyDialog(true)}>
-            <Plus className="h-4 w-4" />
-            Add policy
-          </Button>
-        </div>
-      </div>
-
-      <StatCardGrid>
-        <StatCard title="Active policies" value={summary.activePolicies} icon={<Shield className="h-4 w-4" />} loading={loading} />
-        <StatCard title="Expiring (30d)" value={summary.expiringSoon} loading={loading} />
-        <StatCard title="Total coverage" value={kes(summary.totalCoverage)} loading={loading} />
-        <StatCard title="Open claims" value={summary.openClaims} loading={loading} />
-      </StatCardGrid>
-
-      <Tabs defaultValue="policies">
-        <TabsList>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
-          <TabsTrigger value="claims">Claims</TabsTrigger>
-        </TabsList>
-        <TabsContent value="policies" className="mt-4">
-          <Card>
-            <CardHeader><CardTitle>Policies</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Policy #</TableHead>
-                    <TableHead>Insurer</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Vessel</TableHead>
-                    <TableHead>Coverage</TableHead>
-                    <TableHead>Valid</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {policies.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-mono text-sm">{p.policy_number}</TableCell>
-                      <TableCell>{p.insurer_name}</TableCell>
-                      <TableCell>{p.policy_type}</TableCell>
-                      <TableCell>{p.boat_name || '—'}</TableCell>
-                      <TableCell>{kes(Number(p.coverage_amount))}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.start_date} → {p.end_date}
-                        <Badge className="ml-2" variant="outline">{p.status}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="claims" className="mt-4">
-          <Card>
-            <CardHeader><CardTitle>Claims</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Claim #</TableHead>
-                    <TableHead>Policy</TableHead>
-                    <TableHead>Incident</TableHead>
-                    <TableHead>Claimed</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {claims.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono text-sm">{c.claim_number}</TableCell>
-                      <TableCell>{c.policy_number}</TableCell>
-                      <TableCell>{c.incident_date}</TableCell>
-                      <TableCell>{kes(Number(c.claimed_amount))}</TableCell>
-                      <TableCell><Badge>{c.status}</Badge></TableCell>
-                      <TableCell className="space-x-1">
-                        {c.status === 'submitted' && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => updateClaim(c.id, 'reviewing')}>Review</Button>
-                            <Button size="sm" onClick={() => updateClaim(c.id, 'approved')}>Approve</Button>
-                          </>
-                        )}
-                        {c.status === 'approved' && (
-                          <Button size="sm" onClick={() => updateClaim(c.id, 'paid')}>Mark paid</Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={policyDialog} onOpenChange={setPolicyDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add insurance policy</DialogTitle></DialogHeader>
-          <div className="grid gap-3 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>Policy #</Label><Input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Insurer</Label><Input value={insurer} onChange={(e) => setInsurer(e.target.value)} /></div>
+    <DashboardPageLayout
+      title="Insurance & claims"
+      description="Hull, liability, and cargo cover for fleet operations"
+    >
+      <div className="space-y-2"><Label>Insurer</Label><Input value={insurer} onChange={(e) => setInsurer(e.target.value)} /></div>
             </div>
             <div className="space-y-2">
               <Label>Type</Label>
@@ -344,6 +236,6 @@ export default function InsurancePage() {
           <DialogFooter><Button onClick={createClaim}>Submit claim</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

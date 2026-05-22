@@ -13,6 +13,7 @@ export interface TenantSettings {
   tax_tin?: string
   vat_number?: string
   branding?: TenantBranding
+  stripe_customer_id?: string
   [key: string]: unknown
 }
 
@@ -30,6 +31,7 @@ export interface UpdateTenantSettingsInput {
   branding?: TenantBranding
   name?: string
   defaultCurrency?: string
+  timezone?: string
 }
 
 export interface Branch {
@@ -136,6 +138,10 @@ export async function updateTenantSettings(
   if (input.defaultCurrency !== undefined) {
     updates.push('default_currency = ?')
     params.push(input.defaultCurrency)
+  }
+  if (input.timezone !== undefined) {
+    updates.push('timezone = ?')
+    params.push(input.timezone)
   }
   if (input.branding?.logo_url !== undefined) {
     updates.push('logo_url = ?')

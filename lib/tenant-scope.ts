@@ -23,5 +23,5 @@ export function assertTenantMatch<T extends { tenant_id?: string | null }>(
   label = 'Resource',
 ): asserts row is T {
   if (!row) throw notFound(`${label} not found`)
-  if (row.tenant_id && row.tenant_id !== tenantId) throw forbidden()
+  if (!row.tenant_id || row.tenant_id !== tenantId) throw forbidden()
 }

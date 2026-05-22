@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,14 +52,13 @@ export default function FishermanMobilePage() {
   }
 
   return (
+    <DashboardPageLayout
+      title="Fisherman — Quick log"
+      description="Works offline · sync when back online"
+      hideWorkspaceNav
+    >
     <div className="min-h-screen bg-slate-950 text-white pb-24">
-      <header className="px-4 py-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Fish className="h-6 w-6 text-cyan-400" />
-          Fisherman — Quick log
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">Works offline · sync when back online</p>
-      </header>
+      
       <main className="p-4 space-y-4">
         {pending > 0 && (
           <Card className="bg-amber-900/30 border-amber-700">
@@ -82,5 +82,6 @@ export default function FishermanMobilePage() {
         </Button>
       </main>
     </div>
+    </DashboardPageLayout>
   )
 }

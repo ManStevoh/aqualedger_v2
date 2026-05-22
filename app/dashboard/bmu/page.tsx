@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -116,18 +117,14 @@ export default function BMUPage() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Beach Management Units</h1>
-          <p className="text-muted-foreground">Manage and monitor all BMUs</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
-          <Plus className="w-4 h-4" />
-          Add BMU
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Beach Management Units"
+      description="Manage and monitor all BMUs"
+    >
+      <DashboardPageLayout
+      title="Beach Management Units"
+      description="Manage and monitor all BMUs"
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Active BMUs"
@@ -284,5 +281,6 @@ export default function BMUPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardPageLayout>
   )
 }

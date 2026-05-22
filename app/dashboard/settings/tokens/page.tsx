@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -106,20 +107,10 @@ export default function ApiTokensPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">API tokens</h1>
-          <p className="text-muted-foreground">
-            Scoped tokens for programmatic access (OAuth2-style). Stored as SHA-256 hashes.
-          </p>
-        </div>
-        <Button className="gap-2" onClick={() => { setCreatedToken(null); setDialogOpen(true) }}>
-          <Plus className="h-4 w-4" />
-          Create token
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="API tokens"
+      description="Scoped tokens for programmatic access (OAuth2-style). Stored as SHA-256 hashes."
+    >
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -224,6 +215,6 @@ export default function ApiTokensPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

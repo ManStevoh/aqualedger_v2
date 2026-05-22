@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/dashboard/data-table'
@@ -24,8 +25,9 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { authFetchJson } from '@/lib/api'
-import { FileCheck, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type DocType =
@@ -55,14 +57,6 @@ const DOC_LABELS: Record<DocType, string> = {
   catch_certificate: 'Catch Certificate (EU)',
   customs_declaration: 'Customs Declaration',
   invoice: 'Commercial Invoice',
-}
-
-const statusColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  issued: 'bg-blue-100 text-blue-700',
-  submitted: 'bg-yellow-100 text-yellow-700',
-  approved: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-700',
 }
 
 const defaultForm = {
@@ -179,23 +173,16 @@ export default function ExportDocumentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <FileCheck className="h-7 w-7 text-primary" />
-            Export compliance documents
-          </h1>
-          <p className="text-muted-foreground">
-            EU seafood export: certificate of origin, health certificate, and catch certificate (IUU).
-          </p>
-        </div>
+    <DashboardPageLayout
+      title="Export compliance documents"
+      description="EU seafood export: certificate of origin, health certificate, and catch certificate (IUU)."
+      actions={
         <Button className="gap-2" onClick={() => openCreate()}>
           <Plus className="h-4 w-4" />
           New document
         </Button>
-      </div>
-
+      }
+    >
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocType | 'all')}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="all">All</TabsTrigger>
@@ -242,9 +229,7 @@ export default function ExportDocumentsPage() {
                 key: 'status',
                 header: 'Status',
                 cell: (row) => (
-                  <Badge variant="outline" className={statusColors[row.status] || ''}>
-                    {row.status}
-                  </Badge>
+                  <StatusBadge status={row.status} />
                 ),
               },
               {
@@ -377,6 +362,6 @@ export default function ExportDocumentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

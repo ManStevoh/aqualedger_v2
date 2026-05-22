@@ -1,10 +1,11 @@
-import { execute, queryOne } from '@/lib/db'
+import { execute, query, queryOne } from '@/lib/db'
 import { ApiError } from '@/lib/api-handler'
+import { logAudit } from '@/lib/audit'
 
 /** Google reCAPTCHA — v3 (score-based) or v2 (checkbox), configured by super admin. */
 export type RecaptchaVersion = 'v3' | 'v2_checkbox'
 
-export type RecaptchaAction = 'login' | 'register'
+export type RecaptchaAction = 'login' | 'register' | 'guest_checkout'
 
 export interface RecaptchaConfig {
   enabled: boolean
@@ -15,6 +16,7 @@ export interface RecaptchaConfig {
   minScore: number
   protectLogin: boolean
   protectRegister: boolean
+  protectGuestCheckout: boolean
   /** Optional hostnames from siteverify response (e.g. localhost, app.example.com). */
   hostnameAllowlist: string[]
 }
@@ -26,6 +28,7 @@ export interface PublicRecaptchaConfig {
   minScore: number
   protectLogin: boolean
   protectRegister: boolean
+  protectGuestCheckout: boolean
 }
 
 export interface RecaptchaAdminView {
@@ -37,7 +40,20 @@ export interface RecaptchaAdminView {
   minScore: number
   protectLogin: boolean
   protectRegister: boolean
+  protectGuestCheckout: boolean
   hostnameAllowlist: string[]
+}
+
+export interface RecaptchaAuditEntry {
+  id: string
+  action: string
+  outcome: string
+  recaptchaAction: string
+  code?: string
+  score?: number
+  hostname?: string
+  ipAddress?: string
+  createdAt: string
 }
 
 const SETTING_KEY = 'recaptcha'
@@ -50,12 +66,16 @@ const DEFAULTS: RecaptchaConfig = {
   minScore: 0.5,
   protectLogin: true,
   protectRegister: true,
+  protectGuestCheckout: true,
   hostnameAllowlist: [],
 }
 
-/** Google test keys — always pass; for local dev only. */
+/** Google test keys — for local dev / automated tests only. */
 export const RECAPTCHA_TEST_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
 export const RECAPTCHA_TEST_SECRET_KEY = '6LeIxAcTAAAAAGG-vFIwTn6xmNXbW9h8JqXJq'
+
+/** Token value accepted with test secret in non-production (CI / scripts). */
+export const RECAPTCHA_SANDBOX_PASS_TOKEN = 'google-sandbox-pass'
 
 const VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
@@ -93,6 +113,7 @@ function normalizeConfig(raw: Partial<RecaptchaConfig>): RecaptchaConfig {
     minScore,
     protectLogin: raw.protectLogin !== false,
     protectRegister: raw.protectRegister !== false,
+    protectGuestCheckout: raw.protectGuestCheckout !== false,
     hostnameAllowlist: allowlist,
   }
 }
@@ -156,6 +177,7 @@ export function toAdminView(config: RecaptchaConfig): RecaptchaAdminView {
     minScore: config.minScore,
     protectLogin: config.protectLogin,
     protectRegister: config.protectRegister,
+    protectGuestCheckout: config.protectGuestCheckout,
     hostnameAllowlist: config.hostnameAllowlist,
   }
 }
@@ -169,6 +191,7 @@ export function toPublicConfig(config: RecaptchaConfig): PublicRecaptchaConfig |
     minScore: config.minScore,
     protectLogin: config.protectLogin,
     protectRegister: config.protectRegister,
+    protectGuestCheckout: config.protectGuestCheckout,
   }
 }
 
@@ -178,7 +201,70 @@ export function isRecaptchaRequired(
 ): boolean {
   if (!config.enabled || !config.siteKey || !config.secretKey) return false
   if (action === 'login') return config.protectLogin
-  return config.protectRegister
+  if (action === 'register') return config.protectRegister
+  return config.protectGuestCheckout
+}
+
+async function logRecaptchaEvent(params: {
+  outcome: 'pass' | 'fail' | 'missing'
+  recaptchaAction: RecaptchaAction
+  code?: string
+  score?: number
+  hostname?: string
+  ipAddress?: string
+  userAgent?: string
+  tenantId?: string
+}): Promise<void> {
+  await logAudit({
+    action: 'security.recaptcha',
+    tenantId: params.tenantId ?? null,
+    resourceType: 'recaptcha',
+    resourceId: params.recaptchaAction,
+    metadata: {
+      outcome: params.outcome,
+      recaptchaAction: params.recaptchaAction,
+      code: params.code,
+      score: params.score,
+      hostname: params.hostname,
+    },
+    ipAddress: params.ipAddress,
+    userAgent: params.userAgent,
+  })
+}
+
+export async function listRecaptchaAuditEvents(limit = 25): Promise<RecaptchaAuditEntry[]> {
+  const rows = await query<{
+    id: string
+    action: string
+    metadata: unknown
+    ip_address: string | null
+    created_at: Date
+  }>(
+    `SELECT id, action, metadata, ip_address, created_at
+     FROM audit_logs
+     WHERE action = 'security.recaptcha'
+     ORDER BY created_at DESC
+     LIMIT ?`,
+    [Math.min(limit, 100)],
+  )
+
+  return rows.map((row) => {
+    const meta = parseJson<Record<string, unknown>>(row.metadata, {})
+    return {
+      id: row.id,
+      action: row.action,
+      outcome: String(meta.outcome ?? 'unknown'),
+      recaptchaAction: String(meta.recaptchaAction ?? ''),
+      code: meta.code != null ? String(meta.code) : undefined,
+      score: typeof meta.score === 'number' ? meta.score : undefined,
+      hostname: meta.hostname != null ? String(meta.hostname) : undefined,
+      ipAddress: row.ip_address ?? undefined,
+      createdAt:
+        row.created_at instanceof Date
+          ? row.created_at.toISOString()
+          : String(row.created_at),
+    }
+  })
 }
 
 interface SiteVerifyResponse {
@@ -194,10 +280,32 @@ export async function verifyRecaptchaToken(params: {
   token: string
   remoteIp?: string
   expectedAction?: RecaptchaAction
+  tenantId?: string
+  userAgent?: string
+  audit?: boolean
 }): Promise<{ ok: true; score?: number; hostname?: string } | { ok: false; code: string; error: string }> {
   const config = await getRecaptchaConfig(true)
   if (!config.secretKey) {
     return { ok: false, code: 'RECAPTCHA_NOT_CONFIGURED', error: 'reCAPTCHA secret key is not configured' }
+  }
+
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    config.secretKey === RECAPTCHA_TEST_SECRET_KEY &&
+    params.token === RECAPTCHA_SANDBOX_PASS_TOKEN
+  ) {
+    if (params.audit !== false && params.expectedAction) {
+      await logRecaptchaEvent({
+        outcome: 'pass',
+        recaptchaAction: params.expectedAction,
+        score: 0.9,
+        hostname: 'localhost',
+        ipAddress: params.remoteIp,
+        userAgent: params.userAgent,
+        tenantId: params.tenantId,
+      })
+    }
+    return { ok: true, score: 0.9, hostname: 'localhost' }
   }
 
   const body = new URLSearchParams({
@@ -218,12 +326,39 @@ export async function verifyRecaptchaToken(params: {
     })
     data = (await res.json()) as SiteVerifyResponse
   } catch {
-    return { ok: false, code: 'RECAPTCHA_UNAVAILABLE', error: 'Could not verify CAPTCHA. Try again later.' }
+    const fail = { ok: false as const, code: 'RECAPTCHA_UNAVAILABLE', error: 'Could not verify CAPTCHA. Try again later.' }
+    if (params.audit !== false && params.expectedAction) {
+      await logRecaptchaEvent({
+        outcome: 'fail',
+        recaptchaAction: params.expectedAction,
+        code: fail.code,
+        ipAddress: params.remoteIp,
+        userAgent: params.userAgent,
+        tenantId: params.tenantId,
+      })
+    }
+    return fail
+  }
+
+  const auditFail = async (code: string, error: string, score?: number, hostname?: string) => {
+    if (params.audit !== false && params.expectedAction) {
+      await logRecaptchaEvent({
+        outcome: 'fail',
+        recaptchaAction: params.expectedAction,
+        code,
+        score,
+        hostname,
+        ipAddress: params.remoteIp,
+        userAgent: params.userAgent,
+        tenantId: params.tenantId,
+      })
+    }
+    return { ok: false as const, code, error }
   }
 
   if (!data.success) {
     const codes = data['error-codes']?.join(', ') || 'verification_failed'
-    return { ok: false, code: 'RECAPTCHA_FAILED', error: `CAPTCHA verification failed (${codes})` }
+    return auditFail('RECAPTCHA_FAILED', `CAPTCHA verification failed (${codes})`)
   }
 
   if (config.hostnameAllowlist.length > 0 && data.hostname) {
@@ -231,25 +366,42 @@ export async function verifyRecaptchaToken(params: {
       (h) => h.toLowerCase() === data.hostname!.toLowerCase(),
     )
     if (!allowed) {
-      return { ok: false, code: 'RECAPTCHA_HOST_MISMATCH', error: 'CAPTCHA hostname not allowed' }
+      return auditFail('RECAPTCHA_HOST_MISMATCH', 'CAPTCHA hostname not allowed', undefined, data.hostname)
     }
   }
 
   if (config.version === 'v3') {
     const score = typeof data.score === 'number' ? data.score : 0
     if (score < config.minScore) {
-      return {
-        ok: false,
-        code: 'RECAPTCHA_LOW_SCORE',
-        error: 'Security check failed. Please try again.',
-      }
+      return auditFail('RECAPTCHA_LOW_SCORE', 'Security check failed. Please try again.', score, data.hostname)
     }
     if (params.expectedAction && data.action && data.action !== params.expectedAction) {
-      return { ok: false, code: 'RECAPTCHA_ACTION_MISMATCH', error: 'Invalid CAPTCHA action' }
+      return auditFail('RECAPTCHA_ACTION_MISMATCH', 'Invalid CAPTCHA action', score, data.hostname)
+    }
+    if (params.audit !== false && params.expectedAction) {
+      await logRecaptchaEvent({
+        outcome: 'pass',
+        recaptchaAction: params.expectedAction,
+        score,
+        hostname: data.hostname,
+        ipAddress: params.remoteIp,
+        userAgent: params.userAgent,
+        tenantId: params.tenantId,
+      })
     }
     return { ok: true, score, hostname: data.hostname }
   }
 
+  if (params.audit !== false && params.expectedAction) {
+    await logRecaptchaEvent({
+      outcome: 'pass',
+      recaptchaAction: params.expectedAction,
+      hostname: data.hostname,
+      ipAddress: params.remoteIp,
+      userAgent: params.userAgent,
+      tenantId: params.tenantId,
+    })
+  }
   return { ok: true, hostname: data.hostname }
 }
 
@@ -258,11 +410,20 @@ export async function assertRecaptcha(
   action: RecaptchaAction,
   token: string | undefined,
   remoteIp?: string,
+  options?: { tenantId?: string; userAgent?: string },
 ): Promise<void> {
   const config = await getRecaptchaConfig(true)
   if (!isRecaptchaRequired(config, action)) return
 
   if (!token?.trim()) {
+    await logRecaptchaEvent({
+      outcome: 'missing',
+      recaptchaAction: action,
+      code: 'RECAPTCHA_REQUIRED',
+      ipAddress: remoteIp,
+      userAgent: options?.userAgent,
+      tenantId: options?.tenantId,
+    })
     throw new ApiError('Security verification required', 400, 'RECAPTCHA_REQUIRED')
   }
 
@@ -270,6 +431,8 @@ export async function assertRecaptcha(
     token: token.trim(),
     remoteIp,
     expectedAction: config.version === 'v3' ? action : undefined,
+    tenantId: options?.tenantId,
+    userAgent: options?.userAgent,
   })
 
   if (!result.ok) {

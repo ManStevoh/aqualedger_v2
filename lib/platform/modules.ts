@@ -48,6 +48,7 @@ import {
   HeartPulse,
   CreditCard,
   Receipt,
+  ShieldCheck,
 } from 'lucide-react'
 
 export type ModuleId =
@@ -106,6 +107,7 @@ export const ERP_MODULES: ErpModule[] = [
     apiPrefix: '/api/v2/tenant',
     nav: [
       { title: 'Organization', href: '/dashboard/organization', permission: 'tenant.settings.read', icon: Building2 },
+      { title: 'Billing', href: '/dashboard/organization/billing', permission: 'tenant.settings.read', icon: CreditCard },
       { title: 'Custom domains', href: '/dashboard/organization/domains', permission: 'tenant.settings.write', icon: Globe },
       { title: 'Tenant KPIs', href: '/dashboard/organization?tab=analytics', permission: 'tenant.settings.read', icon: BarChart3 },
       { title: 'Team', href: '/dashboard/team', permission: 'tenant.members.manage', icon: Users },
@@ -305,6 +307,7 @@ export const ERP_MODULES: ErpModule[] = [
       { title: 'Platform audit', href: '/dashboard/admin/audit', permission: 'platform.tenants.manage', icon: Shield },
       { title: 'Health', href: '/dashboard/admin/health', permission: 'platform.tenants.manage', icon: HeartPulse },
       { title: 'Platform settings', href: '/dashboard/admin/settings', permission: 'platform.tenants.manage', icon: Settings },
+      { title: 'Security & CAPTCHA', href: '/dashboard/admin/security', permission: 'platform.tenants.manage', icon: ShieldCheck },
     ],
   },
   {

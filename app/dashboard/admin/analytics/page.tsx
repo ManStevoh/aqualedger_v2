@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -84,14 +85,8 @@ export default function PlatformAnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <BarChart3 className="h-7 w-7" />
-          Platform analytics
-        </h1>
-        <p className="text-muted-foreground">Revenue, adoption, and tenant performance (30-day window)</p>
-      </div>
+    <DashboardPageLayout title="Platform analytics" description="Revenue, adoption, and tenant performance (30-day window)">
+
 
       <AdminHubNav />
 
@@ -194,6 +189,6 @@ export default function PlatformAnalyticsPage() {
           </Card>
         </>
       ) : null}
-    </div>
+    </DashboardPageLayout>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,7 +23,7 @@ import {
 import { DataTable } from '@/components/dashboard/data-table'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { authFetchJson } from '@/lib/api'
-import { ClipboardList, Clock, UserCheck } from 'lucide-react'
+import { ClipboardList, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Employee {
@@ -120,77 +121,63 @@ export default function HRAttendancePage() {
   const late = records.filter((r) => r.status === 'late').length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-          <p className="text-muted-foreground">Daily check-in records by employee</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>Record attendance</Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Attendance"
+      description="Daily check-in records by employee"
+      actions={
+        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Record attendance
+        </Button>
+      }
+    >
       <StatCardGrid>
-        <StatCard title="Records" value={records.length} loading={loading} icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Present" value={present} loading={loading} icon={<UserCheck className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Late" value={late} loading={loading} icon={<Clock className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Employees" value={employees.length} loading={loading} icon={<UserCheck className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Present" value={present} icon={<ClipboardList className="h-4 w-4" />} loading={loading} />
+        <StatCard title="Late" value={late} loading={loading} />
       </StatCardGrid>
 
-      <div className="flex items-center gap-3 max-w-xs">
-        <Label>Filter employee</Label>
-        <Select value={filterEmployee} onValueChange={setFilterEmployee}>
-          <SelectTrigger>
-            <SelectValue placeholder="All employees" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All employees</SelectItem>
-            {employees.map((e) => (
-              <SelectItem key={e.id} value={e.id}>
-                {e.full_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select value={filterEmployee} onValueChange={setFilterEmployee}>
+        <SelectTrigger className="w-[220px]">
+          <SelectValue placeholder="All employees" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All employees</SelectItem>
+          {employees.map((e) => (
+            <SelectItem key={e.id} value={e.id}>
+              {e.full_name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <DataTable
         title="Attendance log"
-        description="hr_attendance — one record per employee per day"
         loading={loading}
         data={records}
-        emptyMessage="No attendance records yet"
+        emptyMessage="No attendance records"
         columns={[
+          { key: 'employee_name', header: 'Employee' },
           {
             key: 'work_date',
             header: 'Date',
-            cell: (row) => String(row.work_date).split('T')[0],
+            cell: (row) => String(row.work_date).slice(0, 10),
           },
-          { key: 'employee_name', header: 'Employee', cell: (row) => row.employee_name ?? '—' },
-          { key: 'check_in', header: 'Check in', cell: (row) => row.check_in ?? '—' },
-          { key: 'check_out', header: 'Check out', cell: (row) => row.check_out ?? '—' },
-          {
-            key: 'hours_worked',
-            header: 'Hours',
-            cell: (row) => (row.hours_worked != null ? Number(row.hours_worked).toFixed(1) : '—'),
-          },
+          { key: 'check_in', header: 'In', cell: (row) => row.check_in || '—' },
+          { key: 'check_out', header: 'Out', cell: (row) => row.check_out || '—' },
           {
             key: 'status',
             header: 'Status',
-            cell: (row) => (
-              <Badge variant={row.status === 'present' ? 'default' : 'secondary'}>
-                {row.status.replace('_', ' ')}
-              </Badge>
-            ),
+            cell: (row) => <Badge variant="outline">{row.status}</Badge>,
           },
         ]}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Record attendance</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 py-2">
             <div className="space-y-2">
               <Label>Employee</Label>
               <Select value={employeeId} onValueChange={setEmployeeId}>
@@ -247,6 +234,6 @@ export default function HRAttendancePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

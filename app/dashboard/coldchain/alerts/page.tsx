@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { DataTable } from '@/components/dashboard/data-table'
@@ -46,13 +47,11 @@ export default function ColdchainAlertsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Cold chain alerts</h1>
-        <p className="text-muted-foreground">Temperature, humidity, and facility alerts</p>
-      </div>
-
-      <StatCardGrid>
+    <DashboardPageLayout
+      title="Cold chain alerts"
+      description="Temperature, humidity, and facility alerts"
+    >
+            <StatCardGrid>
         <StatCard
           title="Open alerts"
           value={openAlerts.length}
@@ -117,6 +116,6 @@ export default function ColdchainAlertsPage() {
           },
         ]}
       />
-    </div>
+    </DashboardPageLayout>
   )
 }

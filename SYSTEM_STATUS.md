@@ -19,7 +19,7 @@ node scripts/setup-fresh-database.mjs
 
 Default database name: **`aquaerp_operating`** (set `DB_NAME` in `.env`).
 
-Migrations: … → `20260606` (vertical modules) → **`20260607`** (module flags) → **`20260608`** (platform settings)
+Migrations: … → `20260610` (boats fixup) → **`20260612`** (DNS verify, tenant flags, GDPR exports). See [`docs/DATABASE_SETUP.md`](docs/DATABASE_SETUP.md), [`docs/PENDING_OVERALL.md`](docs/PENDING_OVERALL.md)
 
 ## Latest pass (enterprise final)
 
@@ -68,11 +68,18 @@ Migrations: … → `20260606` (vertical modules) → **`20260607`** (module fla
 - **Platform audit** — `/dashboard/admin/audit` cross-tenant log with tenant filter (super_admin)
 - **System health** — `/dashboard/admin/health` DB, integrations, env readiness
 - **Platform settings** — `/dashboard/admin/settings` maintenance mode, signup lock, global announcement banner
-- **APIs** — `overview`, `tenants` (GET/POST/PATCH), `tenants/[id]`, `tenants/[id]/export`, `users`, `analytics`, `impersonate` (POST/DELETE), `settings`, `health`
+- **Payments monitor** — `/dashboard/admin/payments` (cross-tenant M-Pesa/Stripe intents)
+- **Billing & plan usage** — `/dashboard/admin/billing` (limits vs usage per tenant)
+- **Email broadcast** — notify all tenant owners from platform settings
+- **Tenant purge (GDPR)** — permanent delete with slug confirmation on tenants page
+- **Signup lock** — enforced on `/api/auth/register` and `/register` when enabled
+- **APIs** — `overview`, `tenants`, `tenants/[id]`, `export`, `purge`, `users`, `analytics`, `payments`, `billing`, `broadcast`, `impersonate`, `settings`, `health`
+- See [`docs/PENDING_OVERALL.md`](docs/PENDING_OVERALL.md) for Phase 5 and env-only items
 
 ### Auth & security
 - **MFA login gate** — `/api/auth/login` → `/api/auth/login/mfa` when TOTP enabled
-- **Google reCAPTCHA** — super admin configures at `/dashboard/admin/security` (v3 invisible or v2 checkbox); protects login/register when enabled; server-side `siteverify`
+- **Google reCAPTCHA** — `/dashboard/admin/security` (v3/v2); protects login, register, **guest storefront checkout**; audit log + rate limits; OAuth respects signup lock
+- **Security headers** — `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` via `next.config.mjs`
 - **Session management** (revoke devices)
 - **Login alerts** on new sign-in
 - **Test script** — `node scripts/test-recaptcha-flow.mjs` (with `npm run dev` running)
@@ -109,8 +116,46 @@ All app and external API URLs are env-driven — see [`docs/URL_CONFIGURATION.md
 ```bash
 npm run typecheck
 npm test
+npm run db:verify
+npm run smoke
+npm run env:check
+npm run predeploy   # typecheck + test + db + env + production build
 npm run dev
 ```
+
+Production: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) · Pilot: [`docs/PILOT_GO_LIVE.md`](docs/PILOT_GO_LIVE.md)
+
+**Edge-safe routing:** Custom domains resolve via `GET /api/internal/resolve-host` (Node); dashboard modules enforced in server layout + `apiHandler`.
+
+## MVP positioning (coastal seafood vertical SaaS)
+
+Credible **operator MVP** — multi-tenant ERP, commerce, cold chain, M-Pesa, MFA, super-admin platform control. Not yet a full Shopify+SAP replacement; suitable for pilot tenants and sandbox go-lives.
+
+| Pillar | Status |
+|--------|--------|
+| Multi-tenant isolation | DB `tenant_id` on legacy tables + API `pushTenantCondition` / `assertTenantMatch` |
+| M-Pesa | Daraja when `MPESA_*` set; stub otherwise — `npm run mpesa:check` |
+| MFA | Enroll at `/dashboard/settings/security`; login gate via `/api/auth/login/mfa` |
+| Onboarding | `/dashboard/onboarding` (profile → ops → go-live + M-Pesa/MFA prompts) |
+
+Verify: `npm run db:verify`
+
+## Phase 2 (tenant SaaS routing)
+
+- **Subdomain tenants** — `{slug}.localhost` / `{slug}.PLATFORM_HOST` sets `x-tenant-slug`; APIs scope to that org when user is a member
+- **Custom domains** — verified `shop.client.com` → `x-tenant-id`; DNS TXT verify at Organization → Domains
+- **Onboarding wizard** — `/dashboard/onboarding` with M-Pesa sandbox STK test on go-live step
+- **DB repair** — `npm run db:verify` after `schema.sql` + migrations
+
+## Suggested-features pass (2026-06-12)
+
+- **Stripe Billing Portal** — `/dashboard/organization/billing` (self-serve plan/payment method when `STRIPE_SECRET_KEY` set)
+- **Per-tenant feature flags** — disable marketplace / AI / advanced analytics per org (admin Tenants → flags)
+- **Tenant module API** — `GET /api/v2/tenant/modules` merges platform toggles + tenant flags; enforced on `/api/v2/*`
+- **M-Pesa reconcile** — Admin Payments → reconcile stale STK intents + sync order `paid` status
+- **GDPR export jobs** — Admin Settings → queue exports to `storage/exports/` via `POST /api/v2/platform/exports`; download completed JSON; cron `npm run exports:process` (`CRON_SECRET`)
+- **Custom domain storefront** — verified domain `/` redirects to `/store/{slug}`
+- **Invite user** — Admin Users → invite email to any tenant
 
 ## Phase 5 (future infra)
 

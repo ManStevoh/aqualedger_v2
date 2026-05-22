@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -124,31 +125,23 @@ export default function HRPerformancePage() {
       : '—'
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Performance reviews</h1>
-          <p className="text-muted-foreground">Employee goals, ratings, and feedback</p>
-        </div>
+    <DashboardPageLayout
+      title="Performance reviews"
+      description="Employee goals, ratings, and feedback"
+      actions={
         <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           New review
         </Button>
-      </div>
-
+      }
+    >
       <StatCardGrid>
-        <StatCard title="Reviews" value={reviews.length} loading={loading} icon={<Star className="h-4 w-4" />} />
-        <StatCard title="Avg rating" value={avgRating} loading={loading} icon={<Star className="h-4 w-4" />} />
-        <StatCard
-          title="Submitted"
-          value={reviews.filter((r) => r.status === 'submitted').length}
-          loading={loading}
-          icon={<Star className="h-4 w-4" />}
-        />
+        <StatCard title="Reviews" value={reviews.length} icon={<Star className="h-4 w-4" />} loading={loading} />
+        <StatCard title="Avg rating" value={avgRating} loading={loading} />
       </StatCardGrid>
 
       <DataTable
-        title="Review history"
+        title="Performance log"
         loading={loading}
         data={reviews}
         emptyMessage="No performance reviews yet"
@@ -158,23 +151,19 @@ export default function HRPerformancePage() {
           {
             key: 'rating',
             header: 'Rating',
-            cell: (row) => `${Number(row.rating).toFixed(1)} / 5`,
+            cell: (row) => <Badge variant="secondary">{row.rating}</Badge>,
           },
-          {
-            key: 'status',
-            header: 'Status',
-            cell: (row) => <Badge variant="outline">{row.status}</Badge>,
-          },
+          { key: 'status', header: 'Status' },
           {
             key: 'reviewed_at',
             header: 'Reviewed',
-            cell: (row) => row.reviewed_at?.slice(0, 10) ?? '—',
+            cell: (row) => (row.reviewed_at ? String(row.reviewed_at).slice(0, 10) : '—'),
           },
         ]}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New performance review</DialogTitle>
           </DialogHeader>
@@ -216,13 +205,15 @@ export default function HRPerformancePage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleCreate} disabled={submitting}>
               {submitting ? 'Saving…' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

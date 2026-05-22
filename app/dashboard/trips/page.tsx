@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Anchor, Ship, Clock, Fish, DollarSign, Fuel, Plus, Play, Square, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,15 +30,10 @@ import { useTrips, useBoats, createTrip, completeTrip } from '@/lib/api'
 import type { FishingTrip, Boat } from '@/lib/types'
 import { toast } from 'sonner'
 
-const statusColors: Record<string, string> = {
-  planned: 'bg-blue-100 text-blue-700 border-blue-200',
-  ongoing: 'bg-green-100 text-green-700 border-green-200',
-  completed: 'bg-gray-100 text-gray-700 border-gray-200',
-  cancelled: 'bg-red-100 text-red-700 border-red-200',
-}
-
-export default function TripsPage() {
+function TripsPageContent() {
+  const searchParams = useSearchParams()
   const [showNewTripDialog, setShowNewTripDialog] = useState(false)
+  const [viewTrip, setViewTrip] = useState<FishingTrip | null>(null)
   const [selectedBoat, setSelectedBoat] = useState('')
   const [fishingZone, setFishingZone] = useState('')
   const [isCreating, setIsCreating] = useState(false)
@@ -47,6 +44,14 @@ export default function TripsPage() {
 
   const trips = tripsData?.data?.items || []
   const boats = boatsData?.data?.items || []
+
+  useEffect(() => {
+    const boatId = searchParams.get('boatId')
+    if (boatId && boats.length > 0) {
+      setSelectedBoat(boatId)
+      setShowNewTripDialog(true)
+    }
+  }, [searchParams, boats])
 
   const ongoingTrips = trips.filter((t: FishingTrip) => t.status === 'ongoing').length
   const completedTrips = trips.filter((t: FishingTrip) => t.status === 'completed').length
@@ -100,86 +105,26 @@ export default function TripsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fishing Trips</h1>
-          <p className="text-muted-foreground">
-            Manage and track fishing operations
-          </p>
-        </div>
-        <Button onClick={() => setShowNewTripDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Trip
-        </Button>
-      </div>
-
-      <StatCardGrid>
-        <StatCard
-          title="Ongoing Trips"
-          value={ongoingTrips}
-          icon={<Anchor className="h-4 w-4 text-muted-foreground" />}
-          description="Currently active"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Completed Trips"
-          value={completedTrips}
-          icon={<Ship className="h-4 w-4 text-muted-foreground" />}
-          description="This month"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Total Catch"
-          value={`${(totalCatch / 1000).toFixed(1)}T`}
-          icon={<Fish className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 8.5, isPositive: true }}
-          description="All trips"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Total Revenue"
-          value={`KES ${(totalRevenue / 1000000).toFixed(1)}M`}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 12.3, isPositive: true }}
-          description="From catches"
-          loading={isLoading}
-        />
-      </StatCardGrid>
-
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">All Trips</TabsTrigger>
-          <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
-          <TabsTrigger value="planned">Planned</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-6">
-          <TripsList trips={trips} onEndTrip={handleEndTrip} endingId={endingId} />
-        </TabsContent>
-        <TabsContent value="ongoing" className="mt-6">
-          <TripsList
-            trips={trips.filter((t: FishingTrip) => t.status === 'ongoing')}
-            onEndTrip={handleEndTrip}
-            endingId={endingId}
-          />
-        </TabsContent>
-        <TabsContent value="planned" className="mt-6">
-          <TripsList
-            trips={trips.filter((t: FishingTrip) => t.status === 'planned')}
-            onEndTrip={handleEndTrip}
-            endingId={endingId}
-          />
-        </TabsContent>
-        <TabsContent value="completed" className="mt-6">
-          <TripsList
-            trips={trips.filter((t: FishingTrip) => t.status === 'completed')}
-            onEndTrip={handleEndTrip}
-            endingId={endingId}
-          />
-        </TabsContent>
-      </Tabs>
+    <DashboardPageLayout
+      title="Fishing Trips"
+      description="Manage and track fishing operations"
+    >
+      <DashboardPageLayout
+      title="Fishing Trips"
+      description="Manage and track fishing operations"
+    >
+      <div><span className="text-muted-foreground">Captain</span><p className="font-medium">{viewTrip.captainName}</p></div>
+              <div><span className="text-muted-foreground">Catch</span><p className="font-medium">{viewTrip.totalCatch} kg</p></div>
+              <div><span className="text-muted-foreground">Revenue</span><p className="font-medium">KES {viewTrip.totalRevenue.toLocaleString()}</p></div>
+              <div><span className="text-muted-foreground">Fuel</span><p className="font-medium">{viewTrip.fuelUsed} L</p></div>
+              <div><span className="text-muted-foreground">Started</span><p className="font-medium">{new Date(viewTrip.startTime).toLocaleString()}</p></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewTrip(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New Trip Dialog */}
       <Dialog open={showNewTripDialog} onOpenChange={setShowNewTripDialog}>
@@ -252,9 +197,10 @@ interface TripsListProps {
   trips: FishingTrip[]
   onEndTrip: (id: string) => void
   endingId: string | null
+  onView: (trip: FishingTrip) => void
 }
 
-function TripsList({ trips, onEndTrip, endingId }: TripsListProps) {
+function TripsList({ trips, onEndTrip, endingId, onView }: TripsListProps) {
   if (trips.length === 0) {
     return (
       <Card>
@@ -268,7 +214,7 @@ function TripsList({ trips, onEndTrip, endingId }: TripsListProps) {
   return (
     <div className="space-y-4">
       {trips.map((trip) => (
-        <TripCard key={trip.id} trip={trip} onEndTrip={onEndTrip} endingId={endingId} />
+        <TripCard key={trip.id} trip={trip} onEndTrip={onEndTrip} endingId={endingId} onView={() => onView(trip)} />
       ))}
     </div>
   )
@@ -278,10 +224,12 @@ function TripCard({
   trip,
   onEndTrip,
   endingId,
+  onView,
 }: {
   trip: FishingTrip
   onEndTrip: (id: string) => void
   endingId: string | null
+  onView: () => void
 }) {
   const duration = trip.endTime
     ? Math.round((new Date(trip.endTime).getTime() - new Date(trip.startTime).getTime()) / (1000 * 60 * 60))
@@ -304,9 +252,7 @@ function TripCard({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{trip.boatName}</h3>
-                <Badge variant="outline" className={statusColors[trip.status]}>
-                  {trip.status}
-                </Badge>
+                <StatusBadge status={trip.status} />
               </div>
               <p className="text-sm text-muted-foreground">{trip.fishingZone}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -349,7 +295,7 @@ function TripCard({
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={onView}>
               <Eye className="mr-2 h-4 w-4" />
               View
             </Button>
@@ -375,5 +321,14 @@ function TripCard({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+export default function TripsPage() {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-muted-foreground">Loading…</div>}>
+      <TripsPageContent />
+    </Suspense>
+    </DashboardPageLayout>
   )
 }

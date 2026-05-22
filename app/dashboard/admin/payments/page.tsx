@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,6 +34,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -94,6 +96,7 @@ export default function PlatformPaymentsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [total, setTotal] = useState(0)
+  const [reconciling, setReconciling] = useState(false)
   const limit = 25
 
   const load = useCallback(async () => {
@@ -135,6 +138,28 @@ export default function PlatformPaymentsPage() {
     setPage(1)
   }, [status, provider])
 
+  const reconcile = async () => {
+    setReconciling(true)
+    try {
+      const res = await authFetchJson<{
+        success: boolean
+        data?: { reconciled: number; failed: number; matched: number }
+        error?: string
+      }>('/api/v2/platform/payments/reconcile', { method: 'POST' })
+      if (!res.success) {
+        toast.error(res.error || 'Reconcile failed')
+        return
+      }
+      const { reconciled = 0, failed = 0, matched = 0 } = res.data ?? {}
+      toast.success(`Reconciled ${reconciled}: ${failed} stale failed, ${matched} orders matched`)
+      await load()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setReconciling(false)
+    }
+  }
+
   if (currentRole !== 'super_admin') {
     return (
       <div className="py-12 text-center">
@@ -155,14 +180,8 @@ export default function PlatformPaymentsPage() {
     (stats?.byStatus.failed ?? 0) + (stats?.byStatus.cancelled ?? 0)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <CreditCard className="h-7 w-7" />
-          Payments monitor
-        </h1>
-        <p className="text-muted-foreground">Cross-tenant payment intents and activity (last 7 days stats)</p>
-      </div>
+    <DashboardPageLayout title="Payments monitor" description="Cross-tenant payment intents and activity (last 7 days stats)">
+
 
       <AdminHubNav />
 
@@ -205,6 +224,19 @@ export default function PlatformPaymentsPage() {
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={reconciling || loading}
+              onClick={reconcile}
+            >
+              {reconciling ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Reconcile
+            </Button>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Status" />
@@ -315,6 +347,6 @@ export default function PlatformPaymentsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

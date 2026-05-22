@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -41,11 +42,8 @@ export default function BenefitsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Heart className="h-8 w-8" />Benefits</h1>
-        <p className="text-muted-foreground">Health, pension, and crew benefit plans</p>
-      </div>
+    <DashboardPageLayout title="Benefits" description="Health, pension, and crew benefit plans">
+
 
       <Tabs defaultValue="plans">
         <TabsList><TabsTrigger value="plans">Plans</TabsTrigger><TabsTrigger value="enrollments">Enrollments</TabsTrigger></TabsList>
@@ -80,6 +78,6 @@ export default function BenefitsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </DashboardPageLayout>
   )
 }

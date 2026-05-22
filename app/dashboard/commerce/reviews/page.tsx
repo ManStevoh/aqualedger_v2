@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -87,13 +88,11 @@ export default function CommerceReviewsPage() {
   }, [fetchReviews])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Marketplace Reviews</h1>
-        <p className="text-muted-foreground">Buyer feedback on fish listings</p>
-      </div>
-
-      <StatCardGrid>
+    <DashboardPageLayout
+      title="Marketplace Reviews"
+      description="Buyer feedback on fish listings"
+    >
+            <StatCardGrid>
         <StatCard
           title="Total reviews"
           value={reviews.length}
@@ -180,6 +179,6 @@ export default function CommerceReviewsPage() {
           />
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

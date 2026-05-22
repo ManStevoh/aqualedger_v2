@@ -86,14 +86,12 @@ const MAINTENANCE_EXEMPT_V2 = new Set([
   '/api/v2/platform/health',
   '/api/v2/platform/impersonate',
   '/api/v2/platform/recaptcha',
+  '/api/v2/platform/exports/process',
 ])
 
 async function assertV2PlatformGuards(request: NextRequest): Promise<void> {
   const pathname = request.nextUrl.pathname
   if (!pathname.startsWith('/api/v2/')) return
-
-  const { assertApiModuleEnabled } = await import('@/lib/platform/module-enablement')
-  await assertApiModuleEnabled(pathname)
 
   if (MAINTENANCE_EXEMPT_V2.has(pathname)) return
 
@@ -133,7 +131,38 @@ async function assertV2PlatformGuards(request: NextRequest): Promise<void> {
 export function apiHandler(handler: RouteHandler, route?: string): RouteHandler {
   return async (request, context) => {
     try {
-      await assertV2PlatformGuards(request)
+      const pathname = request.nextUrl.pathname
+      if (pathname.startsWith('/api/v2/')) {
+        await assertV2PlatformGuards(request)
+        const { headers } = await import('next/headers')
+        const hdrs = await headers()
+        let tenantId = hdrs.get('x-tenant-id')
+        if (!tenantId) {
+          const token = request.cookies.get('access_token')?.value
+          const secret = process.env.JWT_SECRET
+          const devFallback =
+            process.env.NODE_ENV !== 'production' ? 'dev-only-jwt-secret-not-for-production' : null
+          const resolved = secret && secret.length >= 32 ? secret : devFallback
+          if (token && resolved) {
+            try {
+              const jwt = await import('jsonwebtoken')
+              const payload = jwt.verify(token, resolved) as {
+                userId: string
+                role: string
+              }
+              const { resolveActiveTenantId } = await import('@/lib/platform/tenant-resolve')
+              tenantId = await resolveActiveTenantId(payload.userId, payload.role as import('@/lib/auth').UserRole, {
+                tenantSlug: hdrs.get('x-tenant-slug'),
+                tenantIdHeader: null,
+              })
+            } catch {
+              /* module check falls back to platform-wide flags */
+            }
+          }
+        }
+        const { assertApiModuleEnabled } = await import('@/lib/platform/module-enablement')
+        await assertApiModuleEnabled(pathname, tenantId)
+      }
       return await handler(request, context)
     } catch (error) {
       return handleApiError(error, route)

@@ -9,5 +9,6 @@ INSERT IGNORE INTO platform_settings (setting_key, setting_value) VALUES
     'minScore', 0.5,
     'protectLogin', TRUE,
     'protectRegister', TRUE,
+    'protectGuestCheckout', TRUE,
     'hostnameAllowlist', JSON_ARRAY()
   ));

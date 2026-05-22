@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -109,15 +110,16 @@ export default function PlatformModulesAdminPage() {
   const totalCount = ERP_MODULES.filter((m) => m.id !== 'platform').length
 
   return (
-    <div className="space-y-6">
+    <DashboardPageLayout
+      title="Platform modules"
+      description="Enable or disable ERP modules for every tenant. Disabled modules are hidden in navigation and blocked via API."
+    >
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Platform modules</h1>
-          <p className="text-muted-foreground">
-            Enable or disable ERP modules for every tenant. Disabled modules are hidden in navigation and blocked via API.
-          </p>
-        </div>
-        <Button className="gap-2" onClick={save} disabled={saving || loading}>
+        <DashboardPageLayout
+      title="Platform modules"
+      description="Enable or disable ERP modules for every tenant. Disabled modules are hidden in navigation and blocked via API."
+    >
+              <Button className="gap-2" onClick={save} disabled={saving || loading}>
           <Save className="h-4 w-4" />
           {saving ? 'Saving…' : 'Save changes'}
         </Button>
@@ -171,6 +173,6 @@ export default function PlatformModulesAdminPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

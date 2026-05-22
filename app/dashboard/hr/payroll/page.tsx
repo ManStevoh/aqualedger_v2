@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -145,18 +146,16 @@ export default function PayrollPage() {
   const totalNet = payrollRuns.reduce((sum, p) => sum + Number(p.total_net), 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Payroll</h1>
-          <p className="text-muted-foreground">Create runs, approve, pay, and post to GL (PAYE/NHIF estimates)</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+    <DashboardPageLayout
+      title="Payroll"
+      description="Create runs, approve, pay, and post to GL (PAYE/NHIF estimates)"
+      actions={
+        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" />
           New payroll run
         </Button>
-      </div>
-
+      }
+    >
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total Runs" value={payrollRuns.length} icon={<FileText className="h-4 w-4" />} loading={loading} />
         <StatCard title="Draft" value={draft} icon={<Calendar className="h-4 w-4" />} loading={loading} />
@@ -258,6 +257,6 @@ export default function PayrollPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -48,13 +49,11 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Team</h1>
-        <p className="text-muted-foreground">Tenant members and roles</p>
-      </div>
-
-      <StatCardGrid>
+    <DashboardPageLayout
+      title="Team"
+      description="Tenant members and roles"
+    >
+            <StatCardGrid>
         <StatCard
           title="Members"
           value={members.length}
@@ -131,6 +130,6 @@ export default function TeamPage() {
           },
         ]}
       />
-    </div>
+    </DashboardPageLayout>
   )
 }

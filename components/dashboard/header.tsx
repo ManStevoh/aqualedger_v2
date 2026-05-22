@@ -1,9 +1,9 @@
 'use client'
 
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Bell, Menu, Search } from 'lucide-react'
+import { Bell, Building2, HelpCircle, Menu, Search } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -19,9 +19,11 @@ import { Badge } from '@/components/ui/badge'
 import { ThemeToggle } from '@/components/dashboard/theme-toggle'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/client-api'
-import { useNotifications } from '@/lib/api'
+import { authFetchJson, useNotifications } from '@/lib/api'
 import { getNavForRole } from '@/lib/platform/modules'
 import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
+import { resolvePageContext } from '@/lib/platform/page-context'
+import { useTenantContext } from '@/lib/hooks/use-tenant-context'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/types'
 
@@ -36,8 +38,15 @@ const roleLabels: Record<UserRole, string> = {
 
 export function DashboardHeader() {
   const router = useRouter()
+  const pathname = usePathname() ?? '/dashboard'
   const searchRef = useRef<HTMLDivElement>(null)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [businessResults, setBusinessResults] = useState<
+    { type: string; id: string; title: string; subtitle?: string; href: string }[]
+  >([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const pageContext = useMemo(() => resolvePageContext(pathname), [pathname])
+  const tenant = useTenantContext()
   const {
     currentUser,
     currentRole,
@@ -78,6 +87,27 @@ export function DashboardHeader() {
         item.href.toLowerCase().includes(q),
     )
   }, [navItems, navSearchQuery])
+
+  useEffect(() => {
+    const q = navSearchQuery.trim()
+    if (q.length < 2) {
+      setBusinessResults([])
+      return
+    }
+    const t = setTimeout(() => {
+      setSearchLoading(true)
+      authFetchJson<{ success: boolean; data?: { results: typeof businessResults } }>(
+        `/api/v2/search?q=${encodeURIComponent(q)}`,
+      )
+        .then((res) => {
+          if (res.success && res.data?.results) setBusinessResults(res.data.results)
+          else setBusinessResults([])
+        })
+        .catch(() => setBusinessResults([]))
+        .finally(() => setSearchLoading(false))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [navSearchQuery])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -127,9 +157,13 @@ export function DashboardHeader() {
         <span className="sr-only">Toggle menu</span>
       </Button>
 
-      <div className="hidden min-w-0 md:block">
-        <p className="text-sm font-semibold tracking-tight">Command Center</p>
-        <p className="text-xs text-muted-foreground">Real-time operations</p>
+      <div className="min-w-0 max-w-[140px] shrink-0 sm:max-w-[200px] md:max-w-none">
+        <p className="truncate text-sm font-semibold tracking-tight">{pageContext.title}</p>
+        <p className="hidden truncate text-xs text-muted-foreground md:block">
+          {pageContext.moduleLabel
+            ? `${pageContext.moduleLabel}${pageContext.subtitle ? ` · ${pageContext.subtitle}` : ''}`
+            : (pageContext.subtitle ?? 'Operations')}
+        </p>
       </div>
 
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:justify-center lg:gap-3">
@@ -137,7 +171,7 @@ export function DashboardHeader() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search modules, pages…"
+            placeholder="Search orders, lots, modules… (⌘K)"
             value={navSearchQuery}
             onChange={(e) => setNavSearchQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
@@ -148,47 +182,94 @@ export function DashboardHeader() {
           />
           {showSearchDropdown && (
             <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-80 overflow-auto rounded-xl border border-border/80 bg-popover/95 p-1 shadow-xl backdrop-blur-xl">
-              {searchResults.length === 0 ? (
-                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  No results for &ldquo;{navSearchQuery}&rdquo;
-                </p>
-              ) : (
-                <ul>
-                  {searchResults.slice(0, 12).map((item) => {
-                    const ItemIcon = item.icon
-                    return (
-                      <li key={item.href}>
+              {searchLoading && (
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Searching…</p>
+              )}
+              {!searchLoading && businessResults.length > 0 && (
+                <div className="p-1">
+                  <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Records</p>
+                  <ul>
+                    {businessResults.map((item) => (
+                      <li key={`${item.type}-${item.id}`}>
                         <button
                           type="button"
-                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent"
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent"
                           onClick={() => navigateToResult(item.href)}
                         >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                            <ItemIcon className="h-4 w-4 text-muted-foreground" />
-                          </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium">{item.title}</span>
                             <span className="block truncate text-xs text-muted-foreground">
-                              {item.moduleLabel}
+                              {item.type}
+                              {item.subtitle ? ` · ${item.subtitle}` : ''}
                             </span>
                           </span>
                         </button>
                       </li>
-                    )
-                  })}
-                </ul>
+                    ))}
+                  </ul>
+                </div>
               )}
+              {!searchLoading && searchResults.length > 0 && (
+                <div className="border-t p-1">
+                  <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Pages</p>
+                  <ul>
+                    {searchResults.slice(0, 8).map((item) => {
+                      const ItemIcon = item.icon
+                      return (
+                        <li key={item.href}>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent"
+                            onClick={() => navigateToResult(item.href)}
+                          >
+                            <ItemIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
+              {!searchLoading &&
+                businessResults.length === 0 &&
+                searchResults.length === 0 && (
+                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    No results for &ldquo;{navSearchQuery}&rdquo;
+                  </p>
+                )}
             </div>
           )}
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        {tenant.name && !tenant.loading && (
+          <Badge
+            variant="outline"
+            className="hidden max-w-[140px] truncate rounded-lg font-normal lg:inline-flex"
+          >
+            <Building2 className="mr-1 h-3 w-3 shrink-0" />
+            {tenant.name}
+          </Badge>
+        )}
+
         <Badge variant="secondary" className="hidden rounded-lg font-medium sm:inline-flex">
           {roleLabels[currentRole]}
         </Badge>
 
         <ThemeToggle />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-xl"
+          title="Module guides"
+          onClick={() => router.push('/dashboard/modules')}
+        >
+          <HelpCircle className="h-[1.125rem] w-[1.125rem]" />
+          <span className="sr-only">Help</span>
+        </Button>
 
         <Button variant="ghost" size="icon" className="relative rounded-xl" asChild>
           <Link href="/dashboard/notifications">
@@ -214,18 +295,32 @@ export function DashboardHeader() {
                 <p className="max-w-[120px] truncate text-sm font-medium leading-none">
                   {currentUser?.name || 'Account'}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{roleLabels[currentRole]}</p>
+                <p className="mt-0.5 max-w-[120px] truncate text-xs text-muted-foreground">
+                  {tenant.name || roleLabels[currentRole]}
+                </p>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-xl">
-            <DropdownMenuLabel>My account</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              {tenant.name ? (
+                <span className="block truncate font-normal text-muted-foreground">
+                  {tenant.name}
+                  {tenant.plan ? ` · ${tenant.plan}` : ''}
+                </span>
+              ) : (
+                'My account'
+              )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push('/dashboard/settings/security')}>
               Security
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/organization')}>
+              Organization
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -121,27 +122,23 @@ export default function HRTrainingPage() {
   }).length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Training records</h1>
-          <p className="text-muted-foreground">Safety, HACCP, and compliance certifications</p>
-        </div>
+    <DashboardPageLayout
+      title="Training records"
+      description="Safety, HACCP, and compliance certifications"
+      actions={
         <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           Add record
         </Button>
-      </div>
-
+      }>
       <StatCardGrid>
-        <StatCard title="Records" value={records.length} loading={loading} icon={<GraduationCap className="h-4 w-4" />} />
         <StatCard
-          title="HACCP / safety"
-          value={records.filter((r) => ['safety', 'haccp'].includes(r.training_type)).length}
-          loading={loading}
+          title="Total records"
+          value={records.length}
           icon={<GraduationCap className="h-4 w-4" />}
+          loading={loading}
         />
-        <StatCard title="Expiring (30d)" value={expiringSoon} loading={loading} icon={<GraduationCap className="h-4 w-4" />} />
+        <StatCard title="Expiring (30d)" value={expiringSoon} loading={loading} />
       </StatCardGrid>
 
       <DataTable
@@ -151,26 +148,35 @@ export default function HRTrainingPage() {
         emptyMessage="No training records yet"
         columns={[
           { key: 'title', header: 'Title' },
+          { key: 'training_type', header: 'Type' },
+          { key: 'employee_name', header: 'Employee', cell: (row) => row.employee_name || 'All staff' },
           {
-            key: 'training_type',
-            header: 'Type',
-            cell: (row) => <Badge variant="outline">{row.training_type}</Badge>,
+            key: 'completed_at',
+            header: 'Completed',
+            cell: (row) => (row.completed_at ? String(row.completed_at).slice(0, 10) : '—'),
           },
-          { key: 'employee_name', header: 'Employee', cell: (row) => row.employee_name ?? 'All staff' },
-          { key: 'completed_at', header: 'Completed', cell: (row) => row.completed_at?.slice(0, 10) ?? '—' },
-          { key: 'expiry_at', header: 'Expires', cell: (row) => row.expiry_at?.slice(0, 10) ?? '—' },
+          {
+            key: 'expiry_at',
+            header: 'Expiry',
+            cell: (row) =>
+              row.expiry_at ? (
+                <Badge variant="outline">{String(row.expiry_at).slice(0, 10)}</Badge>
+              ) : (
+                '—'
+              ),
+          },
         ]}
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add training record</DialogTitle>
+            <DialogTitle>New training record</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-2">
               <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. HACCP refresher" />
             </div>
             <div className="space-y-2">
               <Label>Type</Label>
@@ -215,13 +221,15 @@ export default function HRTrainingPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleCreate} disabled={submitting}>
               {submitting ? 'Saving…' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

@@ -55,12 +55,13 @@ async function fetchJson(url, options = {}) {
 async function enableTestRecaptcha(conn) {
   const value = JSON.stringify({
     enabled: true,
-    version: 'v3',
+    version: 'v2_checkbox',
     siteKey: TEST_SITE,
     secretKey: TEST_SECRET,
     minScore: 0.5,
     protectLogin: true,
     protectRegister: true,
+    protectGuestCheckout: true,
     hostnameAllowlist: [],
   })
   await conn.query(
@@ -80,6 +81,7 @@ async function disableRecaptcha(conn) {
     minScore: 0.5,
     protectLogin: true,
     protectRegister: true,
+    protectGuestCheckout: true,
     hostnameAllowlist: [],
   })
   await conn.query(
@@ -152,7 +154,10 @@ async function main() {
   const { res: withTokenRes, json: withToken } = await fetchJson(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...loginBody, recaptchaToken: 'test-token-from-google-sandbox' }),
+    body: JSON.stringify({
+      ...loginBody,
+      recaptchaToken: 'google-sandbox-pass',
+    }),
   })
   if (
     withToken.code === 'INVALID_CREDENTIALS' ||

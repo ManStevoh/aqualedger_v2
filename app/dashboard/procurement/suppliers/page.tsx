@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -177,18 +178,10 @@ export default function SuppliersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
-          <p className="text-muted-foreground">Manage procurement suppliers and vendors</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add Supplier
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Suppliers"
+      description="Manage procurement suppliers and vendors"
+    >
       <div className="flex flex-wrap gap-3">
         <Input
           className="max-w-xs"
@@ -415,6 +408,6 @@ export default function SuppliersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

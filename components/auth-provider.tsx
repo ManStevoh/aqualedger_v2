@@ -79,13 +79,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCurrentRole(user.role)
 
         try {
-          const modRes = await apiFetch('/v2/platform/modules').then((r) =>
+          const tenantModRes = await apiFetch('/v2/tenant/modules').then((r) =>
             r.json() as Promise<{ success: boolean; data?: { enabledModuleIds: string[] } }>,
           )
-          if (modRes.success && modRes.data?.enabledModuleIds?.length) {
-            setEnabledModuleIds(modRes.data.enabledModuleIds)
+          if (tenantModRes.success && tenantModRes.data?.enabledModuleIds?.length) {
+            setEnabledModuleIds(tenantModRes.data.enabledModuleIds)
           } else {
-            setEnabledModuleIds(['platform'])
+            const modRes = await apiFetch('/v2/platform/modules').then((r) =>
+              r.json() as Promise<{ success: boolean; data?: { enabledModuleIds: string[] } }>,
+            )
+            if (modRes.success && modRes.data?.enabledModuleIds?.length) {
+              setEnabledModuleIds(modRes.data.enabledModuleIds)
+            } else {
+              setEnabledModuleIds(['platform'])
+            }
           }
         } catch {
           setEnabledModuleIds(['platform'])

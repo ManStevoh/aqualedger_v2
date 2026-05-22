@@ -3,6 +3,8 @@
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { InventoryBatchesPanel } from '@/components/dashboard/inventory-batches-panel'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 function InventoryContent() {
   const searchParams = useSearchParams()
@@ -12,12 +14,18 @@ function InventoryContent() {
 }
 
 export default function InventoryPage() {
+  const meta = useDashboardPageMeta({
+    title: 'Inventory',
+    description: 'Stock levels, batch tracking, and inter-location transfers',
+  })
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-        <p className="text-muted-foreground">Stock levels, batch tracking, and inter-location transfers</p>
-      </div>
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+      />
       <Suspense fallback={<p className="text-sm text-muted-foreground">Loading inventory…</p>}>
         <InventoryContent />
       </Suspense>

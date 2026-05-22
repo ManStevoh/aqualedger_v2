@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/client-api'
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants'
+import { useRecaptcha } from '@/components/security/use-recaptcha'
+import { RecaptchaNotice } from '@/components/security/recaptcha-notice'
 import {
-  Anchor,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -77,6 +79,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [signupLocked, setSignupLocked] = useState(false)
   const [statusLoading, setStatusLoading] = useState(true)
+  const recaptcha = useRecaptcha('register')
 
   useEffect(() => {
     let cancelled = false
@@ -162,266 +165,257 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-slate-950/70 p-8 shadow-2xl shadow-black/40 backdrop-blur-xl">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600">
-            <Anchor className="h-7 w-7 text-white" />
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+      <Card className="relative w-full max-w-lg border-border bg-card shadow-sm">
+        <CardHeader className="space-y-4 pb-0 text-center">
+          <div className="mx-auto flex flex-col items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/25">
+              <Fish className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
+              <CardDescription>{APP_TAGLINE}</CardDescription>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white">{APP_NAME}</h1>
-          <p className="text-sm text-slate-400">{APP_TAGLINE}</p>
-        </div>
 
-        <div className="mb-6 flex items-center justify-center gap-2">
-          {[1, 2].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
-                  step >= s
-                    ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white'
-                    : 'border border-white/20 text-slate-500',
-                )}
-              >
-                {s}
-              </div>
-              {s === 1 && <div className={cn('h-px w-12', step > 1 ? 'bg-cyan-500' : 'bg-white/10')} />}
-            </div>
-          ))}
-        </div>
-
-        <div className="mb-4 space-y-1 text-center">
-          <h2 className="text-lg font-semibold text-white">
-            {step === 1 ? 'Your organization' : 'Your account'}
-          </h2>
-          <p className="text-sm text-slate-400">
-            {step === 1
-              ? 'Choose your business type and organization name'
-              : 'Password must be 8+ chars with upper, lower, and a number'}
-          </p>
-        </div>
-
-        {signupLocked && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
-          >
-            <p className="font-medium">Registration is currently closed</p>
-            <p className="mt-1 text-amber-200/90">
-              New signups are temporarily disabled. If you already have an account,{' '}
-              <Link href="/login" className="font-medium text-cyan-400 hover:text-cyan-300">
-                sign in here
-              </Link>
-              .
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
-          >
-            {error}
-          </div>
-        )}
-
-        {step === 1 ? (
-          <form onSubmit={handleStep1Next} className="space-y-4">
-            <fieldset disabled={signupLocked || statusLoading} className="space-y-4 disabled:opacity-60">
-            <div className="space-y-2">
-              <Label className="text-slate-300">Business type</Label>
-              <div className="grid gap-2">
-                {BUSINESS_TYPES.map(({ value, label, description, icon: Icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setBusinessType(value)}
-                    className={cn(
-                      'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
-                      businessType === value
-                        ? 'border-cyan-500/50 bg-cyan-500/10'
-                        : 'border-white/10 bg-slate-900/50 hover:border-white/20',
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        'mt-0.5 h-5 w-5 shrink-0',
-                        businessType === value ? 'text-cyan-400' : 'text-slate-500',
-                      )}
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-white">{label}</p>
-                      <p className="text-xs text-slate-500">{description}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="organizationName" className="text-slate-300">
-                Organization name
-              </Label>
-              <Input
-                id="organizationName"
-                required
-                value={organizationName}
-                onChange={(e) => {
-                  setOrganizationName(e.target.value)
-                  if (error) setError(null)
-                }}
-                placeholder="Lake Victoria Fisheries Co-op"
-                className="border-white/10 bg-slate-900/80 text-white placeholder:text-slate-500"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
-              disabled={!canProceedStep1 || signupLocked || statusLoading}
-            >
-              Continue
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-            </fieldset>
-          </form>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <fieldset disabled={signupLocked || statusLoading} className="space-y-4 disabled:opacity-60">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-slate-300">
-                  First name
-                </Label>
-                <Input
-                  id="firstName"
-                  required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="border-white/10 bg-slate-900/80 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-slate-300">
-                  Last name
-                </Label>
-                <Input
-                  id="lastName"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="border-white/10 bg-slate-900/80 text-white"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="border-white/10 bg-slate-900/80 text-white"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-slate-300">
-                Phone (optional)
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="+254712345678"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="border-white/10 bg-slate-900/80 text-white placeholder:text-slate-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">
-                Password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="border-white/10 bg-slate-900/80 pr-10 text-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+          <div className="flex items-center justify-center gap-2">
+            {[1, 2].map((s) => (
+              <div key={s} className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
+                    step >= s
+                      ? 'bg-primary text-primary-foreground'
+                      : 'border border-border text-muted-foreground',
+                  )}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  {s}
+                </div>
+                {s === 1 && (
+                  <div className={cn('h-px w-12', step > 1 ? 'bg-primary' : 'bg-border')} />
+                )}
               </div>
+            ))}
+          </div>
+
+          <div className="space-y-1">
+            <CardTitle className="text-lg">
+              {step === 1 ? 'Your organization' : 'Your account'}
+            </CardTitle>
+            <CardDescription>
+              {step === 1
+                ? 'Choose your business type and organization name'
+                : 'Password must be 8+ chars with upper, lower, and a number'}
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {signupLocked && (
+            <div
+              role="alert"
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+            >
+              <p className="font-medium">Registration is currently closed</p>
+              <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">
+                New signups are temporarily disabled. If you already have an account,{' '}
+                <Link href="/login" className="font-medium text-primary hover:text-primary/80">
+                  sign in here
+                </Link>
+                .
+              </p>
             </div>
+          )}
 
-            {recaptcha.active && recaptcha.isV2 && (
-              <div ref={recaptcha.v2ContainerRef} className="flex justify-center" />
-            )}
-
-            {recaptcha.active && (
-              <div className="pt-1">
-                <RecaptchaNotice />
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
-                onClick={() => {
-                  setStep(1)
-                  setError(null)
-                }}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
-                disabled={
-                  submitting ||
-                  signupLocked ||
-                  statusLoading ||
-                  (recaptcha.active && !recaptcha.ready)
-                }
-              >
-                {submitting ? 'Creating account…' : 'Create account'}
-              </Button>
+          {error && (
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {error}
             </div>
-            </fieldset>
-          </form>
-        )}
+          )}
 
-        <p className="mt-6 text-center text-sm text-slate-400">
-          Already have an account?{' '}
-          <Link href="/login" className="font-medium text-cyan-400 hover:text-cyan-300">
-            Sign in
-          </Link>
-        </p>
-      </div>
+          {step === 1 ? (
+            <form onSubmit={handleStep1Next} className="space-y-4">
+              <fieldset
+                disabled={signupLocked || statusLoading}
+                className="space-y-4 disabled:opacity-60"
+              >
+                <div className="space-y-2">
+                  <Label>Business type</Label>
+                  <div className="grid gap-2">
+                    {BUSINESS_TYPES.map(({ value, label, description, icon: Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setBusinessType(value)}
+                        className={cn(
+                          'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                          businessType === value
+                            ? 'border-primary/50 bg-primary/5'
+                            : 'border-border bg-muted/30 hover:border-primary/30',
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            'mt-0.5 h-5 w-5 shrink-0',
+                            businessType === value ? 'text-primary' : 'text-muted-foreground',
+                          )}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{label}</p>
+                          <p className="text-xs text-muted-foreground">{description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="organizationName">Organization name</Label>
+                  <Input
+                    id="organizationName"
+                    required
+                    value={organizationName}
+                    onChange={(e) => {
+                      setOrganizationName(e.target.value)
+                      if (error) setError(null)
+                    }}
+                    placeholder="Lake Victoria Fisheries Co-op"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!canProceedStep1 || signupLocked || statusLoading}
+                >
+                  Continue
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </fieldset>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <fieldset
+                disabled={signupLocked || statusLoading}
+                className="space-y-4 disabled:opacity-60"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First name</Label>
+                    <Input
+                      id="firstName"
+                      required
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last name</Label>
+                    <Input
+                      id="lastName"
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone (optional)</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+254712345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {recaptcha.active && recaptcha.isV2 && (
+                  <div ref={recaptcha.v2ContainerRef} className="flex justify-center" />
+                )}
+
+                {recaptcha.active && (
+                  <div className="pt-1">
+                    <RecaptchaNotice />
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setStep(1)
+                      setError(null)
+                    }}
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={
+                      submitting ||
+                      signupLocked ||
+                      statusLoading ||
+                      (recaptcha.active && !recaptcha.ready)
+                    }
+                  >
+                    {submitting ? 'Creating account…' : 'Create account'}
+                  </Button>
+                </div>
+              </fieldset>
+            </form>
+          )}
+
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-primary hover:text-primary/80">
+              Sign in
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

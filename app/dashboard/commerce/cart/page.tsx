@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -126,18 +127,10 @@ export default function CommerceCartPage() {
     row.listing_title || row.product_name || row.listing_id || row.product_id || 'Item'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Shopping cart</h1>
-        <p className="text-muted-foreground">
-          Review items and complete checkout. Add listings from{' '}
-          <Link href="/dashboard/marketplace" className="text-primary underline-offset-4 hover:underline">
-            Marketplace
-          </Link>
-          .
-        </p>
-      </div>
-
+    <DashboardPageLayout
+      title="Shopping cart"
+      description="Review items and complete checkout. Add listings from Marketplace."
+    >
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -247,6 +240,6 @@ export default function CommerceCartPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardPageLayout>
   )
 }

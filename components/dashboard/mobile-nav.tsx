@@ -2,26 +2,73 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, Bell, Sparkles, Ship } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Package,
+  Bell,
+  Ship,
+  ShoppingCart,
+  Building2,
+  BarChart3,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store'
 import { resolveModuleFromDashboardPath } from '@/lib/platform/module-paths'
+import type { UserRole } from '@/lib/types'
 
-const TABS = [
+type MobileTab = { href: string; label: string; icon: LucideIcon }
+
+const DEFAULT_TABS: MobileTab[] = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { href: '/dashboard/catches', label: 'Catch', icon: Ship },
   { href: '/dashboard/inventory', label: 'Stock', icon: Package },
   { href: '/dashboard/notifications', label: 'Alerts', icon: Bell },
-  { href: '/dashboard/ai', label: 'AI', icon: Sparkles },
-] as const
+  { href: '/dashboard/analytics', label: 'Insights', icon: BarChart3 },
+]
+
+const ROLE_TABS: Partial<Record<UserRole, MobileTab[]>> = {
+  fisherman: [
+    { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+    { href: '/dashboard/catches', label: 'Catch', icon: Ship },
+    { href: '/dashboard/trips', label: 'Trips', icon: Ship },
+    { href: '/dashboard/notifications', label: 'Alerts', icon: Bell },
+    { href: '/dashboard/mobile/fisherman', label: 'Field', icon: Ship },
+  ],
+  fish_buyer: [
+    { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+    { href: '/dashboard/orders', label: 'Orders', icon: ShoppingCart },
+    { href: '/dashboard/marketplace', label: 'Market', icon: ShoppingCart },
+    { href: '/dashboard/notifications', label: 'Alerts', icon: Bell },
+    { href: '/dashboard/analytics', label: 'Insights', icon: BarChart3 },
+  ],
+  boat_owner: [
+    { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+    { href: '/dashboard/fleet', label: 'Fleet', icon: Ship },
+    { href: '/dashboard/catches', label: 'Catch', icon: Ship },
+    { href: '/dashboard/orders', label: 'Orders', icon: ShoppingCart },
+    { href: '/dashboard/notifications', label: 'Alerts', icon: Bell },
+  ],
+  bmu_official: [
+    { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+    { href: '/dashboard/bmu', label: 'BMU', icon: Building2 },
+    { href: '/dashboard/licenses', label: 'Licenses', icon: Building2 },
+    { href: '/dashboard/notifications', label: 'Alerts', icon: Bell },
+    { href: '/dashboard/analytics', label: 'Insights', icon: BarChart3 },
+  ],
+  super_admin: DEFAULT_TABS,
+  investor: DEFAULT_TABS,
+}
 
 export function MobileNav() {
   const pathname = usePathname()
-  const { enabledModuleIds, modulesLoaded } = useAppStore()
+  const { enabledModuleIds, modulesLoaded, currentRole } = useAppStore()
 
-  const visibleTabs = TABS.filter((tab) => {
+  const tabs = ROLE_TABS[currentRole] ?? DEFAULT_TABS
+
+  const visibleTabs = tabs.filter((tab) => {
     if (tab.href === '/dashboard') return true
-    if (!modulesLoaded) return false
+    if (!modulesLoaded) return tab.href === '/dashboard'
     const mod = resolveModuleFromDashboardPath(tab.href)
     return !mod || enabledModuleIds.includes(mod)
   })

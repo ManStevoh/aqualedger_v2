@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { Bell, BarChart3, AlertCircle, CheckCircle2, Plus, Filter } from 'lucide-react'
 import { authFetchJson } from '@/lib/api'
@@ -69,21 +69,6 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.read).length
   const alertCount = notifications.filter(n => n.type === 'alert').length
   const criticalAlerts = notifications.filter(n => n.type === 'alert' && !n.read).length
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'alert':
-        return 'bg-red-100 text-red-800'
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'success':
-        return 'bg-green-100 text-green-800'
-      case 'info':
-        return 'bg-blue-100 text-blue-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -175,9 +160,7 @@ export default function NotificationsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-semibold">{notification.title}</h4>
-                    <Badge className={getTypeColor(notification.type)}>
-                      {notification.type.toUpperCase()}
-                    </Badge>
+                    <StatusBadge status={notification.type} label={notification.type.toUpperCase()} />
                     {!notification.read && (
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     )}

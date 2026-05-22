@@ -59,6 +59,10 @@ const migrations = [
   'database/migrations/20260607_platform_module_flags.sql',
   'database/migrations/20260608_platform_settings.sql',
   'database/migrations/20260609_platform_recaptcha.sql',
+  'database/migrations/20260610_recaptcha_guest_checkout.sql',
+  'database/migrations/20260610_boats_tenant_fixup.sql',
+  'database/migrations/20260611_wallets_tenant_backfill.sql',
+  'database/migrations/20260612_suggested_features.sql',
 ]
 
 async function main() {

@@ -6,6 +6,7 @@ import {
   listCustomDomains,
   addCustomDomain,
   verifyCustomDomain,
+  verifyCustomDomainDns,
 } from '@/lib/modules/tenant/custom-domains'
 
 const addSchema = z.object({ domain: z.string().min(3) })
@@ -20,6 +21,11 @@ export const GET = apiHandler(async () => {
 export const POST = apiHandler(async (request: NextRequest) => {
   const ctx = await requirePermission('tenant.settings.write')
   const body = await request.json()
+  if (body.action === 'verify-dns') {
+    const input = verifySchema.parse(body)
+    const result = await verifyCustomDomainDns(ctx.tenantId, input.domainId)
+    return jsonOk({ domain: result })
+  }
   if (body.action === 'verify') {
     const input = verifySchema.parse(body)
     const result = await verifyCustomDomain(ctx.tenantId, input.domainId)

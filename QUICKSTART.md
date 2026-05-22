@@ -1,4 +1,18 @@
-# 🎯 AquaLedger V2 - Quick Start Guide
+# AquaERP — Quick Start
+
+> **Current stack:** See [README.md](README.md), [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), and [SYSTEM_STATUS.md](SYSTEM_STATUS.md).  
+> Legacy content below may reference older names (`aqualedger32`, AquaLedger V2).
+
+```bash
+cp .env.example .env
+node scripts/setup-fresh-database.mjs   # or: node scripts/run-migrations.mjs
+npm install && npm run setup:cron && npm run dev
+npm run smoke
+```
+
+---
+
+# 🎯 AquaLedger V2 - Quick Start Guide (legacy)
 
 ## 📋 What You Have
 

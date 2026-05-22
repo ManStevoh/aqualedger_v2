@@ -1,11 +1,12 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import {
   Dialog,
   DialogContent,
@@ -136,27 +137,11 @@ export default function HRContractsPage() {
     return end <= threshold
   }).length
 
-  const typeColor = (type: string) => {
-    switch (type) {
-      case 'permanent': return 'bg-green-100 text-green-800'
-      case 'contract': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-yellow-100 text-yellow-800'
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Employment Contracts</h1>
-          <p className="text-muted-foreground">Track contract terms and documents</p>
-        </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
-          <UserPlus className="w-4 h-4" />
-          New Contract
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Employment Contracts"
+      description="Track contract terms and documents"
+    >
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard title="Total Contracts" value={contracts.length} icon={<FileText className="h-4 w-4 text-muted-foreground" />} loading={loading} />
         <StatCard title="Permanent" value={permanent} icon={<Briefcase className="h-4 w-4 text-muted-foreground" />} loading={loading} />
@@ -190,7 +175,7 @@ export default function HRContractsPage() {
                       <div className="text-xs text-muted-foreground">{c.employee_number}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <Badge className={typeColor(c.contract_type)}>{c.contract_type}</Badge>
+                      <StatusBadge status={c.contract_type} />
                     </td>
                     <td className="py-3 px-4">{c.start_date}</td>
                     <td className="py-3 px-4">{c.end_date || '—'}</td>
@@ -277,6 +262,6 @@ export default function HRContractsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

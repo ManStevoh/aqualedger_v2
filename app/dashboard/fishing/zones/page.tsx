@@ -1,7 +1,8 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTable } from '@/components/dashboard/data-table'
@@ -34,12 +35,6 @@ interface FishingZone {
   fao_area: string | null
   county: string | null
   status: string
-}
-
-const statusColors: Record<string, string> = {
-  open: 'bg-green-100 text-green-700 border-green-200',
-  restricted: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  closed: 'bg-red-100 text-red-700 border-red-200',
 }
 
 export default function FishingZonesPage() {
@@ -116,18 +111,10 @@ export default function FishingZonesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fishing Zones</h1>
-          <p className="text-muted-foreground">Manage tenant fishing areas, FAO codes, and access status</p>
-        </div>
-        <Button onClick={() => setShowDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add zone
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Fishing Zones"
+      description="Manage tenant fishing areas, FAO codes, and access status"
+    >
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -181,9 +168,7 @@ export default function FishingZonesPage() {
                 key: 'status',
                 header: 'Status',
                 cell: (z) => (
-                  <Badge variant="outline" className={statusColors[z.status] || ''}>
-                    {z.status}
-                  </Badge>
+                  <StatusBadge status={z.status} />
                 ),
               },
             ]}
@@ -238,6 +223,6 @@ export default function FishingZonesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

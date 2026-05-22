@@ -1,9 +1,10 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/dashboard/status-badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -175,28 +176,11 @@ export default function FishAuctionsPage() {
   const live = auctions.filter((a) => a.status === 'live').length
   const closed = auctions.filter((a) => a.status === 'closed').length
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'live': return 'bg-green-100 text-green-800'
-      case 'closed': return 'bg-blue-100 text-blue-800'
-      case 'cancelled': return 'bg-red-100 text-red-800'
-      default: return 'bg-yellow-100 text-yellow-800'
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Fish auctions</h1>
-          <p className="text-muted-foreground">Landing-site auctions linked to traceability lots</p>
-        </div>
-        <Button className="gap-2" onClick={() => setShowDialog(true)}>
-          <Plus className="w-4 h-4" />
-          Schedule auction
-        </Button>
-      </div>
-
+    <DashboardPageLayout
+      title="Fish auctions"
+      description="Landing-site auctions linked to traceability lots"
+    >
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total" value={auctions.length} loading={loading} icon={<Gavel className="h-4 w-4 text-muted-foreground" />} />
         <StatCard title="Live" value={live} loading={loading} icon={<Gavel className="h-4 w-4 text-muted-foreground" />} />
@@ -239,7 +223,7 @@ export default function FishAuctionsPage() {
                         : '—'}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge className={statusColor(a.status)}>{a.status}</Badge>
+                      <StatusBadge status={a.status} />
                     </td>
                     <td className="py-3 px-4 text-right">
                       {a.status !== 'closed' && a.status !== 'cancelled' && (
@@ -349,6 +333,6 @@ export default function FishAuctionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

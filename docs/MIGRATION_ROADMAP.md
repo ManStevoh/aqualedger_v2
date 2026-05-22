@@ -13,13 +13,13 @@ Transform **AquaLedger** (single-tenant fisheries OS) → **AquaERP** (multi-ten
 
 ## Phase 1 — Tenant SaaS core (Week 3–6) ✅ largely complete
 
-- [ ] Tenant onboarding wizard (create org + owner)
+- [x] Tenant onboarding wizard (profile → operations → go-live + M-Pesa test)
 - [x] Users belong to tenant via `tenant_members`
 - [x] Add `tenant_id` to: boats, trips, catches, listings, orders, wallets, expenses, storage, BMU, licenses, etc.
 - [x] All `/api/v2/*` routes use `withApiPermission`
 - [x] Tenant settings: name, logo, currency, VAT/TIN (PATCH)
 - [x] Branch support (landing site / cold store as branch)
-- [ ] Middleware resolves tenant from subdomain or header
+- [x] Middleware resolves tenant from subdomain (`x-tenant-slug` → `getAuthContext`)
 
 ## Phase 2 — Commerce & inventory ✅ largely complete
 

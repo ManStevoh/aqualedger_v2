@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -112,14 +113,8 @@ export default function PlatformBillingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Receipt className="h-7 w-7" />
-          Billing overview
-        </h1>
-        <p className="text-muted-foreground">Plan limits and usage across all tenants</p>
-      </div>
+    <DashboardPageLayout title="Billing overview" description="Plan limits and usage across all tenants">
+
 
       <AdminHubNav />
 
@@ -217,6 +212,6 @@ export default function PlatformBillingPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardPageLayout>
   )
 }

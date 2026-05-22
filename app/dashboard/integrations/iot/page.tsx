@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -77,18 +78,10 @@ export default function IntegrationsIotPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Radio className="h-8 w-8" />
-            IoT & sensors
-          </h1>
-          <p className="text-muted-foreground">
-            Machine ingest for cold chain, GPS, and scales — see{' '}
-            <code className="text-xs">docs/HARDWARE_IOT.md</code>
-          </p>
-        </div>
+    <DashboardPageLayout
+      title="IoT & sensors"
+      description="Machine ingest for cold chain, GPS, and scales — see docs/HARDWARE_IOT.md"
+      actions={
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={fetchEvents}>
             <RefreshCw className="h-4 w-4" />
@@ -104,8 +97,7 @@ export default function IntegrationsIotPage() {
             </Link>
           </Button>
         </div>
-      </div>
-
+      }>
       <div className="grid gap-4 md:grid-cols-3">
         {endpoints.map((ep) => {
           const Icon = ep.icon
@@ -168,6 +160,6 @@ export default function IntegrationsIotPage() {
           },
         ]}
       />
-    </div>
+    </DashboardPageLayout>
   )
 }

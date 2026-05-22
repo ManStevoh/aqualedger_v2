@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -130,20 +131,13 @@ export default function CrewPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <UserCog className="h-7 w-7 text-primary" />
-            Boat crew
-          </h1>
-          <p className="text-muted-foreground">Assign fishermen and officers to vessels.</p>
-        </div>
+    <DashboardPageLayout title="Boat crew" description="Assign fishermen and officers to vessels." actions={
         <Button className="gap-2" onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4" />
           Add crew
         </Button>
-      </div>
+      }>
+
 
       <div className="flex items-center gap-3 max-w-xs">
         <Label className="shrink-0">Boat</Label>
@@ -253,6 +247,6 @@ export default function CrewPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardPageLayout>
   )
 }

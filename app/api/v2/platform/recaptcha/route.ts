@@ -7,6 +7,7 @@ import {
   updateRecaptchaConfig,
   toAdminView,
   verifyRecaptchaToken,
+  listRecaptchaAuditEvents,
   RECAPTCHA_TEST_SITE_KEY,
   RECAPTCHA_TEST_SECRET_KEY,
 } from '@/lib/modules/security/recaptcha'
@@ -14,8 +15,10 @@ import {
 export const GET = apiHandler(async () => {
   await requireSuperAdmin()
   const config = await getRecaptchaConfig()
+  const recentEvents = await listRecaptchaAuditEvents(20)
   return jsonOk({
     recaptcha: toAdminView(config),
+    recentEvents,
     testKeys: {
       siteKey: RECAPTCHA_TEST_SITE_KEY,
       secretKey: RECAPTCHA_TEST_SECRET_KEY,
@@ -32,6 +35,7 @@ const patchSchema = z.object({
   minScore: z.number().min(0).max(1).optional(),
   protectLogin: z.boolean().optional(),
   protectRegister: z.boolean().optional(),
+  protectGuestCheckout: z.boolean().optional(),
   hostnameAllowlist: z.array(z.string().max(253)).optional(),
 })
 

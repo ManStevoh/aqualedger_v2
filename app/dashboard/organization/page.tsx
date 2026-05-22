@@ -12,6 +12,8 @@ import { authFetchJson } from '@/lib/api'
 import { urlInputPlaceholder } from '@/lib/config/urls'
 import { Building2, Globe, MapPin, Save } from 'lucide-react'
 import { toast } from 'sonner'
+import { ModulePageHeader } from '@/components/dashboard/module-page-header'
+import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
 interface Tenant {
   id: string
@@ -46,6 +48,9 @@ interface Branch {
 }
 
 export default function OrganizationPage() {
+  const meta = useDashboardPageMeta({
+    description: 'Tenant profile, subscription, and tax settings',
+  })
   const [tenant, setTenant] = useState<Tenant | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [branches, setBranches] = useState<Branch[]>([])
@@ -122,10 +127,11 @@ export default function OrganizationPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Organization</h1>
-        <p className="text-muted-foreground">Tenant profile, subscription, and tax settings</p>
-      </div>
+      <ModulePageHeader
+        title={meta.title}
+        description={meta.description}
+        breadcrumbs={meta.breadcrumbs}
+      />
 
       <StatCardGrid>
         <StatCard
