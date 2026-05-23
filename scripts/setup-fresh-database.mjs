@@ -37,6 +37,10 @@ function rewriteSqlForDb(sql, dbName) {
   if (!/^\s*USE\s+/im.test(out)) {
     out = `USE ${dbName};\n\n${out}`
   }
+
+  // Strip standard MySQL incompatible 'IF NOT EXISTS' from ALTER ADD statements
+  out = out.replace(/(\bADD(?:\s+COLUMN|\s+INDEX|\s+KEY|\s+UNIQUE\s+KEY)?)\s+IF\s+NOT\s+EXISTS/gi, '$1')
+
   return out
 }
 
