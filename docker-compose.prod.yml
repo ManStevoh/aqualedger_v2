@@ -7,7 +7,7 @@ services:
     container_name: aqualedger-app
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000" # Expose only to localhost for secure Nginx reverse proxying
+      - "127.0.0.1:3001:3000" # Expose only to localhost for secure Nginx reverse proxying
     environment:
       - NODE_ENV=production
       - DB_HOST=db             # Match the MySQL service name below

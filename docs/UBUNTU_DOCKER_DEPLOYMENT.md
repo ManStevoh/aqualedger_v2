@@ -9,7 +9,7 @@ This guide provides a comprehensive walkthrough for deploying the **AquaLedger V
 ```mermaid
 graph TD
     Client[Client / Web Browser] -- HTTPS:443 --> Nginx[Nginx Reverse Proxy]
-    Nginx -- HTTP:3000 --> App[Next.js App Container]
+    Nginx -- HTTP:3001 --> App[Next.js App Container]
     App -- Internal Port 3306 --> DB[(MySQL Container)]
     
     subgraph Host Network
@@ -167,7 +167,7 @@ sudo docker compose -f docker-compose.prod.yml ps
 ```
 You should see:
 - `aqualedger-db` running and marked as **healthy** (after ~15 seconds).
-- `aqualedger-app` running and listening on port `3000` locally.
+- `aqualedger-app` running and listening on port `3001` locally.
 
 To view logs for troubleshooting:
 ```bash
@@ -202,7 +202,7 @@ sudo docker compose -f docker-compose.prod.yml exec app npm run db:verify
 
 ## 6. Nginx Reverse Proxy & SSL Setup
 
-Our Next.js app container is listening on `127.0.0.1:3000`. We will use Nginx on the host server to handle public HTTPS traffic, route requests to our container, and automatically manage SSL certificates.
+Our Next.js app container is listening on `127.0.0.1:3001`. We will use Nginx on the host server to handle public HTTPS traffic, route requests to our container, and automatically manage SSL certificates.
 
 ### A. Install Nginx and Certbot
 ```bash
@@ -230,7 +230,7 @@ server {
     client_max_body_size 20M;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         
         # Connection headers for WebSockets support (Next.js HMR/realtime)
