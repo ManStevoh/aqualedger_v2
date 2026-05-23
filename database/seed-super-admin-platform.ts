@@ -72,7 +72,7 @@ const PLATFORM_STAFF: Array<{
 }> = [
   { email: 'platform.support@aqualedger.co.ke', firstName: 'Platform', lastName: 'Support', role: 'super_admin' },
   { email: 'platform.billing@aqualedger.co.ke', firstName: 'Platform', lastName: 'Billing', role: 'super_admin' },
-  { email: 'staff.reviewer@aqualedger.co.ke', firstName: 'Cross', lastName: 'Tenant Reviewer', role: 'cooperative_admin' },
+  { email: 'staff.reviewer@aqualedger.co.ke', firstName: 'Cross', lastName: 'Tenant Reviewer', role: 'super_admin' },
 ]
 
 async function ensureSuperAdmin(passwordHash: string): Promise<string> {
