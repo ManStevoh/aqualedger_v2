@@ -1,0 +1,61 @@
+services:
+  # Next.js Application Monolith
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aqualedger-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000" # Expose only to localhost for secure Nginx reverse proxying
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db             # Match the MySQL service name below
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - CRON_SECRET=${CRON_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - aqualedger-network
+
+  # Production MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: aqualedger-db
+    restart: unless-stopped
+    # Do NOT expose MySQL port 3306 to the public internet for security. 
+    # It is accessible internally within the docker network.
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - aqualedger-network
+
+# Networks & Persistent Volumes
+networks:
+  aqualedger-network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
