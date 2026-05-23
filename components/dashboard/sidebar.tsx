@@ -113,7 +113,7 @@ export function DashboardSidebar() {
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 px-3 py-4">
+        <ScrollArea className="flex-1 min-h-0 px-3 py-4">
           <nav className="space-y-1" aria-label="Main navigation">
             {modules.map((mod) => {
               const ModuleIcon = mod.icon
