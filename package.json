@@ -112,6 +112,7 @@
     }
   },
   "devDependencies": {
+    "@next/swc-win32-x64-msvc": "^16.2.6",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/bcryptjs": "^3.0.0",

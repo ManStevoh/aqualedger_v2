@@ -183,14 +183,15 @@ async function applyTenantHeaders(request: NextRequest): Promise<TenantHeaderRes
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { response: tenantResponse } = await applyTenantHeaders(request)
   if (tenantResponse.status === 307 || tenantResponse.status === 308) {
     return tenantResponse
   }
 
   const { pathname } = request.nextUrl
-  const accessToken = request.cookies.get('access_token')?.value
+  const cookies = request.cookies as any
+  const accessToken = cookies.get('access_token')?.value
   const payload = accessToken ? await verifyToken(accessToken) : null
   const hasValidAccess = Boolean(payload)
 
@@ -207,8 +208,9 @@ export async function middleware(request: NextRequest) {
       login.searchParams.set('from', pathname)
       const response = NextResponse.redirect(login)
       if (accessToken) {
-        response.cookies.delete('access_token')
-        response.cookies.delete('refresh_token')
+        const respCookies = response.cookies as any
+        respCookies.delete('access_token')
+        respCookies.delete('refresh_token')
       }
       return response
     }
