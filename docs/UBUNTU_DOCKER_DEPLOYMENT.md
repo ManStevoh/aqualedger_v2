@@ -39,7 +39,7 @@ graph TD
 
 ## 1. Prerequisites & Server Setup
 
-Ensure your Ubuntu Server (20.04 or 22.04 LTS recommended) has a public IP address and your domain name (e.g. `app.yourdomain.com`) is pointing to that IP address in your DNS settings.
+Ensure your Ubuntu Server (20.04 or 22.04 LTS recommended) has a public IP address and your domain name (e.g. `aqua.kenwafula.cv`) is pointing to that IP address in your DNS settings.
 
 Log in to your Ubuntu server via SSH and execute the following commands to install Docker and Docker Compose:
 
@@ -129,7 +129,7 @@ DB_PASSWORD=InsertStrongUserPasswordHere
 JWT_SECRET=InsertGenerated32CharJwtSecretHere
 
 # URL Configurations (Crucial for secure cookies, redirection and M-Pesa callbacks)
-NEXT_PUBLIC_APP_URL=https://app.yourdomain.com
+NEXT_PUBLIC_APP_URL=https://aqua.kenwafula.cv
 
 # Cron GDPR Export Secret
 # Run: openssl rand -base64 32 to generate
@@ -200,82 +200,48 @@ sudo docker compose -f docker-compose.prod.yml exec app npm run db:verify
 
 ---
 
-## 6. Nginx Reverse Proxy & SSL Setup
+## 6. Cloudflare Tunnel Routing & SSL Setup
 
-Our Next.js app container is listening on `127.0.0.1:3001`. We will use Nginx on the host server to handle public HTTPS traffic, route requests to our container, and automatically manage SSL certificates.
+Since your home lab setup runs behind a home network (without a public IP), Nginx and Let's Encrypt Certbot are bypassed. Instead, traffic is securely routed from Cloudflare directly to port `3001` inside your Docker container using your active **`home-lab`** Cloudflare Tunnel (`cloudflared`).
 
-### A. Install Nginx and Certbot
+### A. Configure Local Tunnel Rules
+On your Ubuntu server, open your Cloudflare Tunnel configuration file:
 ```bash
-sudo apt install nginx certbot python3-certbot-nginx -y
+nano ~/.cloudflared/config.yml
 ```
 
-### B. Create an Nginx Server Block Configuration
-Create a configuration file for your application:
+Ensure your configuration maps `aqua.kenwafula.cv` directly to port `3001` (where your app Docker container is listening):
+```yaml
+tunnel: fbd28d4d-4c8f-4e4b-9f54-13185231682f
+credentials-file: /home/staticlumen/.cloudflared/fbd28d4d-4c8f-4e4b-9f54-13185231682f.json
+
+ingress:
+  - hostname: broda.kenwafula.cv
+    service: http://localhost:80
+  - hostname: aqua.kenwafula.cv
+    service: http://localhost:3001
+  - hostname: kenwafula.cv
+    service: http://localhost:80
+  - service: http_status:404
+```
+
+### B. Apply the Tunnel Rules
+Restart the Cloudflare Tunnel client service to apply the new rules:
 ```bash
-sudo nano /etc/nginx/sites-available/aqualedger
+sudo systemctl restart cloudflared
 ```
 
-Paste the following reverse proxy configuration (replace `app.yourdomain.com` with your domain):
-```nginx
-server {
-    listen 80;
-    server_name app.yourdomain.com;
+### C. Create Cloudflare DNS Record
+In the DNS settings of your Cloudflare Dashboard under `kenwafula.cv`:
+1. Click **Add record**.
+2. Fill in the fields:
+   * **Type**: `CNAME`
+   * **Name**: `aqua`
+   * **Target**: `fbd28d4d-4c8f-4e4b-9f54-13185231682f.cfargotunnel.com`
+   * **Proxy status**: `Proxied` (Orange Cloud)
+3. Click **Save**.
 
-    # Secure Header Configuration
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-    # Set maximum upload size (useful for GDPR / document uploads)
-    client_max_body_size 20M;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        
-        # Connection headers for WebSockets support (Next.js HMR/realtime)
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        
-        # Forward Client IP headers (Crucial for audit trails and security logs)
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # Disable buffering for low-latency streaming if needed
-        proxy_buffering off;
-    }
-}
-```
-
-### C. Enable the Site and Test Configuration
-```bash
-# Link the configuration to sites-enabled
-sudo ln -s /etc/nginx/sites-available/aqualedger /etc/nginx/sites-enabled/
-
-# Remove Nginx default index site if active
-sudo rm /etc/nginx/sites-enabled/default
-
-# Test configuration for syntax errors
-sudo nginx -t
-```
-If the test is successful, restart Nginx:
-```bash
-sudo systemctl restart nginx
-```
-
-### D. Obtain SSL Certificate with Certbot (Let's Encrypt)
-Run Certbot to automatically fetch and configure a secure HTTPS certificate for your domain:
-```bash
-sudo certbot --nginx -d app.yourdomain.com
-```
-Follow the interactive prompts:
-1. Enter your email address (for certificate renewal notifications).
-2. Accept the terms of service.
-3. Choose whether to redirect HTTP traffic to HTTPS (highly recommended!).
-
-Once complete, Certbot will automatically rewrite Nginx config to serve over HTTPS (port 443) and set up a systemd cron job to renew the certificates before they expire!
+*No Nginx server blocks, firewall ports, or Certbot Let's Encrypt runs are required! Cloudflare's Edge network automatically secures your subdomain with high-grade HTTPS (SSL) before forwarding traffic.*
 
 ---
 
@@ -314,4 +280,4 @@ sudo docker image prune -f
 ---
 
 ## 🚀 Welcome to Production!
-You are all set! Open your browser, navigate to `https://app.yourdomain.com/login` and sign in with the platform super admin credentials generated by the seeding step. Use the Platform Command Center (`/dashboard/admin`) to provision tenant organizations.
+You are all set! Open your browser, navigate to `https://aqua.kenwafula.cv/login` and sign in with the platform super admin credentials generated by the seeding step. Use the Platform Command Center (`/dashboard/admin`) to provision tenant organizations.

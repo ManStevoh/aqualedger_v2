@@ -356,8 +356,8 @@ async function seedFishing(
 
   const speciesId = ctx.speciesIds[ctx.index % ctx.speciesIds.length]
   await execute(
-    `INSERT INTO catches (id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price, total_value, storage_method, recorded_by)
-     VALUES (?, ?, ?, ?, ?, 'A', ?, ?, 'iced', ?)`,
+    `INSERT INTO catches (id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price, storage_method, recorded_by)
+     VALUES (?, ?, ?, ?, ?, 'A', ?, 'iced', ?)`,
     [
       generateId(),
       ctx.tenantId,
@@ -365,7 +365,6 @@ async function seedFishing(
       speciesId,
       catchKg,
       unitPrice,
-      catchKg * unitPrice,
       ctx.ownerId,
     ],
   )
