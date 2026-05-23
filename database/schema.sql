@@ -143,9 +143,8 @@ CREATE TABLE IF NOT EXISTS investments (
 
 CREATE TABLE IF NOT EXISTS boats (
   id VARCHAR(36) PRIMARY KEY,
-  tenant_id VARCHAR(36) NULL,
   owner_id VARCHAR(36) NOT NULL,
-  registration_number VARCHAR(50) NOT NULL,
+  registration_number VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(200) NOT NULL,
   type ENUM('fiber', 'wooden', 'steel', 'aluminum') DEFAULT 'fiber',
   capacity_kg INT NOT NULL,
@@ -161,9 +160,7 @@ CREATE TABLE IF NOT EXISTS boats (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_owner_id (owner_id),
-  INDEX idx_status (status),
-  INDEX idx_boats_tenant (tenant_id),
-  UNIQUE KEY uk_tenant_registration (tenant_id, registration_number)
+  INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS boat_crew (
