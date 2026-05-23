@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy package configurations
 COPY package.json package-lock.json* ./
 
-# Install clean dependencies
-RUN npm ci
+# Install dependencies
+RUN npm install
 
 # --- STEP 2: Build the Application ---
 FROM node:20-alpine AS builder
