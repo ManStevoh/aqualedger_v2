@@ -170,6 +170,7 @@ async function clearDemoTenants(): Promise<void> {
 
   const orphanCodes = [
     ...DEMO_TENANTS.map((t) => `${t.slug}-lnd`),
+    ...DEMO_TENANTS.map((t) => `${t.slug.slice(0, 16)}-lnd`),
     ...DEMO_TENANTS.map((t) => `${t.slug.slice(0, 6).toUpperCase()}-LND`),
   ]
   const codePh = orphanCodes.map(() => '?').join(',')
@@ -293,7 +294,7 @@ async function seedFishing(
       siteId,
       ctx.tenantId,
       `${def.county} Landing`,
-      `${def.slug}-lnd`,
+      `${def.slug.slice(0, 16)}-lnd`,
       def.county,
       def.lat,
       def.lng,
