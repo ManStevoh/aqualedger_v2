@@ -35,15 +35,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy public assets and static files
-COPY --from=builder /app/public ./public
-
 # Set up runtime cache directory with correct ownership
 RUN mkdir .next && chown nextjs:nodejs .next
 
-# Leverage Next.js standalone file-tracing to copy only the bare minimum runtime dependencies
+# Leverage Next.js standalone file-tracing to copy the standalone server
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy maintenance folders & full production node_modules so npm scripts can run inside the container
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/database ./database
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Switch to the secure non-root user
 USER nextjs
