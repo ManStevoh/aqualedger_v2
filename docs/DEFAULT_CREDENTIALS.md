@@ -24,7 +24,7 @@ Use this account to test the fish buyer storefront experience. This account is p
 
 ---
 
-## 🏢 3. Demo Tenants (20 Organizations)
+## 🏢 3. Demo Tenants (3 Relevant Organizations)
 Each demo tenant represents a fully provisioned cooperative, business, or logistics depot complete with their own landing sites, fleet records, temperature IoT sensors, payroll history, and financial ledgers.
 
 * **Owner Password (All Tenants):** `Demo@123`
@@ -36,23 +36,6 @@ Each demo tenant represents a fully provisioned cooperative, business, or logist
 |-------------|----------------|---------------|--------|-------------|
 | **Coast Fish Cooperative** | `coastfish` | Cooperative | Kwale | `owner-coastfish@demo.aquaerp.local` |
 | **Lamu Sea Ventures** | `lamusea` | Fisherman / Fleet | Lamu | `owner-lamusea@demo.aquaerp.local` |
-| **Kilifi Processors Ltd** | `kilifiprocess` | Fish Processor | Kilifi | `owner-kilifiprocess@demo.aquaerp.local` |
-| **Mombasa Marine Market** | `mombasamarine` | Local Fish Market | Mombasa | `owner-mombasamarine@demo.aquaerp.local` |
-| **Indian Ocean Exporters** | `indianexport` | Seafood Exporter | Mombasa | `owner-indianexport@demo.aquaerp.local` |
-| **Sea Breeze Grill Group** | `seabreezegrill` | Restaurant Chain | Nairobi | `owner-seabreezegrill@demo.aquaerp.local` |
-| **Swahili Coast Logistics** | `swahililogistics`| Cold Chain Depot | Mombasa | `owner-swahililogistics@demo.aquaerp.local` |
-| **Victoria Tilapia Union** | `victoriatilapia`| Cooperative | Kisumu | `owner-victoriatilapia@demo.aquaerp.local` |
-| **Dunga Beach Operators** | `dungaoperators`| Fisherman / Fleet | Kisumu | `owner-dungaoperators@demo.aquaerp.local` |
-| **Homa Bay Fresh Catch** | `homabayfresh` | Local Fish Market | Homa Bay| `owner-homabayfresh@demo.aquaerp.local` |
-| **Naivasha Cold Chain Ltd** | `naivashacold`  | Cold Chain Depot | Nakuru | `owner-naivashacold@demo.aquaerp.local` |
-| **Watamu Fisheries Enterprise**| `watamuenterprises`| Fisherman / Fleet | Kilifi | `owner-watamuenterprises@demo.aquaerp.local` |
-| **Shimoni Catch Cooperative** | `shimonicatch`  | Cooperative | Kwale | `owner-shimonicatch@demo.aquaerp.local` |
-| **Malindi Fish Hub** | `malindihub`    | Local Fish Market | Kilifi | `owner-malindihub@demo.aquaerp.local` |
-| **Diani Reef Restaurant Supply**| `dianirestaurant`| Restaurant Chain | Kwale | `owner-dianirestaurant@demo.aquaerp.local` |
-| **Kizingitini Fleet Owners** | `kizingitinifleet`| Cooperative | Lamu | `owner-kizingitinifleet@demo.aquaerp.local` |
-| **Pwani Logistics & Ice** | `pwanalogistics` | Cold Chain Depot | Kilifi | `owner-pwanalogistics@demo.aquaerp.local` |
-| **Nairobi Wholesale Fish Co** | `nairobiwholesale`| Local Fish Market | Nairobi | `owner-nairobiwholesale@demo.aquaerp.local` |
-| **Lake Turkana Operations** | `turkanaoperations`| Fisherman / Fleet | Turkana | `owner-turkanaoperations@demo.aquaerp.local` |
 | **AquaERP Showcase Tenant** | `aquaerp-demo`  | Cooperative | Mombasa | `owner-aquaerp-demo@demo.aquaerp.local` |
 
 ---
@@ -92,12 +75,8 @@ All core capabilities are pre-configured to be **globally active** (`Platform Mo
 ## 💳 7. Subscription Plans & Demo States
 Demo organizations are pre-allocated across different subscription plans and statuses to facilitate billing limits, payroll calculations, and feature gate testing:
 
-* **Enterprise Tier (`active`):** `coastfish`, `mombasamarine`, `indianexport`, `nairobiwholesale`, `aquaerp-demo`
-* **Professional Tier (`active`):** `kilifiprocess`, `seabreezegrill`, `swahililogistics`, `naivashacold`, `malindihub`
-* **Starter Tier (`active`):** `victoriatilapia`, `dungaoperators`, `homabayfresh`, `watamuenterprises`, `shimonicatch`, `pwanalogistics`
-* **Trial Tier (`active`):** `dianirestaurant`, `kizingitinifleet`
+* **Enterprise Tier (`active`):** `coastfish`, `aquaerp-demo`
 * **Trial Tier (`pending`):** `lamusea`
-* **Trial Tier (`suspended`):** `turkanaoperations`
 
 ---
 

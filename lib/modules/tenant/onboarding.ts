@@ -32,17 +32,17 @@ export interface TenantOnboardingView extends TenantOnboarding {
 }
 
 const BUSINESS_TYPE_USER_ROLE: Record<BusinessType, UserRole> = {
-  fisherman: 'fisherman',
-  cooperative: 'boat_owner',
-  processor: 'fish_buyer',
-  market: 'fish_buyer',
-  exporter: 'fish_buyer',
-  restaurant: 'fish_buyer',
-  logistics: 'fish_buyer',
+  fisherman: 'user',
+  cooperative: 'user',
+  processor: 'user',
+  market: 'user',
+  exporter: 'user',
+  restaurant: 'user',
+  logistics: 'user',
 }
 
 export function businessTypeToUserRole(businessType: BusinessType): UserRole {
-  return BUSINESS_TYPE_USER_ROLE[businessType] ?? 'fisherman'
+  return BUSINESS_TYPE_USER_ROLE[businessType] ?? 'user'
 }
 
 async function uniqueSlug(baseName: string, conn?: Connection): Promise<string> {

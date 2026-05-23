@@ -354,17 +354,12 @@ export const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
   ],
 }
 
-/** Legacy app roles mapped to tenant member role for permission checks */
 export function legacyRoleToMemberRole(
   role: string,
 ): TenantMemberRole {
   const map: Record<string, TenantMemberRole> = {
     super_admin: 'tenant_owner',
     investor: 'tenant_owner',
-    boat_owner: 'branch_manager',
-    fisherman: 'fisherman',
-    fish_buyer: 'customer',
-    bmu_official: 'bmu_official',
   }
   return map[role] || 'fisherman'
 }

@@ -1,5 +1,6 @@
 'use client'
 
+
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
@@ -28,8 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { 
-  Users, Search, Plus, UserCheck, UserX, 
+import {
+  Users, Search, Plus, UserCheck, UserX,
   Shield, Ship, Fish, ShoppingCart, Building2, MoreVertical
 } from 'lucide-react'
 import {
@@ -53,7 +54,7 @@ export default function UsersPage() {
   const [newFirstName, setNewFirstName] = useState('')
   const [newLastName, setNewLastName] = useState('')
   const [newPhone, setNewPhone] = useState('')
-  const [newRole, setNewRole] = useState<UserRole>('fisherman')
+  const [newRole, setNewRole] = useState<UserRole>('user')
   const [profileUser, setProfileUser] = useState<User | null>(null)
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null)
 
@@ -152,7 +153,7 @@ export default function UsersPage() {
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = 
+    const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = roleFilter === 'all' || user.role === roleFilter
@@ -207,10 +208,10 @@ export default function UsersPage() {
 
   return (
     <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button></>}>
-{/* Stats Overview */}
+      <Plus className="h-4 w-4 mr-2" />
+      Add User
+    </Button></>}>
+      {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Total Users"
@@ -240,7 +241,7 @@ export default function UsersPage() {
 
       {/* Role Filter */}
       <div className="flex flex-wrap gap-2">
-        {['all', 'super_admin', 'investor', 'boat_owner', 'fisherman', 'fish_buyer', 'bmu_official'].map((role) => (
+        {['all', 'super_admin', 'investor', 'user'].map((role) => (
           <Button
             key={role}
             variant={roleFilter === role ? 'default' : 'outline'}
@@ -414,7 +415,7 @@ export default function UsersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(['fisherman', 'boat_owner', 'fish_buyer', 'bmu_official', 'investor'] as UserRole[]).map(
+                  {(['user', 'investor', 'super_admin'] as UserRole[]).map(
                     (r) => (
                       <SelectItem key={r} value={r}>
                         {r.replace('_', ' ')}

@@ -25,7 +25,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   currentUser: null,
-  currentRole: 'fisherman',
+  currentRole: 'user',
   memberRole: null,
   rolePermissions: null,
   enabledModuleIds: ['platform'],

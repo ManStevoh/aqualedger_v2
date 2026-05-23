@@ -31,10 +31,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
   investor: 'Platform Operator',
-  boat_owner: 'Boat Owner',
-  fisherman: 'Fisherman',
-  fish_buyer: 'Fish Buyer',
-  bmu_official: 'BMU Official',
+  user: 'User',
 }
 
 interface AdminUserRow {

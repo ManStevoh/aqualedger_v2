@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     pushTenantCondition(conditions, params, 'm', auth.tenantId)
 
-    if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official') {
+    if (!hasFullSystemAccess(auth.role)) {
       conditions.push('b.owner_id = ?')
       params.push(auth.userId)
     }

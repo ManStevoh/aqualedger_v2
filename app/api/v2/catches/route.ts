@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     pushTenantCondition(conditions, params, 'c', auth.tenantId)
     
     // Filter by user's access
-    if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official') {
+    if (!hasFullSystemAccess(auth.role)) {
       conditions.push('(t.captain_id = ? OR b.owner_id = ?)')
       params.push(auth.userId, auth.userId)
     }
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verify access
-    if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official' &&
+    if (!hasFullSystemAccess(auth.role) &&
         trip.owner_id !== auth.userId && trip.captain_id !== auth.userId) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
@@ -312,7 +312,7 @@ export async function PUT(request: NextRequest) {
     
     assertTenantMatch(catchRecord, auth.tenantId, 'Catch')
     
-    if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official' &&
+    if (!hasFullSystemAccess(auth.role) &&
         catchRecord.owner_id !== auth.userId && catchRecord.captain_id !== auth.userId) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },

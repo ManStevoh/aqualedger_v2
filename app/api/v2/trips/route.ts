@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     pushTenantCondition(conditions, params, 't', auth.tenantId)
     
     // Filter by user's boats for non-admin
-    if (!hasFullSystemAccess(auth.role) && auth.role !== 'bmu_official') {
+    if (!hasFullSystemAccess(auth.role)) {
       conditions.push('(t.captain_id = ? OR b.owner_id = ?)')
       params.push(auth.userId, auth.userId)
     }

@@ -31,10 +31,7 @@ import type { UserRole } from '@/lib/types'
 const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
   investor: 'Investor (platform)',
-  boat_owner: 'Boat Owner',
-  fisherman: 'Fisherman',
-  fish_buyer: 'Fish Buyer',
-  bmu_official: 'BMU Official',
+  user: 'User',
 }
 
 export function DashboardHeader() {
@@ -108,7 +105,7 @@ export function DashboardHeader() {
   const handleLogout = async () => {
     await apiFetch('/auth/logout', { method: 'POST' })
     setCurrentUser(null)
-    setCurrentRole('fisherman')
+    setCurrentRole('user')
     router.push('/login')
     router.refresh()
   }

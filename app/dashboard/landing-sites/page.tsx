@@ -70,8 +70,7 @@ export default function LandingSitesPage() {
 
   const canCreate =
     currentUser?.role === 'super_admin' ||
-    currentUser?.role === 'investor' ||
-    currentUser?.role === 'bmu_official'
+    currentUser?.role === 'investor'
 
   const load = async () => {
     setLoading(true)

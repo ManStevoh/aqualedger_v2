@@ -5,12 +5,12 @@ describe('platform access', () => {
   it('grants full access to super_admin and investor', () => {
     expect(hasFullSystemAccess('super_admin')).toBe(true)
     expect(hasFullSystemAccess('investor')).toBe(true)
-    expect(hasFullSystemAccess('fisherman')).toBe(false)
+    expect(hasFullSystemAccess('user')).toBe(false)
   })
 
   it('allows user management for admin roles', () => {
     expect(canManageUsers('super_admin')).toBe(true)
-    expect(canManageUsers('bmu_official')).toBe(true)
-    expect(canManageUsers('fisherman')).toBe(false)
+    expect(canManageUsers('investor')).toBe(true)
+    expect(canManageUsers('user')).toBe(false)
   })
 })

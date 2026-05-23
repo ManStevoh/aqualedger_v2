@@ -33,7 +33,7 @@ import { toast } from 'sonner'
 const PAGE_SIZE = 25
 
 function defaultOrderRole(role: UserRole | undefined): 'buyer' | 'seller' {
-  if (role === 'fish_buyer' || role === 'investor') return 'buyer'
+  if (role === 'investor') return 'buyer'
   return 'seller'
 }
 

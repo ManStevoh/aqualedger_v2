@@ -19,7 +19,7 @@ export interface User {
   created_at: Date
 }
 
-export type UserRole = 'super_admin' | 'investor' | 'boat_owner' | 'fisherman' | 'fish_buyer' | 'bmu_official'
+export type UserRole = 'super_admin' | 'investor' | 'user'
 
 export interface JWTPayload {
   userId: string
@@ -104,7 +104,7 @@ export async function createUser(data: {
   await query(
     `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, data.email.toLowerCase(), passwordHash, data.firstName, data.lastName, data.phone || null, data.role || 'fisherman', status]
+    [id, data.email.toLowerCase(), passwordHash, data.firstName, data.lastName, data.phone || null, data.role || 'user', status]
   )
   
   // Create wallet for user

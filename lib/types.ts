@@ -1,5 +1,5 @@
 // Core User Types
-export type UserRole = 'super_admin' | 'investor' | 'boat_owner' | 'fisherman' | 'fish_buyer' | 'bmu_official'
+export type UserRole = 'super_admin' | 'investor' | 'user'
 
 export interface User {
   id: string

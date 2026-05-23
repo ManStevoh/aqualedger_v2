@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DataTable } from '@/components/dashboard/data-table'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { PortalInviteDialog } from '@/components/dashboard/portal-invite-dialog'
+import { StaffInviteDialog } from '@/components/dashboard/staff-invite-dialog'
 import { authFetchJson } from '@/lib/api'
 import { Shield, UserCheck, Users, Store, Settings, UserPlus } from 'lucide-react'
 
@@ -29,6 +30,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true)
   const [vendorInviteOpen, setVendorInviteOpen] = useState(false)
   const [clientInviteOpen, setClientInviteOpen] = useState(false)
+  const [staffInviteOpen, setStaffInviteOpen] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -66,6 +68,10 @@ export default function TeamPage() {
       description="Staff, vendors, and clients with portal access"
     >
       <div className="flex flex-wrap gap-2 mb-4">
+        <Button className="gap-2" onClick={() => setStaffInviteOpen(true)}>
+          <UserPlus className="h-4 w-4" />
+          Invite staff
+        </Button>
         <Button className="gap-2" variant="outline" onClick={() => setVendorInviteOpen(true)}>
           <Store className="h-4 w-4" />
           Invite vendor
@@ -166,6 +172,11 @@ export default function TeamPage() {
         ]}
       />
 
+      <StaffInviteDialog
+        open={staffInviteOpen}
+        onOpenChange={setStaffInviteOpen}
+        onSuccess={load}
+      />
       <PortalInviteDialog
         kind="vendor"
         open={vendorInviteOpen}

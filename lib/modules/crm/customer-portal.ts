@@ -36,7 +36,7 @@ export async function inviteClientPortalUser(
       firstName: input.firstName,
       lastName: input.lastName,
       phone: input.phone,
-      role: 'fish_buyer',
+      role: 'user',
       initialStatus: 'active',
     })
     userId = user.id

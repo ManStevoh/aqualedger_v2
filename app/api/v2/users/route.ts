@@ -11,6 +11,7 @@ import {
 import { withApiPermission, withApiPermissionAny } from '@/lib/platform/api-auth'
 import { hasFullSystemAccess } from '@/lib/platform-access'
 import { legacyRoleToMemberRole } from '@/lib/platform/permissions'
+import type { TenantMemberRole } from '@/lib/tenant'
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +61,7 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      const adminAuth = await withApiPermission('platform.tenants.manage')
+      const adminAuth = await withApiPermissionAny(['platform.tenants.manage', 'tenant.members.manage'])
       const resolvedTargetId = targetId || adminAuth.userId
 
       const member = await queryOne<{ user_id: string }>(
@@ -178,16 +179,21 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+function memberRoleToLegacyRole(memberRole: TenantMemberRole): UserRole {
+  if (memberRole === 'tenant_owner') return 'super_admin'
+  return 'user'
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const auth = await withApiPermission('platform.tenants.manage')
+    const auth = await withApiPermissionAny(['platform.tenants.manage', 'tenant.members.manage'])
     const body = await request.json()
     const email = (body.email as string)?.trim().toLowerCase()
     const password = body.password as string
     const firstName = (body.firstName as string)?.trim()
     const lastName = (body.lastName as string)?.trim()
     const phone = (body.phone as string)?.trim() || null
-    const role = (body.role as UserRole) || 'fisherman'
+    const role = (body.role as string) || 'fisherman'
 
     if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
@@ -198,12 +204,24 @@ export async function POST(request: NextRequest) {
 
     const hash = await hashPassword(password)
     const id = generateId()
-    const memberRole = legacyRoleToMemberRole(role)
+
+    // Determine TenantMemberRole (accepts either standard TenantMemberRole or legacy UserRole)
+    const validMemberRoles = new Set([
+      'tenant_owner', 'branch_manager', 'accountant', 'procurement_officer',
+      'warehouse_staff', 'fisherman', 'vendor', 'delivery_staff', 'customer',
+      'hr_officer', 'bmu_official'
+    ])
+    const memberRole = validMemberRoles.has(role)
+      ? (role as TenantMemberRole)
+      : legacyRoleToMemberRole(role)
+
+    // Map the TenantMemberRole to a secure global database UserRole to satisfy enum constraints
+    const legacyRole = memberRoleToLegacyRole(memberRole)
 
     await execute(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`,
-      [id, email, hash, firstName, lastName, phone, role],
+      [id, email, hash, firstName, lastName, phone, legacyRole],
     )
 
     await execute(

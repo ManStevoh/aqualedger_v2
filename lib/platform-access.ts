@@ -11,5 +11,5 @@ export function hasFullSystemAccess(role: UserRole): boolean {
 }
 
 export function canManageUsers(role: UserRole): boolean {
-  return role === 'super_admin' || role === 'investor' || role === 'bmu_official'
+  return role === 'super_admin' || role === 'investor'
 }

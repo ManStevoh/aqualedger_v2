@@ -30,10 +30,7 @@ import type { UserRole } from '@/lib/types'
 const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
   investor: 'Platform Operator',
-  boat_owner: 'Boat Owner',
-  fisherman: 'Fisherman',
-  fish_buyer: 'Fish Buyer',
-  bmu_official: 'BMU Official',
+  user: 'User',
 }
 
 const QUICK_ACTIONS = [

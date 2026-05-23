@@ -37,7 +37,7 @@ export async function inviteMarketplaceVendor(
       firstName: input.firstName,
       lastName: input.lastName,
       phone: input.phone,
-      role: 'fisherman',
+      role: 'user',
       initialStatus: 'active',
     })
     userId = user.id

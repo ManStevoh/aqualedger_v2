@@ -36,23 +36,6 @@ const DEMO_TENANTS: Array<{
 }> = [
   { slug: 'coastfish', name: 'Coast Fish Cooperative', businessType: 'cooperative', county: 'Kwale', lat: -4.65, lng: 39.38 },
   { slug: 'lamusea', name: 'Lamu Sea Ventures', businessType: 'fisherman', county: 'Lamu', lat: -2.27, lng: 40.9 },
-  { slug: 'kilifiprocess', name: 'Kilifi Processors Ltd', businessType: 'processor', county: 'Kilifi', lat: -3.22, lng: 40.12 },
-  { slug: 'mombasamarine', name: 'Mombasa Marine Market', businessType: 'market', county: 'Mombasa', lat: -4.04, lng: 39.67 },
-  { slug: 'indianexport', name: 'Indian Ocean Exporters', businessType: 'exporter', county: 'Mombasa', lat: -4.05, lng: 39.66 },
-  { slug: 'seabreezegrill', name: 'Sea Breeze Grill Group', businessType: 'restaurant', county: 'Nairobi', lat: -1.29, lng: 36.82 },
-  { slug: 'swahililogistics', name: 'Swahili Coast Logistics', businessType: 'logistics', county: 'Mombasa', lat: -4.03, lng: 39.65 },
-  { slug: 'victoriatilapia', name: 'Victoria Tilapia Union', businessType: 'cooperative', county: 'Kisumu', lat: -0.1, lng: 34.75 },
-  { slug: 'dungaoperators', name: 'Dunga Beach Operators', businessType: 'fisherman', county: 'Kisumu', lat: -0.12, lng: 34.74 },
-  { slug: 'homabayfresh', name: 'Homa Bay Fresh Catch', businessType: 'market', county: 'Homa Bay', lat: -0.53, lng: 34.45 },
-  { slug: 'naivashacold', name: 'Naivasha Cold Chain Ltd', businessType: 'processor', county: 'Nakuru', lat: -0.72, lng: 36.43 },
-  { slug: 'watamuenterprises', name: 'Watamu Fisheries Enterprise', businessType: 'fisherman', county: 'Kilifi', lat: -3.36, lng: 40.01 },
-  { slug: 'shimonicatch', name: 'Shimoni Catch Cooperative', businessType: 'cooperative', county: 'Kwale', lat: -4.65, lng: 39.38 },
-  { slug: 'malindihub', name: 'Malindi Fish Hub', businessType: 'market', county: 'Kilifi', lat: -3.22, lng: 40.12 },
-  { slug: 'dianirestaurant', name: 'Diani Reef Restaurant Supply', businessType: 'restaurant', county: 'Kwale', lat: -4.32, lng: 39.58 },
-  { slug: 'kizingitinifleet', name: 'Kizingitini Fleet Owners', businessType: 'cooperative', county: 'Lamu', lat: -2.07, lng: 41.02 },
-  { slug: 'pwanalogistics', name: 'Pwani Logistics & Ice', businessType: 'logistics', county: 'Kilifi', lat: -3.5, lng: 39.9 },
-  { slug: 'nairobiwholesale', name: 'Nairobi Wholesale Fish Co', businessType: 'market', county: 'Nairobi', lat: -1.28, lng: 36.82 },
-  { slug: 'turkanaoperations', name: 'Lake Turkana Operations', businessType: 'fisherman', county: 'Turkana', lat: 3.12, lng: 35.97 },
   { slug: 'aquaerp-demo', name: 'AquaERP Showcase Tenant', businessType: 'cooperative', county: 'Mombasa', lat: -4.04, lng: 39.67 },
 ]
 
@@ -105,7 +88,7 @@ async function ensureUser(
 }
 
 async function ensureBuyer(passwordHash: string): Promise<string> {
-  const id = await ensureUser(BUYER_EMAIL, 'Demo', 'Buyer', 'fish_buyer', passwordHash)
+  const id = await ensureUser(BUYER_EMAIL, 'Demo', 'Buyer', 'user', passwordHash)
   const wallet = await queryOne<{ id: string }>(`SELECT id FROM wallets WHERE user_id = ? LIMIT 1`, [id])
   if (!wallet) {
     await execute(
@@ -204,7 +187,7 @@ async function provisionTenant(
     email,
     'Demo',
     'Owner',
-    businessTypeToUserRole(def.businessType),
+    'user',
     passwordHash,
   )
 

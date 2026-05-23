@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   last_name VARCHAR(100) NOT NULL,
   phone VARCHAR(20),
   county VARCHAR(100),
-  role ENUM('super_admin', 'investor', 'boat_owner', 'fisherman', 'fish_buyer', 'bmu_official') DEFAULT 'fisherman',
+  role ENUM('super_admin', 'investor', 'user') DEFAULT 'user',
   status ENUM('active', 'suspended', 'pending', 'inactive') DEFAULT 'active',
   avatar_url VARCHAR(500),
   kyc_verified BOOLEAN DEFAULT FALSE,
