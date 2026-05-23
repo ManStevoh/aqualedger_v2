@@ -38,6 +38,9 @@ function rewriteSqlForDb(sql, dbName) {
   // Strip standard MySQL incompatible 'IF NOT EXISTS' from ALTER ADD statements
   out = out.replace(/(\bADD(?:\s+COLUMN|\s+INDEX|\s+KEY|\s+UNIQUE\s+KEY)?)\s+IF\s+NOT\s+EXISTS/gi, '$1')
 
+  // Strip standard MySQL incompatible 'IF NOT EXISTS' from CREATE INDEX statements
+  out = out.replace(/(CREATE(?:\s+UNIQUE)?\s+INDEX)\s+IF\s+NOT\s+EXISTS/gi, '$1')
+
   return out
 }
 
