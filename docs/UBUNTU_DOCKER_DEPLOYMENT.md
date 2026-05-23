@@ -261,36 +261,73 @@ Add the following line to run the export process every 30 minutes inside the run
 ```
 
 ### B. Deployment Upgrades (Deploying Updates)
-When you make changes to the repository and want to redeploy them successfully on the Ubuntu server, execute the following workflow on the server to pull, rebuild, run database tasks, and aggressively reclaim disk space:
+
+When you make changes to the repository and want to redeploy them successfully on the Ubuntu server, execute the following workflow on the server. This guide covers **pulling changes, rebuilding, refreshing containers, conditionally migrating/seeding, and purging unused resources to reclaim disk space**.
+
+#### 📋 Quick Upgrade Cheat-Sheet
+Run this script on the server to execute the entire redeployment cycle:
 
 ```bash
-# 1. Navigate to the project folder
+# Step 1: Navigate to the application root directory
 cd /var/www/aqualedger
 
-# 2. Pull the latest code changes from GitHub
+# Step 2: Fetch and pull the latest code updates from GitHub
 git pull origin main
 
-# 3. Rebuild the application Docker image with the new code
+# Step 3: Rebuild the standalone application Docker image
 sudo docker compose -f docker-compose.prod.yml build app
 
-# 4. Recreate and restart the running container to apply the new image (recreate)
+# Step 4: Recreate and restart the container (Forces the container to use the new image)
 sudo docker compose -f docker-compose.prod.yml up -d app
 
-# 5. Run any pending database migrations (safe & incremental - won't wipe data)
+# Step 5: (IF NEEDED) Run database migrations (Safe, incremental schema updates)
+# -> Run only if you added new .sql files to database/migrations/
 sudo docker compose -f docker-compose.prod.yml exec app npm run db:migrate
 
-# 6. (Optional) Run Database Seeds
-# To incrementally ensure platform settings, modules, or staff without clearing your demo data:
+# Step 6: (IF NEEDED) Run database seeds
+# -> Run ONLY if you added new seeder definitions or want to ensure configs/staff are up to date:
 sudo docker compose -f docker-compose.prod.yml exec app npm run db:seed:super-admin
-# OR, if you want to completely WIPE all demo data and start with a fresh seed:
+# -> Or, if you explicitly want to WIPE all your demo database tables and seed fresh:
 # sudo docker compose -f docker-compose.prod.yml exec app npm run db:seed:super-admin:fresh
 
-# 7. Aggressively prune unused Docker resources to save disk space
-# Free up dangling/untagged layers:
+# Step 7: (RECOMMENDED) Purge unused Docker resources to save disk space
+# Free up dangling/untagged image layers:
 sudo docker image prune -f
-# Free up the Docker builder cache (highly recommended for Next.js builds):
+# Purge the Next.js compilation build cache (essential for space management):
 sudo docker builder prune -f
 ```
+
+---
+
+#### 🔍 Detailed Explanations & "When to Run" Guidelines
+
+##### 1. Pulling Changes (`git pull origin main`)
+* **What it does:** Fetches the latest commits from your GitHub repository and merges them into your local server copy.
+* **When is it needed:** Every time you push a bug fix, feature, or document update from your local development machine to GitHub and want it live on the server.
+
+##### 2. Rebuilding the Image (`docker compose ... build app`)
+* **What it does:** Starts the multi-stage Docker build pipeline from the `Dockerfile`. It installs clean production dependencies, compiles the Next.js codebase (`npm run build`), creates the optimized standalone build layer, and saves it as a new Docker image labeled `aqualedger-app:latest`.
+* **When is it needed:** Every time you pull down any changes to frontend files (`.ts`, `.tsx`, `.css`), backend files (`.ts`), or seeder scripts. If the code changes, a rebuild is **strictly mandatory**.
+
+##### 3. Refreshing the Container (`docker compose ... up -d app`)
+* **What it does:** Compares the active running `aqualedger-app` container against the newly compiled `aqualedger-app:latest` image. Seeing a difference, Docker Compose gracefully tears down the old container and boots up a **fresh container** using the new image in under a second (near zero-downtime).
+* **When is it needed:** **Mandatory** immediately after running `build app`. If you skip this step, your running container will continue running your old code in the background (even if the build succeeded!).
+
+##### 4. Migrating the Database (`docker compose ... exec app npm run db:migrate`)
+* **What it does:** Executes your database migration runner inside the running container. It reads the files in `database/migrations/` and applies any new table alterations, column changes, or indexes. This command is safe and incremental: it only executes *new* migration scripts and will **never** overwrite or delete your existing tenant data.
+* **When is it needed:** **Only if your updates modified the database schema** (i.e. you added a new `.sql` file inside the `database/migrations/` directory). If you only changed frontend components, styling, or routing logic, you can safely skip this command.
+
+##### 5. Seeding the Database (`docker compose ... exec app npm run db:seed:super-admin`)
+* **What it does:** Runs the platform-level and tenant-level seeder scripts inside your running container. 
+* **When is it needed:** 
+  * **Standard Seed (`npm run db:seed:super-admin`):** Run this if you added a new platform configuration, staff account, or default settings to your seeds and want to apply them without affecting existing tenants.
+  * **Fresh Seed (`npm run db:seed:super-admin:fresh`):** **CAUTION:** Run this ONLY if you want to completely wipe all demo data, drop your active tables, and reload a 100% clean, fresh set of 20 demo tenants. Do not run this if you have real data you want to preserve.
+
+##### 6. Purging for Space (`docker image prune` & `docker builder prune`)
+* **What it does:** 
+  * `docker image prune -f` deletes all "dangling" or untagged Docker images. These are old compiled layers left behind every time you rebuild the application.
+  * `docker builder prune -f` purges the BuildKit builder cache. During multi-stage Next.js builds, Docker caches npm package structures to speed up subsequent builds. This cache grows incredibly fast and can easily consume **10GB - 20GB+** of disk space on a small home-lab server.
+* **When is it needed:** Highly recommended to run **after every rebuild**. Running this regularly keeps your server's disk usage perfectly lean and prevents the disk from filling up.
 
 ---
 
