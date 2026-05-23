@@ -169,7 +169,7 @@ async function ensurePlatformStaff(passwordHash: string): Promise<void> {
   if (!reviewer) return
 
   const demoTenants = await query<{ id: string; slug: string }>(
-    `SELECT id, slug FROM tenants WHERE slug IN (${DEMO_SLUGS.map(() => '?').join(',')}) LIMIT 2`,
+    `SELECT id, slug FROM tenants WHERE slug IN (?, ?) LIMIT 2`,
     ['coastfish', 'mombasamarine'],
   )
   for (const t of demoTenants) {
