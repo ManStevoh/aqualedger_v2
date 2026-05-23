@@ -108,10 +108,9 @@ export const ERP_MODULES: ErpModule[] = [
     color: 'from-violet-500 to-purple-600',
     apiPrefix: '/api/v2/tenant',
     nav: [
-      { title: 'Organization', href: '/dashboard/organization', permission: 'tenant.settings.read', icon: Building2 },
+      { title: 'Company Profile', href: '/dashboard/organization', permission: 'tenant.settings.read', icon: Building2 },
       { title: 'Billing', href: '/dashboard/organization/billing', permission: 'tenant.settings.read', icon: CreditCard },
       { title: 'Custom domains', href: '/dashboard/organization/domains', permission: 'tenant.settings.write', icon: Globe },
-      { title: 'Tenant KPIs', href: '/dashboard/organization?tab=analytics', permission: 'tenant.settings.read', icon: BarChart3 },
       { title: 'Team', href: '/dashboard/team', permission: 'tenant.members.manage', icon: Users },
       { title: 'Portal roles', href: '/dashboard/settings/roles', permission: 'tenant.members.manage', icon: Shield },
       { title: 'Users', href: '/dashboard/users', permission: 'platform.tenants.manage', icon: Users },
