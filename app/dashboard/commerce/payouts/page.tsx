@@ -1,6 +1,7 @@
+'use client'
+
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
-'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
