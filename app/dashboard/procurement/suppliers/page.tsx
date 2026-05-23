@@ -182,6 +182,12 @@ export default function SuppliersPage() {
     <DashboardPageLayout
       title="Suppliers"
       description="Manage procurement suppliers and vendors"
+      actions={
+        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+          <Plus className="h-4 w-4" />
+          Add Supplier
+        </Button>
+      }
     >
       <div className="flex flex-wrap gap-3">
         <Input

@@ -147,6 +147,12 @@ export default function HaccpPage() {
     <DashboardPageLayout
       title="HACCP checklists"
       description="Codex Alimentarius daily food-safety inspections"
+      actions={
+        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+          <Plus className="h-4 w-4" />
+          New Inspection
+        </Button>
+      }
     >
       <div className="flex gap-4 items-end">
         <div className="space-y-2 max-w-xs">

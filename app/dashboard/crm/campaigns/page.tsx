@@ -135,6 +135,12 @@ export default function CampaignsPage() {
     <DashboardPageLayout
       title="CRM Campaigns"
       description="Email, SMS, WhatsApp, and in-app outreach"
+      actions={
+        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+          <Plus className="h-4 w-4" />
+          New Campaign
+        </Button>
+      }
     >
       <div className="flex flex-wrap gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>

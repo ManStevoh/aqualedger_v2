@@ -7,10 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { authFetchJson } from '@/lib/api'
 
 export default function SalesForecastPage() {
-  const meta = useDashboardPageMeta({ title: 'Sales forecasting', description: 'Pipeline-weighted forecast · Win rate {(winRate * 100).toFixed(0)}%' })
-
   const [months, setMonths] = useState<{ month: string; forecastRevenue: number; closedRevenue: number }[]>([])
   const [winRate, setWinRate] = useState(0)
+
+  const meta = useDashboardPageMeta({
+    title: 'Sales forecasting',
+    description: `Pipeline-weighted forecast · Win rate ${(winRate * 100).toFixed(0)}%`,
+  })
 
   useEffect(() => {
     authFetchJson<{ success: boolean; data?: { forecast: { months: typeof months; winRate: number } } }>(
