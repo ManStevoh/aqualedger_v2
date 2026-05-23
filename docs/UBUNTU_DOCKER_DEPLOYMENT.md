@@ -261,20 +261,35 @@ Add the following line to run the export process every 30 minutes inside the run
 ```
 
 ### B. Deployment Upgrades (Deploying Updates)
-When you commit changes to Git and want to redeploy them to the Ubuntu server, run this simple script on the server:
+When you make changes to the repository and want to redeploy them successfully on the Ubuntu server, execute the following workflow on the server to pull, rebuild, run database tasks, and aggressively reclaim disk space:
 
 ```bash
+# 1. Navigate to the project folder
 cd /var/www/aqualedger
-git pull
 
-# Rebuild and start container in background (zero downtime!)
-sudo docker compose -f docker-compose.prod.yml up -d --build
+# 2. Pull the latest code changes from GitHub
+git pull origin main
 
-# Run migrations (safe, won't delete data)
+# 3. Rebuild the application Docker image with the new code
+sudo docker compose -f docker-compose.prod.yml build app
+
+# 4. Recreate and restart the running container to apply the new image (recreate)
+sudo docker compose -f docker-compose.prod.yml up -d app
+
+# 5. Run any pending database migrations (safe & incremental - won't wipe data)
 sudo docker compose -f docker-compose.prod.yml exec app npm run db:migrate
 
-# Prune old Docker build cache and dangling images to save disk space
+# 6. (Optional) Run Database Seeds
+# To incrementally ensure platform settings, modules, or staff without clearing your demo data:
+sudo docker compose -f docker-compose.prod.yml exec app npm run db:seed:super-admin
+# OR, if you want to completely WIPE all demo data and start with a fresh seed:
+# sudo docker compose -f docker-compose.prod.yml exec app npm run db:seed:super-admin:fresh
+
+# 7. Aggressively prune unused Docker resources to save disk space
+# Free up dangling/untagged layers:
 sudo docker image prune -f
+# Free up the Docker builder cache (highly recommended for Next.js builds):
+sudo docker builder prune -f
 ```
 
 ---
