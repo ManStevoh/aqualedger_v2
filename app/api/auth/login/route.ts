@@ -11,7 +11,7 @@ import { logAudit } from '@/lib/audit'
 import { handleApiError } from '@/lib/api-handler'
 import { logger } from '@/lib/logger'
 import { recordLoginAlert } from '@/lib/modules/auth/sessions'
-import { resolveUserTenantId } from '@/lib/modules/tenant/service'
+import { resolveUserTenantId, getTenant } from '@/lib/modules/tenant/service'
 import { getMfaStatus } from '@/lib/modules/auth/mfa'
 import { signMfaChallengeToken } from '@/lib/modules/auth/mfa-challenge'
 import { getMaintenanceStatus } from '@/lib/platform/platform-settings'
@@ -113,8 +113,13 @@ export async function POST(request: NextRequest) {
       metadata: { rememberMe },
     })
 
+    let tenantSlug: string | null = null
     try {
       const tenantId = await resolveUserTenantId(user.id)
+      if (tenantId) {
+        const tenant = await getTenant(tenantId)
+        tenantSlug = tenant?.slug || null
+      }
       await recordLoginAlert({
         userId: user.id,
         tenantId,
@@ -122,7 +127,7 @@ export async function POST(request: NextRequest) {
         userAgent: userAgent || undefined,
       })
     } catch (alertErr) {
-      logger.warn('Login alert not recorded', { userId: user.id, error: alertErr })
+      logger.warn('Login alert not recorded or tenant not resolved', { userId: user.id, error: alertErr })
     }
 
     logger.info('User logged in', { userId: user.id, route: 'auth/login' })
@@ -140,6 +145,7 @@ export async function POST(request: NextRequest) {
           status: user.status,
           avatarUrl: user.avatar_url,
           kycVerified: user.kyc_verified,
+          tenantSlug,
         },
       },
     })

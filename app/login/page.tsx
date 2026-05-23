@@ -49,6 +49,34 @@ function LoginForm() {
   const [mfaEmail, setMfaEmail] = useState('')
   const recaptcha = useRecaptcha('login')
 
+  const performSubdomainRedirect = (tenantSlug: string | null, userRole: string) => {
+    if (!tenantSlug || userRole === 'super_admin' || userRole === 'investor') {
+      router.push(from.startsWith('/') ? from : '/dashboard')
+      router.refresh()
+      return
+    }
+
+    const { hostname, protocol, port } = window.location
+
+    // 1. Localhost environment (Fully supports wildcard subdomains out-of-the-box!)
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      const portSuffix = port ? `:${port}` : ''
+      window.location.href = `${protocol}//${tenantSlug}.localhost${portSuffix}/dashboard`
+      return
+    }
+
+    // 2. Public Home Lab testing (Bypasses nested subdomain redirects to avoid Cloudflare SSL depth limit)
+    if (hostname === 'aqua.kenwafula.cv') {
+      router.push(from.startsWith('/') ? from : '/dashboard')
+      router.refresh()
+      return
+    }
+
+    // 3. cPanel Production Domain (Fully supports standard free SSL wildcards)
+    const baseHost = hostname.replace(/^www\./i, '')
+    window.location.href = `${protocol}//${tenantSlug}.${baseHost}/dashboard`
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -90,8 +118,7 @@ function LoginForm() {
         setMfaEmail(json.data.user?.email || email)
         return
       }
-      router.push(from.startsWith('/') ? from : '/dashboard')
-      router.refresh()
+      performSubdomainRedirect(json.data?.user?.tenantSlug || null, json.data?.user?.role || 'user')
     } catch {
       setError('Network error. Check your connection and try again.')
     } finally {
@@ -115,8 +142,7 @@ function LoginForm() {
         setError(json.error || 'Verification failed')
         return
       }
-      router.push(from.startsWith('/') ? from : '/dashboard')
-      router.refresh()
+      performSubdomainRedirect(json.data?.user?.tenantSlug || null, json.data?.user?.role || 'user')
     } catch {
       setError('Network error. Check your connection and try again.')
     } finally {
