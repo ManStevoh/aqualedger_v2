@@ -12,12 +12,16 @@ import { toast } from 'sonner'
 import { Clock } from 'lucide-react'
 
 export default function ClockInPage() {
-  const meta = useDashboardPageMeta({ title: 'Clock In / Out', description: '{today} · {now}' })
+  const today = new Date().toISOString().split('T')[0]
+  const now = new Date().toTimeString().slice(0, 5)
+
+  const meta = useDashboardPageMeta({
+    title: 'Clock In / Out',
+    description: `${today} · ${now}`,
+  })
 
   const [employees, setEmployees] = useState<{ id: string; full_name: string }[]>([])
   const [employeeId, setEmployeeId] = useState('')
-  const today = new Date().toISOString().split('T')[0]
-  const now = new Date().toTimeString().slice(0, 5)
 
   useEffect(() => {
     authFetchJson<{ success: boolean; data?: { employees: typeof employees } }>('/api/v2/hr/employees?limit=100').then(
