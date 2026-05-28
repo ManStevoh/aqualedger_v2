@@ -32,6 +32,7 @@ export async function loadPublicStorefront(slug: string) {
       price: Number(p.base_price),
       unit: p.unit,
       category: p.category || undefined,
+      imageUrl: p.image_url || undefined,
       grade,
       traceable,
     }

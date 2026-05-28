@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { authFetchJson } from '@/lib/api'
-import { Check, ExternalLink, Palette, Save, Globe } from 'lucide-react'
+import { Check, ExternalLink, Palette, Save, Globe, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ThemeOption {
@@ -36,6 +36,7 @@ interface StorefrontSettings {
   hero_headline: string | null
   hero_subheadline: string | null
   hero_cta_label: string | null
+  hero_image_url: string | null
   cookie_banner_text: string | null
   privacy_policy_url: string | null
   terms_url: string | null
@@ -59,6 +60,7 @@ export default function StorefrontCustomizerPage() {
   const [tagline, setTagline] = useState('')
   const [heroHeadline, setHeroHeadline] = useState('')
   const [heroSubheadline, setHeroSubheadline] = useState('')
+  const [heroImageUrl, setHeroImageUrl] = useState('')
   const [cookieText, setCookieText] = useState('')
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
@@ -88,6 +90,7 @@ export default function StorefrontCustomizerPage() {
         setTagline(s.tagline || '')
         setHeroHeadline(s.hero_headline || '')
         setHeroSubheadline(s.hero_subheadline || '')
+        setHeroImageUrl(s.hero_image_url || '')
         setCookieText(s.cookie_banner_text || '')
         setSeoTitle(s.seo_title || '')
         setSeoDescription(s.seo_description || '')
@@ -120,6 +123,7 @@ export default function StorefrontCustomizerPage() {
           tagline: tagline || null,
           heroHeadline: heroHeadline || null,
           heroSubheadline: heroSubheadline || null,
+          heroImageUrl: heroImageUrl || null,
           cookieBannerText: cookieText || null,
           seoTitle: seoTitle || null,
           seoDescription: seoDescription || null,
@@ -258,6 +262,68 @@ export default function StorefrontCustomizerPage() {
             <div>
               <Label htmlFor="heroSub">Hero subheadline</Label>
               <Textarea id="heroSub" value={heroSubheadline} onChange={(e) => setHeroSubheadline(e.target.value)} rows={2} />
+            </div>
+            <div>
+              <Label htmlFor="heroImage">Hero banner image</Label>
+              <div className="mt-2 space-y-4">
+                {heroImageUrl ? (
+                  <div className="relative group rounded-lg overflow-hidden border border-border bg-muted flex items-center justify-center aspect-[21/9] w-full max-w-md shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={heroImageUrl}
+                      alt="Hero banner preview"
+                      className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setHeroImageUrl('')}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Remove image
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-lg p-6 flex flex-col items-center justify-center bg-muted/20 hover:bg-muted/40 transition-colors w-full max-w-md cursor-pointer relative group min-h-[140px]">
+                    <Input
+                      id="heroImage"
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const tToast = toast.loading('Uploading banner image...')
+                        try {
+                          const formData = new FormData()
+                          formData.append('file', file)
+                          const res = await fetch('/api/v2/commerce/products/upload', {
+                            method: 'POST',
+                            body: formData,
+                          })
+                          const data = await res.json()
+                          if (data.success && data.imageUrl) {
+                            setHeroImageUrl(data.imageUrl)
+                            toast.success('Banner image uploaded successfully', { id: tToast })
+                          } else {
+                            toast.error('Failed to upload image', { id: tToast })
+                          }
+                        } catch {
+                          toast.error('Error uploading image', { id: tToast })
+                        }
+                      }}
+                    />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm mb-3">
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-semibold text-foreground">Upload hero banner photo</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Recommended ratio: wide 21:9 or 16:9 (PNG, JPG)</p>
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

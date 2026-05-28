@@ -26,6 +26,7 @@ export default function StoreCheckoutPage() {
   const router = useRouter()
   const slug = String(params.slug)
   const [submitting, setSubmitting] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -37,6 +38,26 @@ export default function StoreCheckoutPage() {
   const recaptcha = useRecaptcha('guest_checkout')
 
   useEffect(() => {
+    fetch(`/api/public/store/${slug}/auth/me`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data?.authenticated) {
+          const user = data.data.user
+          setName(`${user.firstName} ${user.lastName}`)
+          setEmail(user.email)
+          if (user.phone) setPhone(user.phone)
+          setCheckingAuth(false)
+        } else {
+          router.push(`/store/${slug}/login?redirect=/store/${slug}/checkout`)
+        }
+      })
+      .catch(() => {
+        router.push(`/store/${slug}/login?redirect=/store/${slug}/checkout`)
+      })
+  }, [slug, router])
+
+  useEffect(() => {
+    if (checkingAuth) return
     publicApiFetch(`/store/${slug}/delivery-slots`)
       .then((r) => r.json())
       .then((data) => {
@@ -49,7 +70,7 @@ export default function StoreCheckoutPage() {
         }
       })
       .catch(() => {})
-  }, [slug])
+  }, [slug, checkingAuth])
 
   const pollPayment = useCallback(async (intentId: string, attempts = 0): Promise<boolean> => {
     if (attempts > 30) return false
@@ -145,6 +166,17 @@ export default function StoreCheckoutPage() {
     }
   }
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-600 mx-auto"></div>
+          <p className="mt-4 text-sm text-slate-500 font-medium animate-pulse">Securing your checkout session...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b bg-white px-4 py-4">
@@ -152,16 +184,16 @@ export default function StoreCheckoutPage() {
           <ArrowLeft className="h-4 w-4" /> Back to cart
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Checkout</h1>
-        <p className="text-sm text-slate-500">Guest checkout · M-Pesa, Paystack, Stripe, or pay on delivery</p>
+        <p className="text-sm text-slate-500">Secure customer checkout · M-Pesa, Paystack, Stripe, or pay on delivery</p>
       </header>
       <form onSubmit={submit} className="mx-auto max-w-lg px-4 py-8 space-y-4">
         <div>
-          <label className="text-sm font-medium" htmlFor="name">Full name</label>
-          <input id="name" required className="mt-1 w-full rounded border px-3 py-2 min-h-[44px]" value={name} onChange={(e) => setName(e.target.value)} />
+          <label className="text-sm font-medium text-slate-500" htmlFor="name">Full name (Account)</label>
+          <input id="name" disabled className="mt-1 w-full rounded border px-3 py-2 min-h-[44px] bg-slate-100/80 text-slate-500 cursor-not-allowed font-medium" value={name} />
         </div>
         <div>
-          <label className="text-sm font-medium" htmlFor="email">Email</label>
-          <input id="email" type="email" required className="mt-1 w-full rounded border px-3 py-2 min-h-[44px]" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="text-sm font-medium text-slate-500" htmlFor="email">Email (Account)</label>
+          <input id="email" type="email" disabled className="mt-1 w-full rounded border px-3 py-2 min-h-[44px] bg-slate-100/80 text-slate-500 cursor-not-allowed font-medium" value={email} />
         </div>
         <div>
           <label className="text-sm font-medium" htmlFor="phone">Phone</label>

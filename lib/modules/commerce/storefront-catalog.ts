@@ -31,14 +31,30 @@ export async function searchPublicProducts(
 
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))] as string[]
 
-  const mapped = filtered.map((p) => ({
-    id: p.id,
-    name: p.name,
-    sku: p.sku,
-    price: Number(p.base_price),
-    unit: p.unit,
-    category: p.category,
-  }))
+  const mapped = filtered.map((p) => {
+    let grade: string | undefined
+    let traceable = false
+    if (p.metadata) {
+      try {
+        const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata
+        grade = meta.grade
+        traceable = Boolean(meta.traceable || meta.lotCode)
+      } catch {
+        /* ignore */
+      }
+    }
+    return {
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      price: Number(p.base_price),
+      unit: p.unit,
+      category: p.category,
+      imageUrl: p.image_url || undefined,
+      grade,
+      traceable,
+    }
+  })
 
   return { products: mapped, categories }
 }
@@ -74,6 +90,7 @@ export async function getPublicProductById(tenantId: string, productId: string) 
     unit: row.unit,
     category: row.category || undefined,
     description,
+    imageUrl: row.image_url || undefined,
     grade,
     traceable,
     lotCode,

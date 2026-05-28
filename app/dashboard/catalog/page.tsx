@@ -67,6 +67,35 @@ export default function CatalogPage() {
   const [category, setCategory] = useState('')
   const [basePrice, setBasePrice] = useState('')
   const [unit, setUnit] = useState('kg')
+  const [imageUrl, setImageUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/api/v2/commerce/products/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const json = await res.json()
+      if (res.ok && json.success && json.data?.imageUrl) {
+        setImageUrl(json.data.imageUrl)
+        toast.success('Image uploaded successfully!')
+      } else {
+        toast.error(json.error || 'Failed to upload image')
+      }
+    } catch {
+      toast.error('Network error uploading file')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const fetchProducts = useCallback(async () => {
     const data = await authFetchJson<{
@@ -121,6 +150,7 @@ export default function CatalogPage() {
             category: category.trim() || null,
             basePrice: parseFloat(basePrice) || 0,
             unit,
+            imageUrl: imageUrl.trim() || null,
           }),
         },
       )
@@ -134,6 +164,7 @@ export default function CatalogPage() {
       setName('')
       setCategory('')
       setBasePrice('')
+      setImageUrl('')
       await fetchProducts()
     } catch {
       toast.error('Network error')
@@ -270,6 +301,35 @@ export default function CatalogPage() {
                 <Label>Base price (KES)</Label>
                 <Input type="number" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Product Image</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  className="cursor-pointer"
+                />
+                {uploading && <span className="text-xs text-muted-foreground animate-pulse">Uploading...</span>}
+              </div>
+              {imageUrl && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg border p-2 bg-muted/40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imageUrl} alt="Preview" className="h-10 w-10 rounded object-cover" />
+                  <span className="text-xs text-muted-foreground truncate flex-1">{imageUrl}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                    onClick={() => setImageUrl('')}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

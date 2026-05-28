@@ -77,6 +77,7 @@ const migrations = [
   'database/migrations/20260615_tenant_role_permissions.sql',
   'database/migrations/20260616_tenant_module_flags.sql',
   'database/migrations/20260617_platform_payments_pass.sql',
+  'database/migrations/20260618_product_image_url.sql',
 ]
 
 async function runSqlFile(conn, rel, dbName) {

@@ -14,6 +14,7 @@ export const productCatalogCreateSchema = z.object({
   hsCode: z.string().max(20).optional().nullable(),
   status: productCatalogStatusSchema.default('active'),
   vendorId: z.string().uuid().optional().nullable(),
+  imageUrl: z.string().max(500).optional().nullable(),
 })
 
 export const productCatalogUpdateSchema = productCatalogCreateSchema.partial().extend({

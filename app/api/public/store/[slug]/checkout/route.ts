@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { apiHandler, jsonOk, notFound, conflict } from '@/lib/api-handler'
+import { apiHandler, jsonOk, notFound, conflict, unauthorized } from '@/lib/api-handler'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { assertRecaptcha } from '@/lib/modules/security/recaptcha'
+import { getAuthFromCookies, getUserById } from '@/lib/auth'
+import { queryOne } from '@/lib/db'
 import {
   resolveTenantIdBySlug,
   getGuestCartView,
@@ -12,13 +14,13 @@ import { checkoutGuestCart } from '@/lib/modules/commerce/guest-checkout'
 export const runtime = 'nodejs'
 
 const bodySchema = z.object({
-  guestName: z.string().min(1).max(200),
-  guestEmail: z.string().email(),
+  guestName: z.string().max(200).optional(),
+  guestEmail: z.string().email().optional(),
   guestPhone: z.string().max(20).optional(),
   deliveryAddress: z.string().max(2000).optional(),
   deliverySlotId: z.string().uuid().optional(),
   sessionToken: z.string().optional(),
-  paymentMethod: z.enum(['mpesa', 'cod', 'stripe']).default('cod'),
+  paymentMethod: z.enum(['mpesa', 'cod', 'stripe', 'paystack']).default('cod'),
   couponCode: z.string().max(50).optional().nullable(),
   recaptchaToken: z.string().min(1).optional(),
 })
@@ -45,6 +47,27 @@ export const POST = apiHandler(async (
     )
   }
 
+  // Enforce Storefront Customer Authentication
+  const auth = await getAuthFromCookies()
+  if (!auth) {
+    throw unauthorized('Customer login required before purchase.')
+  }
+
+  const member = await queryOne<{ role: string; status: string }>(
+    `SELECT role, status FROM tenant_members
+     WHERE tenant_id = ? AND user_id = ?`,
+    [tenantId, auth.userId],
+  )
+
+  if (!member || member.status !== 'active') {
+    throw unauthorized('Account is not registered for this storefront. Please sign up or log in first.')
+  }
+
+  const user = await getUserById(auth.userId)
+  if (!user || user.status !== 'active') {
+    throw unauthorized('Account is inactive or suspended.')
+  }
+
   const body = bodySchema.parse(await request.json())
   await assertRecaptcha('guest_checkout', body.recaptchaToken, ip, {
     tenantId,
@@ -54,14 +77,17 @@ export const POST = apiHandler(async (
   if (!session) throw notFound('Cart session missing')
 
   const cart = await getGuestCartView(tenantId, session)
-  if (body.paymentMethod === 'mpesa' && !body.guestPhone?.trim()) {
+  
+  const finalPhone = body.guestPhone?.trim() || user.phone?.trim() || ''
+  if (body.paymentMethod === 'mpesa' && !finalPhone) {
     throw conflict('Phone number required for M-Pesa payment')
   }
 
   const result = await checkoutGuestCart(tenantId, cart, {
-    guestName: body.guestName,
-    guestEmail: body.guestEmail,
-    guestPhone: body.guestPhone,
+    buyerId: user.id,
+    guestName: body.guestName?.trim() || `${user.first_name} ${user.last_name}`,
+    guestEmail: body.guestEmail?.trim() || user.email,
+    guestPhone: finalPhone || undefined,
     deliveryAddress: body.deliveryAddress,
     deliverySlotId: body.deliverySlotId,
     couponCode: body.couponCode,

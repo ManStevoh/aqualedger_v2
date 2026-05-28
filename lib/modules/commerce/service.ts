@@ -20,6 +20,7 @@ export interface ProductCatalogRow {
   category: string | null
   unit: string
   base_price: number
+  image_url: string | null
   tax_code: string | null
   hs_code: string | null
   status: string
@@ -109,8 +110,8 @@ export async function createProductCatalog(
   await execute(
     `INSERT INTO product_catalog (
       id, tenant_id, vendor_id, sku, name, species_id, category, unit,
-      base_price, tax_code, hs_code, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      base_price, image_url, tax_code, hs_code, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       tid,
@@ -121,6 +122,7 @@ export async function createProductCatalog(
       input.category ?? null,
       input.unit,
       input.basePrice,
+      input.imageUrl ?? null,
       input.taxCode ?? null,
       input.hsCode ?? null,
       input.status,
@@ -165,6 +167,7 @@ export async function updateProductCatalog(
       category = COALESCE(?, category),
       unit = COALESCE(?, unit),
       base_price = COALESCE(?, base_price),
+      image_url = COALESCE(?, image_url),
       tax_code = COALESCE(?, tax_code),
       hs_code = COALESCE(?, hs_code),
       status = COALESCE(?, status),
@@ -178,6 +181,7 @@ export async function updateProductCatalog(
       input.category !== undefined ? input.category : null,
       input.unit ?? null,
       input.basePrice ?? null,
+      input.imageUrl !== undefined ? input.imageUrl : null,
       input.taxCode !== undefined ? input.taxCode : null,
       input.hsCode !== undefined ? input.hsCode : null,
       input.status ?? null,

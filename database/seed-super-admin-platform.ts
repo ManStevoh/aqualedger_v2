@@ -432,8 +432,8 @@ async function main(): Promise<void> {
     `SELECT COUNT(*) AS cnt FROM tenants WHERE slug IN (${DEMO_SLUGS.map(() => '?').join(',')})`,
     [...DEMO_SLUGS],
   )
-  if (Number(tenantCount?.cnt ?? 0) < 5) {
-    console.error('❌ Fewer than 5 demo tenants found. Run: npm run db:seed:demo  (or db:seed:super-admin)')
+  if (Number(tenantCount?.cnt ?? 0) < DEMO_SLUGS.length) {
+    console.error(`❌ Fewer than ${DEMO_SLUGS.length} demo tenants found. Run: npm run db:seed:demo  (or db:seed:super-admin)`)
     process.exit(1)
   }
 

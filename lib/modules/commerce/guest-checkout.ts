@@ -14,6 +14,7 @@ import {
 } from './vendor-resolve'
 
 export interface GuestCheckoutInput {
+  buyerId?: string
   guestName: string
   guestEmail: string
   guestPhone?: string
@@ -66,7 +67,7 @@ export async function checkoutGuestCart(
   tenantId: string,
   cart: GuestCartView,
   input: GuestCheckoutInput,
-): Promise<GuestCheckoutResult> {
+ ): Promise<GuestCheckoutResult> {
   if (cart.items.length === 0) throw conflict('Cart is empty')
 
   if (input.deliverySlotId) {
@@ -74,7 +75,7 @@ export async function checkoutGuestCart(
     await bookDeliverySlot(tenantId, input.deliverySlotId)
   }
 
-  const buyerId = await resolveGuestBuyerId(tenantId)
+  const buyerId = input.buyerId || await resolveGuestBuyerId(tenantId)
   const subtotal = cart.subtotal
   const { coupon, discount } = await validateCoupon(tenantId, input.couponCode, subtotal)
   const discountedSubtotal = Math.max(0, subtotal - discount)

@@ -59,8 +59,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
       </header>
       <main className="mx-auto max-w-4xl px-4 py-10">
         <div className="grid gap-8 md:grid-cols-2">
-          <div className="aspect-square rounded-[var(--sf-radius)] bg-[var(--sf-surface-alt)] flex items-center justify-center border border-[var(--sf-border)]">
-            <Fish className="h-24 w-24 text-[var(--sf-text-muted)] opacity-30" aria-hidden />
+          <div className="aspect-square rounded-[var(--sf-radius)] bg-[var(--sf-surface-alt)] overflow-hidden flex items-center justify-center border border-[var(--sf-border)] relative shadow-sm">
+            {product.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
+            ) : (
+              <div className="relative h-full w-full flex items-center justify-center bg-gradient-to-tr from-[var(--sf-surface-alt)] to-[var(--sf-surface)]">
+                <Fish className="h-24 w-24 text-[var(--sf-text-muted)] opacity-30" aria-hidden />
+              </div>
+            )}
           </div>
           <div>
             <div className="flex flex-wrap gap-2 mb-3">
