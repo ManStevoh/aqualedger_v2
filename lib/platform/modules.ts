@@ -55,6 +55,7 @@ import {
 
 export type ModuleId =
   | 'platform'
+  | 'platform_admin'
   | 'tenant'
   | 'commerce'
   | 'inventory'
@@ -76,6 +77,7 @@ export interface ModuleNavItem {
   permission: Permission
   icon: LucideIcon
   badge?: string
+  section?: string
 }
 
 export interface ErpModule {
@@ -117,7 +119,7 @@ export const ERP_MODULES: ErpModule[] = [
       { title: 'Settings', href: '/dashboard/settings', permission: 'tenant.settings.read', icon: Settings },
       { title: 'Workflows', href: '/dashboard/settings/workflows', permission: 'workflows.read', icon: Route },
       { title: 'Security', href: '/dashboard/settings/security', permission: 'auth.sessions.read', icon: Monitor },
-      { title: 'Audit trail', href: '/dashboard/admin/audit', permission: 'tenant.audit.read', icon: Shield },
+      { title: 'Audit trail', href: '/dashboard/audit', permission: 'tenant.audit.read', icon: Shield },
       { title: 'API Tokens', href: '/dashboard/settings/tokens', permission: 'auth.tokens.read', icon: Shield },
     ],
   },
@@ -294,17 +296,6 @@ export const ERP_MODULES: ErpModule[] = [
       { title: 'Reports hub', href: '/dashboard/analytics/reports', permission: 'analytics.export', icon: FileText },
       { title: 'Communications', href: '/dashboard/communications', permission: 'communications.read', icon: Mail },
       { title: 'Scheduled Reports', href: '/dashboard/analytics/scheduled', permission: 'analytics.scheduled.read', icon: CalendarClock },
-      { title: 'Command center', href: '/dashboard/admin', permission: 'platform.tenants.manage', icon: LayoutDashboard },
-      { title: 'Tenants', href: '/dashboard/admin/tenants', permission: 'platform.tenants.manage', icon: Building2 },
-      { title: 'Platform users', href: '/dashboard/admin/users', permission: 'platform.tenants.manage', icon: Users },
-      { title: 'Platform analytics', href: '/dashboard/admin/analytics', permission: 'platform.tenants.manage', icon: BarChart3 },
-      { title: 'Payments', href: '/dashboard/admin/payments', permission: 'platform.tenants.manage', icon: CreditCard },
-      { title: 'Billing', href: '/dashboard/admin/billing', permission: 'platform.tenants.manage', icon: Receipt },
-      { title: 'Modules', href: '/dashboard/admin/modules', permission: 'platform.tenants.manage', icon: LayoutGrid },
-      { title: 'Platform audit', href: '/dashboard/admin/audit', permission: 'platform.tenants.manage', icon: Shield },
-      { title: 'Health', href: '/dashboard/admin/health', permission: 'platform.tenants.manage', icon: HeartPulse },
-      { title: 'Platform settings', href: '/dashboard/admin/settings', permission: 'platform.tenants.manage', icon: Settings },
-      { title: 'Security & CAPTCHA', href: '/dashboard/admin/security', permission: 'platform.tenants.manage', icon: ShieldCheck },
     ],
   },
   {
@@ -376,7 +367,32 @@ export function getNavForRole(
   legacyRole?: string,
   enabledModuleIds?: Iterable<string>,
   tenantRolePermissions?: import('./permissions').Permission[] | null,
-) {
+): ErpModule[] {
+  if (legacyRole === 'super_admin') {
+    return [
+      {
+        id: 'platform_admin',
+        label: 'Platform Admin',
+        description: 'Super Administrator Controls',
+        icon: Shield,
+        color: 'from-purple-600 to-indigo-700',
+        nav: [
+          { title: 'Command Center', href: '/admin', permission: 'platform.tenants.manage', icon: LayoutDashboard, section: 'Operations & Directory' },
+          { title: 'Tenants', href: '/admin/tenants', permission: 'platform.tenants.manage', icon: Building2 },
+          { title: 'Platform Users', href: '/admin/users', permission: 'platform.tenants.manage', icon: Users },
+          { title: 'Platform Analytics', href: '/admin/analytics', permission: 'platform.tenants.manage', icon: BarChart3, section: 'Finance & Analytics' },
+          { title: 'Payments', href: '/admin/payments', permission: 'platform.tenants.manage', icon: CreditCard },
+          { title: 'Billing', href: '/admin/billing', permission: 'platform.tenants.manage', icon: Receipt },
+          { title: 'Modules', href: '/admin/modules', permission: 'platform.tenants.manage', icon: LayoutGrid, section: 'System Control & Health' },
+          { title: 'Platform Audit', href: '/admin/audit', permission: 'platform.tenants.manage', icon: Shield },
+          { title: 'System Health', href: '/admin/health', permission: 'platform.tenants.manage', icon: HeartPulse },
+          { title: 'Platform Settings', href: '/admin/settings', permission: 'platform.tenants.manage', icon: Settings, section: 'Platform Configuration' },
+          { title: 'Security & CAPTCHA', href: '/admin/security', permission: 'platform.tenants.manage', icon: ShieldCheck },
+        ],
+      },
+    ] as ErpModule[]
+  }
+
   const enabled =
     enabledModuleIds != null ? new Set(enabledModuleIds) : null
 

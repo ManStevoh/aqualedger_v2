@@ -13,6 +13,19 @@ export type DashboardAccessResult =
 
 /** Node-only dashboard module gate (used from server layout). */
 export async function checkDashboardModuleAccess(pathname: string): Promise<DashboardAccessResult> {
+  if (pathname.startsWith('/admin')) {
+    let auth
+    try {
+      auth = await requireAuth()
+    } catch {
+      return { allowed: true }
+    }
+    if (auth.role === 'super_admin') {
+      return { allowed: true }
+    }
+    return { allowed: false, moduleId: 'platform_admin' }
+  }
+
   if (!pathname.startsWith('/dashboard')) {
     return { allowed: true }
   }
@@ -53,6 +66,10 @@ export async function checkDashboardModuleAccess(pathname: string): Promise<Dash
 export async function assertDashboardModuleAccess(pathname: string): Promise<void> {
   const result = await checkDashboardModuleAccess(pathname)
   if (!result.allowed) {
-    redirect(`/dashboard?module_disabled=${encodeURIComponent(result.moduleId)}`)
+    if (pathname.startsWith('/admin')) {
+      redirect('/dashboard')
+    } else {
+      redirect(`/dashboard?module_disabled=${encodeURIComponent(result.moduleId)}`)
+    }
   }
 }

@@ -76,6 +76,7 @@ const migrations = [
   'database/migrations/20260616_tenant_module_flags.sql',
   'database/migrations/20260617_platform_payments_pass.sql',
   'database/migrations/20260618_product_image_url.sql',
+  'database/migrations/20260619_add_bmu_to_landing_sites.sql',
 ]
 
 async function main() {

@@ -35,7 +35,8 @@ export async function getPlatformOverview(): Promise<PlatformOverview> {
        SUM(status = 'active') AS active,
        SUM(status = 'suspended') AS suspended,
        SUM(plan = 'trial') AS trial
-     FROM tenants`,
+     FROM tenants
+     WHERE slug != 'default'`,
   )
 
   const users = await queryOne<{

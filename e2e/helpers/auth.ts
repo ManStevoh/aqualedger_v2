@@ -7,9 +7,9 @@ export const DEMO_OWNER = {
 }
 
 export const DEMO_OWNER_B = {
-  email: 'owner-mombasamarine@demo.aquaerp.local',
+  email: 'owner-lamusea@demo.aquaerp.local',
   password: 'Demo@123',
-  slug: 'mombasamarine',
+  slug: 'lamusea',
 }
 
 export async function loginViaApi(

@@ -20,7 +20,8 @@ import { assertRecaptcha } from '@/lib/modules/security/recaptcha'
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const rate = checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000)
+    const limit = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' ? 1000 : 10
+    const rate = checkRateLimit(`login:${ip}`, limit, 15 * 60 * 1000)
     if (!rate.allowed) {
       return NextResponse.json(
         { success: false, error: 'Too many login attempts. Try again later.', code: 'RATE_LIMITED' },

@@ -28,7 +28,6 @@ Use this account to test the fish buyer storefront experience. This account is p
 Each demo tenant represents a fully provisioned cooperative, business, or logistics depot complete with their own landing sites, fleet records, temperature IoT sensors, payroll history, and financial ledgers.
 
 * **Owner Password (All Tenants):** `Demo@123`
-* **Owner Email Pattern:** `owner-{slug}@demo.aquaerp.local`
 
 ### 📋 Full Tenant List & Slugs
 
@@ -37,17 +36,6 @@ Each demo tenant represents a fully provisioned cooperative, business, or logist
 | **Coast Fish Cooperative** | `coastfish` | Cooperative | Kwale | `owner-coastfish@demo.aquaerp.local` |
 | **Lamu Sea Ventures** | `lamusea` | Fisherman / Fleet | Lamu | `owner-lamusea@demo.aquaerp.local` |
 | **AquaERP Showcase Tenant** | `aquaerp-demo`  | Cooperative | Mombasa | `owner-aquaerp-demo@demo.aquaerp.local` |
-
----
-
-## 👥 4. Platform Staff Accounts
-These accounts represent internal operators of the AquaLedger platform. They have administrative access to support customers, audit transactions, and manage billing.
-
-* **Support Password (All Staff):** `Admin@123`
-* **Accounts list:**
-  * **Platform Support:** `platform.support@aqualedger.co.ke` (Role: `super_admin`)
-  * **Platform Billing:** `platform.billing@aqualedger.co.ke` (Role: `super_admin`)
-  * **Cross-Tenant Reviewer:** `staff.reviewer@aqualedger.co.ke` (Role: `super_admin` — also joined to `coastfish` and `mombasamarine` as `branch_manager`)
 
 ---
 

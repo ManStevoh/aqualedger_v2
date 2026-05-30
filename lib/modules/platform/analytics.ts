@@ -41,7 +41,7 @@ export async function getPlatformAnalytics(): Promise<PlatformAnalytics> {
   )
 
   const planBreakdown = await query<{ plan: TenantPlan; count: number }>(
-    `SELECT plan, COUNT(*) AS count FROM tenants GROUP BY plan ORDER BY count DESC`,
+    `SELECT plan, COUNT(*) AS count FROM tenants WHERE slug != 'default' GROUP BY plan ORDER BY count DESC`,
   )
 
   const topTenants = await query<{
@@ -65,6 +65,7 @@ export async function getPlatformAnalytics(): Promise<PlatformAnalytics> {
        (SELECT COUNT(*) FROM tenant_members tm WHERE tm.tenant_id = t.id AND tm.status = 'active') AS member_count
      FROM tenants t
      LEFT JOIN orders o ON o.tenant_id = t.id
+     WHERE t.slug != 'default'
      GROUP BY t.id, t.name, t.slug, t.plan, t.status
      ORDER BY revenue_30d DESC, order_count_30d DESC
      LIMIT 20`,

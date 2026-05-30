@@ -4,6 +4,7 @@ import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layou
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
   Bell,
@@ -108,6 +109,14 @@ type OnboardingStatus = {
 
 export default function DashboardPage() {
   const { currentRole, currentUser, enabledModuleIds, modulesLoaded } = useAppStore()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (currentRole === 'super_admin') {
+      router.replace('/admin')
+    }
+  }, [currentRole, router])
+
   const meta = useDashboardPageMeta({
     title: `${APP_NAME} Command Center`,
     description: `Welcome back${currentUser?.name ? `, ${currentUser.name}` : ''}. ${APP_TAGLINE}`,

@@ -200,11 +200,13 @@ CREATE TABLE IF NOT EXISTS landing_sites (
   county VARCHAR(100) NOT NULL,
   latitude DECIMAL(10, 8),
   longitude DECIMAL(11, 8),
+  bmu_id VARCHAR(36) NULL,
   status ENUM('active', 'inactive') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_code (code),
-  INDEX idx_county (county)
+  INDEX idx_county (county),
+  INDEX idx_bmu_id (bmu_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS fishing_trips (
@@ -366,6 +368,8 @@ CREATE TABLE IF NOT EXISTS bmu (
   INDEX idx_county (county)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+ALTER TABLE landing_sites ADD CONSTRAINT fk_landing_sites_bmu FOREIGN KEY (bmu_id) REFERENCES bmu(id) ON DELETE SET NULL;
+
 CREATE TABLE IF NOT EXISTS licenses (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
@@ -453,6 +457,8 @@ CREATE TABLE IF NOT EXISTS climate_alerts (
 CREATE TABLE IF NOT EXISTS expenses (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
+  boat_id VARCHAR(36) NULL,
+  trip_id VARCHAR(36) NULL,
   category VARCHAR(100) NOT NULL,
   description VARCHAR(255),
   amount DECIMAL(10, 2) NOT NULL,
@@ -464,6 +470,8 @@ CREATE TABLE IF NOT EXISTS expenses (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (boat_id) REFERENCES boats(id) ON DELETE SET NULL,
+  FOREIGN KEY (trip_id) REFERENCES fishing_trips(id) ON DELETE SET NULL,
   INDEX idx_user_id (user_id),
   INDEX idx_status (status),
   INDEX idx_expense_date (expense_date)

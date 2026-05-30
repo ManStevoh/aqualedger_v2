@@ -50,36 +50,6 @@ async function seedAdmin() {
     console.log('  email:', email)
     console.log('  password: Admin@123')
 
-    // --- Ensure Platform Investor exists ---
-    const investorEmail = 'investor@test.com'
-    const [[existingInvestor]] = (await connection.execute(`SELECT id FROM users WHERE email = ? LIMIT 1`, [
-      investorEmail,
-    ])) as [{ id: string }[], unknown]
-
-    const investorId = existingInvestor?.id || randomUUID()
-    const investorPasswordHash = await bcrypt.hash('Test@123', 12)
-
-    await connection.execute(
-      `INSERT IGNORE INTO users (id, email, password_hash, first_name, last_name, role, status, kyc_verified)
-       VALUES (?, ?, ?, 'John', 'Investor', 'investor', 'active', TRUE)`,
-      [investorId, investorEmail, investorPasswordHash],
-    )
-
-    await connection.execute(
-      `INSERT IGNORE INTO wallets (id, user_id, balance, currency, status)
-       VALUES (?, ?, 150000, 'KES', 'active')`,
-      [randomUUID(), investorId],
-    )
-
-    await connection.execute(
-      `INSERT IGNORE INTO credit_scores (id, user_id, score, grade)
-       VALUES (?, ?, 750, 'A')`,
-      [randomUUID(), investorId],
-    )
-
-    console.log('✅ Platform Investor ensured.')
-    console.log('  email:', investorEmail)
-    console.log('  password: Test@123')
   } finally {
     await connection.end()
   }

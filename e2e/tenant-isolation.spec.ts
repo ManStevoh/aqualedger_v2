@@ -60,7 +60,7 @@ test.describe('Tenant data isolation (API)', () => {
       const list = await apiJson<{
         success?: boolean
         data?: { leads?: Array<{ id: string; name: string }> }
-      }>(ctxB, '/api/v2/crm/leads?limit=200')
+      }>(ctxB, '/api/v2/crm/leads?limit=100')
       expect(list.status).toBe(200)
       expect(list.json.success).toBeTruthy()
       const found = list.json.data?.leads?.find((l) => l.id === leadId)
@@ -111,7 +111,7 @@ test.describe('Tenant data isolation (API)', () => {
       const list = await apiJson<{
         success?: boolean
         data?: { policies?: Array<{ policy_number: string }> }
-      }>(ctxB, '/api/v2/risk/insurance?limit=200')
+      }>(ctxB, '/api/v2/risk/insurance?limit=100')
       expect(list.status).toBe(200)
       const match = list.json.data?.policies?.find((p) => p.policy_number === policyNumber)
       expect(match).toBeUndefined()
@@ -153,7 +153,7 @@ test.describe('Tenant data isolation (API)', () => {
       const list = await apiJson<{
         success?: boolean
         data?: { expenses?: Array<{ description?: string }> }
-      }>(ctxB, '/api/v2/expenses?limit=200')
+      }>(ctxB, '/api/v2/expenses?limit=100')
       expect(list.status).toBe(200)
       const match = list.json.data?.expenses?.find(
         (e) => String(e.description || '').includes(description),

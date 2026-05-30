@@ -162,30 +162,46 @@ export function DashboardSidebar() {
                         (item.href !== '/dashboard' && pathname.startsWith(item.href))
 
                       return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setSidebarOpen(false)}
-                          className={cn(
-                            'group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all',
-                            isActive
-                              ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-sidebar-border/80'
-                              : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                        <div key={item.href} className="space-y-0.5">
+                          {item.section && (
+                            <div
+                              className={cn(
+                                'flex items-center px-3 pb-1.5 pt-4',
+                                mod.nav.indexOf(item) === 0 ? 'pt-2' : 'pt-4',
+                              )}
+                            >
+                              <span className="text-[9.5px] font-bold tracking-wider text-sidebar-foreground/35 uppercase">
+                                {item.section}
+                              </span>
+                              <div className="ml-2.5 flex-1 h-px bg-gradient-to-r from-sidebar-border/40 to-transparent" />
+                            </div>
                           )}
-                        >
-                          <Icon
+                          <Link
+                            href={item.href}
+                            onClick={() => setSidebarOpen(false)}
                             className={cn(
-                              'h-4 w-4 shrink-0 transition-colors',
-                              isActive ? 'text-primary' : 'opacity-60 group-hover:opacity-100',
+                              'group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200 ease-out',
+                              isActive
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-sidebar-border/80'
+                                : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:pl-4',
                             )}
-                          />
-                          <span className="truncate">{item.title}</span>
-                          {item.badge && (
-                            <span className="ml-auto rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                              {item.badge}
+                          >
+                            <Icon
+                              className={cn(
+                                'h-4 w-4 shrink-0 transition-all duration-200 group-hover:scale-110',
+                                isActive ? 'text-primary' : 'opacity-60 group-hover:opacity-100',
+                              )}
+                            />
+                            <span className="truncate transition-transform duration-200 group-hover:translate-x-0.5">
+                              {item.title}
                             </span>
-                          )}
-                        </Link>
+                            {item.badge && (
+                              <span className="ml-auto rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        </div>
                       )
                     })}
                   </CollapsibleContent>

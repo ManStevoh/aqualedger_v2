@@ -24,13 +24,10 @@ async function seed() {
   console.log('🌱 Starting database seed...')
   
   try {
-    // Create test users
+    // Create test users (Sanitized to comply with the clean 5-user configuration)
     const users = [
-      { email: 'investor@test.com', firstName: 'John', lastName: 'Investor', role: 'investor' },
-      { email: 'boatowner@test.com', firstName: 'Mary', lastName: 'Boat', role: 'boat_owner' },
-      { email: 'fisherman@test.com', firstName: 'Peter', lastName: 'Fisher', role: 'fisherman' },
-      { email: 'buyer@test.com', firstName: 'Jane', lastName: 'Buyer', role: 'fish_buyer' },
-      { email: 'bmu@test.com', firstName: 'Samuel', lastName: 'BMU', role: 'bmu_official' },
+      { email: 'owner-coastfish@demo.aquaerp.local', firstName: 'Demo', lastName: 'Owner', role: 'user' },
+      { email: 'buyer@demo.aquaerp.local', firstName: 'Jane', lastName: 'Buyer', role: 'user' },
     ]
     
     const passwordHash = await bcrypt.hash('Test@123', 12)
@@ -81,11 +78,11 @@ async function seed() {
     
     // Get boat owner ID
     const [[boatOwner]] = await connection.execute(
-      `SELECT id FROM users WHERE email = 'boatowner@test.com'`
+      `SELECT id FROM users WHERE email = 'owner-coastfish@demo.aquaerp.local'`
     ) as [{ id: string }[], unknown]
     
     const [[fisherman]] = await connection.execute(
-      `SELECT id FROM users WHERE email = 'fisherman@test.com'`
+      `SELECT id FROM users WHERE email = 'owner-coastfish@demo.aquaerp.local'`
     ) as [{ id: string }[], unknown]
     
     // Create landing sites
@@ -191,7 +188,7 @@ async function seed() {
     // Create BMUs
     console.log('Creating BMUs...')
     const [[bmuUser]] = await connection.execute(
-      `SELECT id FROM users WHERE email = 'bmu@test.com'`
+      `SELECT id FROM users WHERE email = 'owner-coastfish@demo.aquaerp.local'`
     ) as [{ id: string }[], unknown]
     
     const bmus = [
@@ -301,11 +298,8 @@ async function seed() {
     console.log('✅ Database seeded successfully!')
     console.log('')
     console.log('Test accounts (password: Test@123):')
-    console.log('  - investor@test.com (Investor)')
-    console.log('  - boatowner@test.com (Boat Owner)')
-    console.log('  - fisherman@test.com (Fisherman)')
-    console.log('  - buyer@test.com (Fish Buyer)')
-    console.log('  - bmu@test.com (BMU Official)')
+    console.log('  - owner-coastfish@demo.aquaerp.local (Tenant Owner)')
+    console.log('  - buyer@demo.aquaerp.local (Fish Buyer)')
     console.log('')
     console.log('Admin account (password: Admin@123):')
     console.log('  - admin@aqualedger.co.ke (Super Admin)')

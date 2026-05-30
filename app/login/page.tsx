@@ -50,7 +50,14 @@ function LoginForm() {
   const recaptcha = useRecaptcha('login')
 
   const performSubdomainRedirect = (tenantSlug: string | null, userRole: string) => {
-    if (!tenantSlug || userRole === 'super_admin' || userRole === 'investor') {
+    if (userRole === 'super_admin') {
+      const redirectUrl = from !== '/dashboard' && from.startsWith('/') ? from : '/admin'
+      router.push(redirectUrl)
+      router.refresh()
+      return
+    }
+
+    if (!tenantSlug || userRole === 'investor') {
       router.push(from.startsWith('/') ? from : '/dashboard')
       router.refresh()
       return

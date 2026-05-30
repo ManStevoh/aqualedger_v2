@@ -600,7 +600,7 @@ async function tenantDashboard(tenantId: string) {
       { label: 'Organization', href: '/dashboard/organization' },
       { label: 'Team', href: '/dashboard/team' },
       { label: 'Settings', href: '/dashboard/settings' },
-      { label: 'Audit', href: '/dashboard/admin/audit' },
+      { label: 'Audit', href: '/dashboard/audit' },
     ],
   }
 }

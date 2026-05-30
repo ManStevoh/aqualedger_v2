@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
   }
   const accessToken = jwt.sign(payload, secret, { expiresIn: '15m' })
 
-  const res = NextResponse.redirect(appUrl('/dashboard', base))
+  const redirectUrl = user.role === 'super_admin' ? '/admin' : '/dashboard'
+  const res = NextResponse.redirect(appUrl(redirectUrl, base))
   res.cookies.set('access_token', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

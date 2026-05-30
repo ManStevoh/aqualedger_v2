@@ -31,7 +31,7 @@ npm run db:seed:demo          # skip existing slugs
 npm run db:seed:demo:fresh    # wipe demo tenants/users first, then re-seed
 ```
 
-- **Owners:** `owner-{slug}@demo.aquaerp.local` / `Demo@123`
+- **Owners:** `owner-coastfish@demo.aquaerp.local` (Coast Fish), `owner-lamusea@demo.aquaerp.local` (Lamu Sea), `owner-aquaerp-demo@demo.aquaerp.local` (Showcase) / `Demo@123`
 - **Buyer (orders):** `buyer@demo.aquaerp.local` / `Demo@123`
 - **Subdomains:** `{slug}.localhost:3000` (see `PLATFORM_HOST` in production)
 - Script: `database/seed-demo-tenants.ts` — onboarding complete, chart of accounts, fishing, commerce, cold chain, CRM, HR, accounting, procurement, logistics, insurance, IoT, AI insights
@@ -45,8 +45,7 @@ npm run db:seed:platform           # platform layer only (requires demo tenants)
 ```
 
 - **Super admin:** `admin@aqualedger.co.ke` / `Admin@123`
-- **Platform staff:** `platform.support@`, `platform.billing@`, `staff.reviewer@` @ `aqualedger.co.ke` (same password)
-- **Admin hub:** `/dashboard/admin` — tenants (mixed plans/status), payments (`payment_intents`), audit trail, branding/settings, module flags
+- **Admin hub:** `/admin` — tenants (mixed plans/status), payments (`payment_intents`), audit trail, branding/settings, module flags
 - Scripts: `database/seed-super-admin-full.ts`, `database/seed-super-admin-platform.ts`
 
 ### Form & E2E tests
@@ -57,7 +56,7 @@ npm run test:forms          # form-focused unit tests
 npm run test:e2e            # Playwright — 6 form UIs + onboarding + cross-tenant API
 ```
 
-See [`docs/FORM_TESTING.md`](docs/FORM_TESTING.md). Demo login for E2E: `owner-coastfish@demo.aquaerp.local` / `Demo@123`.
+See [`docs/FORM_TESTING.md`](docs/FORM_TESTING.md). Demo login for E2E: `owner-coastfish@demo.aquaerp.local` / `Demo@123` and `owner-lamusea@demo.aquaerp.local` / `Demo@123`.
 
 ### Responsive UI (mobile-first)
 

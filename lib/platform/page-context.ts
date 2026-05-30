@@ -96,8 +96,8 @@ export function resolvePageContext(pathname: string): PageContext {
     }
   }
 
-  if (pathname.startsWith('/dashboard/admin')) {
-    const segment = pathname.split('/')[3]
+  if (pathname.startsWith('/admin')) {
+    const segment = pathname.split('/')[2]
     const pageLabel = segment ? (ADMIN_SEGMENTS[segment] ?? humanizeSegment(segment)) : 'Platform admin'
     return {
       title: segment ? pageLabel : 'Platform admin',
@@ -105,8 +105,8 @@ export function resolvePageContext(pathname: string): PageContext {
       moduleId: 'platform',
       moduleLabel: 'Platform',
       breadcrumbs: [
-        { label: 'Command Center', href: '/dashboard' },
-        { label: 'Platform admin', href: '/dashboard/admin' },
+        { label: 'Command Center', href: '/admin' },
+        { label: 'Platform admin', href: '/admin' },
         ...(segment ? [{ label: pageLabel }] : []),
       ],
     }

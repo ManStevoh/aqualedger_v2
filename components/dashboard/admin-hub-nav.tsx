@@ -18,17 +18,17 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/dashboard/admin', label: 'Overview', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/admin/tenants', label: 'Tenants', icon: Building2 },
-  { href: '/dashboard/admin/users', label: 'Users', icon: Users },
-  { href: '/dashboard/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/admin/payments', label: 'Payments', icon: CreditCard },
-  { href: '/dashboard/admin/billing', label: 'Billing', icon: Receipt },
-  { href: '/dashboard/admin/modules', label: 'Modules', icon: LayoutGrid },
-  { href: '/dashboard/admin/audit', label: 'Audit', icon: Shield },
-  { href: '/dashboard/admin/health', label: 'Health', icon: HeartPulse },
-  { href: '/dashboard/admin/settings', label: 'Settings', icon: Settings },
-  { href: '/dashboard/admin/security', label: 'Security', icon: ShieldCheck },
+  { href: '/admin', label: 'Overview', icon: LayoutDashboard, exact: true },
+  { href: '/admin/tenants', label: 'Tenants', icon: Building2 },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/payments', label: 'Payments', icon: CreditCard },
+  { href: '/admin/billing', label: 'Billing', icon: Receipt },
+  { href: '/admin/modules', label: 'Modules', icon: LayoutGrid },
+  { href: '/admin/audit', label: 'Audit', icon: Shield },
+  { href: '/admin/health', label: 'Health', icon: HeartPulse },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/security', label: 'Security', icon: ShieldCheck },
 ] as const
 
 export function AdminHubNav() {

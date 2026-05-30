@@ -40,7 +40,7 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # if dev is already running
 ### Demo credentials
 
 - **Tenant A:** `owner-coastfish@demo.aquaerp.local` / `Demo@123`
-- **Tenant B:** `owner-mombasamarine@demo.aquaerp.local` / `Demo@123`
+- **Tenant B:** `owner-lamusea@demo.aquaerp.local` / `Demo@123`
 
 ## Full verify stack
 

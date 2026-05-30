@@ -42,6 +42,7 @@ export async function listTenantsWithStats(): Promise<TenantWithStats[]> {
        (SELECT COALESCE(SUM(o2.total), 0) FROM orders o2
         WHERE o2.tenant_id = t.id AND o2.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS revenue_30d
      FROM tenants t
+     WHERE t.slug != 'default'
      ORDER BY t.created_at DESC`,
   )
 

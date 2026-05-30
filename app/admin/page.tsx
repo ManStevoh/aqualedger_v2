@@ -54,13 +54,13 @@ interface PlatformOverview {
 }
 
 const QUICK_ACTIONS = [
-  { href: '/dashboard/admin/tenants', label: 'Tenants', description: 'Provision & manage orgs', icon: Building2 },
-  { href: '/dashboard/admin/users', label: 'Users', description: 'Impersonate for support', icon: UserPlus },
-  { href: '/dashboard/admin/analytics', label: 'Analytics', description: 'GMV & plan breakdown', icon: Activity },
-  { href: '/dashboard/admin/modules', label: 'Modules', description: 'Toggle ERP modules', icon: LayoutGrid },
-  { href: '/dashboard/admin/audit', label: 'Audit', description: 'Platform activity log', icon: Shield },
-  { href: '/dashboard/admin/health', label: 'Health', description: 'Service status', icon: HeartPulse },
-  { href: '/dashboard/admin/settings', label: 'Settings', description: 'Maintenance & announcements', icon: Settings },
+  { href: '/admin/tenants', label: 'Tenants', description: 'Provision & manage orgs', icon: Building2 },
+  { href: '/admin/users', label: 'Users', description: 'Impersonate for support', icon: UserPlus },
+  { href: '/admin/analytics', label: 'Analytics', description: 'GMV & plan breakdown', icon: Activity },
+  { href: '/admin/modules', label: 'Modules', description: 'Toggle ERP modules', icon: LayoutGrid },
+  { href: '/admin/audit', label: 'Audit', description: 'Platform activity log', icon: Shield },
+  { href: '/admin/health', label: 'Health', description: 'Service status', icon: HeartPulse },
+  { href: '/admin/settings', label: 'Settings', description: 'Maintenance & announcements', icon: Settings },
 ]
 
 export default function AdminPage() {
@@ -243,7 +243,7 @@ export default function AdminPage() {
                 />
               </div>
               <Button variant="outline" className="gap-2" asChild>
-                <Link href="/dashboard/admin/users?invite=1">
+                <Link href="/admin/users?invite=1">
                   <UserPlus className="h-4 w-4" />
                   Invite user
                 </Link>

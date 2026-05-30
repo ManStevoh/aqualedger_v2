@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useAppStore()
 
   useEffect(() => {
-    if (!pathname?.startsWith('/dashboard')) {
+    if (!pathname?.startsWith('/dashboard') && !pathname?.startsWith('/admin')) {
       return
     }
 
@@ -80,6 +80,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (me.success && me.data?.user) {
         const user = mapMeUser(me.data.user)
+
+        // Strict role-based workspace isolation
+        if (pathname.startsWith('/admin') && user.role !== 'super_admin') {
+          router.replace('/dashboard')
+          return
+        }
+        if (pathname.startsWith('/dashboard') && user.role === 'super_admin') {
+          router.replace('/admin')
+          return
+        }
+
         setCurrentUser(user)
         setCurrentRole(user.role)
         setMemberRole(me.data.memberRole ?? null)

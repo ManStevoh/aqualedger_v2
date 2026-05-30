@@ -54,7 +54,7 @@ export const API_ALWAYS_ALLOWED_PREFIXES = [
   '/api/auth/',
 ]
 
-export const DASHBOARD_ALWAYS_ALLOWED_PREFIXES = ['/dashboard/admin/modules']
+export const DASHBOARD_ALWAYS_ALLOWED_PREFIXES = ['/admin/modules', '/dashboard/admin/modules']
 
 export function resolveModuleFromApiPath(pathname: string): ModuleId | null {
   for (const prefix of API_ALWAYS_ALLOWED_PREFIXES) {
@@ -68,6 +68,9 @@ export function resolveModuleFromApiPath(pathname: string): ModuleId | null {
 export function resolveModuleFromDashboardPath(pathname: string): ModuleId | null {
   for (const prefix of DASHBOARD_ALWAYS_ALLOWED_PREFIXES) {
     if (pathname.startsWith(prefix)) return null
+  }
+  if (pathname.startsWith('/admin')) {
+    return 'platform'
   }
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/modules')) {
     return 'platform'

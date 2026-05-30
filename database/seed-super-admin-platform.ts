@@ -30,16 +30,7 @@ const PLAN_ASSIGNMENTS: Record<string, { plan: string; status: string }> = {
   'aquaerp-demo': { plan: 'enterprise', status: 'active' },
 }
 
-const PLATFORM_STAFF: Array<{
-  email: string
-  firstName: string
-  lastName: string
-  role: string
-}> = [
-  { email: 'platform.support@aqualedger.co.ke', firstName: 'Platform', lastName: 'Support', role: 'super_admin' },
-  { email: 'platform.billing@aqualedger.co.ke', firstName: 'Platform', lastName: 'Billing', role: 'super_admin' },
-  { email: 'staff.reviewer@aqualedger.co.ke', firstName: 'Cross', lastName: 'Tenant Reviewer', role: 'super_admin' },
-]
+// Platform staff removed to keep exactly 5 clean users.
 
 async function ensureSuperAdmin(passwordHash: string): Promise<string> {
   const existing = await queryOne<{ id: string }>(`SELECT id FROM users WHERE email = ?`, [SUPER_ADMIN_EMAIL])
@@ -116,36 +107,7 @@ async function syncModuleFlags(adminId: string): Promise<void> {
   }
 }
 
-async function ensurePlatformStaff(passwordHash: string): Promise<void> {
-  for (const staff of PLATFORM_STAFF) {
-    const existing = await queryOne<{ id: string }>(`SELECT id FROM users WHERE email = ?`, [staff.email])
-    const id = existing?.id ?? generateId()
-    if (!existing) {
-      await execute(
-        `INSERT INTO users (id, email, password_hash, first_name, last_name, role, status, kyc_verified)
-         VALUES (?, ?, ?, ?, ?, ?, 'active', TRUE)`,
-        [id, staff.email, passwordHash, staff.firstName, staff.lastName, staff.role],
-      )
-    }
-  }
-
-  const reviewer = await queryOne<{ id: string }>(`SELECT id FROM users WHERE email = ?`, [
-    'staff.reviewer@aqualedger.co.ke',
-  ])
-  if (!reviewer) return
-
-  const demoTenants = await query<{ id: string; slug: string }>(
-    `SELECT id, slug FROM tenants WHERE slug IN (?, ?) LIMIT 2`,
-    ['coastfish', 'mombasamarine'],
-  )
-  for (const t of demoTenants) {
-    await execute(
-      `INSERT IGNORE INTO tenant_members (id, tenant_id, user_id, role, status, joined_at)
-       VALUES (?, ?, ?, 'branch_manager', 'active', NOW())`,
-      [generateId(), t.id, reviewer.id],
-    )
-  }
-}
+// ensurePlatformStaff removed
 
 async function assignTenantPlanMix(): Promise<number> {
   let updated = 0
@@ -447,22 +409,22 @@ async function main(): Promise<void> {
 
   await ensurePlatformSettings(adminId)
   await syncModuleFlags(adminId)
-  await ensurePlatformStaff(passwordHash)
   const plansUpdated = await assignTenantPlanMix()
   const payments = await seedPaymentIntents()
   const audits = await seedAuditTrail(adminId)
   await backfillSignupActivity()
+
+  // Structurally purge Default Organization from the database
+  console.log('Purging Default Organization structurally from the database…')
+  await execute(`SET FOREIGN_KEY_CHECKS = 0`)
+  await execute(`DELETE FROM tenants WHERE id = 'tenant-default-0001' OR slug = 'default'`)
+  await execute(`SET FOREIGN_KEY_CHECKS = 1`)
 
   console.log('')
   console.log('✅ Platform seed complete')
   console.log('')
   console.log('Super admin login:')
   console.log(`  ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`)
-  console.log('')
-  console.log('Platform staff (same password):')
-  for (const s of PLATFORM_STAFF) {
-    console.log(`  ${s.email}`)
-  }
   console.log('')
   console.log(`Tenants plan/status updated: ${plansUpdated}`)
   console.log(`Payment intents seeded: ${payments}`)
