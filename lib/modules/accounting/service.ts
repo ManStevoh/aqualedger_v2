@@ -473,7 +473,7 @@ export async function createApInvoice(
 
 export async function listArInvoices(
   tenantId: string,
-  opts: { page?: number; limit?: number; status?: string } = {},
+  opts: { page?: number; limit?: number; status?: string; customerId?: string } = {},
 ): Promise<{ invoices: ArInvoice[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100)
@@ -484,6 +484,11 @@ export async function listArInvoices(
   if (opts.status) {
     conditions.push('ar.status = ?')
     params.push(opts.status)
+  }
+
+  if (opts.customerId) {
+    conditions.push('ar.customer_id = ?')
+    params.push(opts.customerId)
   }
 
   const where = conditions.join(' AND ')

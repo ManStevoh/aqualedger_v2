@@ -18,6 +18,7 @@ import {
   Plug,
   Radio,
   Cpu,
+  CloudRain,
   Sparkles,
   Warehouse,
   UserCircle,
@@ -99,7 +100,9 @@ export const ERP_MODULES: ErpModule[] = [
     color: 'from-sky-500 to-blue-600',
     nav: [
       { title: 'Command Center', href: '/dashboard', permission: 'analytics.dashboard.read', icon: LayoutDashboard },
-      { title: 'All module dashboards', href: '/dashboard/modules', permission: 'analytics.dashboard.read', icon: BarChart3 },
+      { title: 'Climate & Ocean Safety', href: '/dashboard/climate', permission: 'fishing.trips.read', icon: CloudRain },
+      { title: 'Compliance & Licenses', href: '/dashboard/licenses', permission: 'fishing.licenses.read', icon: FileCheck },
+      { title: 'AI Assistant', href: '/dashboard/ai', permission: 'ai.chat.read', icon: Sparkles },
     ],
   },
   {

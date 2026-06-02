@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Megaphone, Wrench } from 'lucide-react'
+import { Wrench } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { resolveFetchUrl } from '@/lib/config/urls'
 
@@ -57,10 +57,8 @@ export function PlatformBanner() {
 
   const isSuperAdmin = currentRole === 'super_admin'
   const showMaintenance = status.maintenanceMode && !isSuperAdmin
-  const showAnnouncement =
-    status.announcementEnabled && (status.announcementTitle || status.announcementBody)
 
-  if (!showMaintenance && !showAnnouncement) return null
+  if (!showMaintenance) return null
 
   return (
     <div className="mb-6 space-y-3">
@@ -72,15 +70,6 @@ export function PlatformBanner() {
             {status.maintenanceMessage ||
               'The platform is currently undergoing maintenance. Some features may be unavailable.'}
           </AlertDescription>
-        </Alert>
-      )}
-      {showAnnouncement && (
-        <Alert>
-          <Megaphone className="h-4 w-4" />
-          <AlertTitle>{status.announcementTitle || 'Platform announcement'}</AlertTitle>
-          {status.announcementBody && (
-            <AlertDescription>{status.announcementBody}</AlertDescription>
-          )}
         </Alert>
       )}
     </div>

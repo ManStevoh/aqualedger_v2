@@ -43,7 +43,7 @@ async function fishingDashboard(tenantId: string): Promise<Omit<ModuleDashboardP
   )
   const [catches] = await query<{ total: number; qty: number; value: number }>(
     `SELECT COUNT(*) total, COALESCE(SUM(quantity_kg),0) qty, COALESCE(SUM(total_value),0) value
-     FROM catches WHERE ${tw} AND catch_time >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+     FROM catches WHERE ${tw} AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
     [tenantId, PERIOD_DAYS],
   )
   const [lots] = await query<{ active: number }>(
@@ -56,9 +56,9 @@ async function fishingDashboard(tenantId: string): Promise<Omit<ModuleDashboardP
   )
 
   const trend = await query<{ d: string; kg: number }>(
-    `SELECT DATE(catch_time) d, COALESCE(SUM(quantity_kg),0) kg
-     FROM catches WHERE ${tw} AND catch_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
-     GROUP BY DATE(catch_time) ORDER BY d`,
+    `SELECT DATE(created_at) d, COALESCE(SUM(quantity_kg),0) kg
+     FROM catches WHERE ${tw} AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+     GROUP BY DATE(created_at) ORDER BY d`,
     [tenantId, PERIOD_DAYS],
   )
 

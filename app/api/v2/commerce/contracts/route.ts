@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { apiHandler, jsonOk } from '@/lib/api-handler'
 import { requirePermission } from '@/lib/platform/access'
+import { queryOne } from '@/lib/db'
 import {
   listSalesContracts,
   createSalesContract,
@@ -27,14 +28,31 @@ const createSchema = z.object({
 export const GET = apiHandler(async (request: NextRequest) => {
   const ctx = await requirePermission('commerce.contracts.read')
   const { searchParams } = new URL(request.url)
+  
+  let customerId: string | undefined = undefined
+  if (ctx.memberRole === 'customer') {
+    const cust = await queryOne<{ id: string }>(
+      `SELECT id FROM crm_customers WHERE tenant_id = ? AND user_id = ?`,
+      [ctx.tenantId, ctx.userId]
+    )
+    if (!cust) {
+      return jsonOk(searchParams.get('summary') === '1' 
+        ? { summary: { active: 0, draft: 0, openKg: 0, openValueKes: 0 } }
+        : { contracts: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 1 } }
+      )
+    }
+    customerId = cust.id
+  }
+
   if (searchParams.get('summary') === '1') {
-    const summary = await getSalesContractSummary(ctx.tenantId)
+    const summary = await getSalesContractSummary(ctx.tenantId, customerId)
     return jsonOk({ summary })
   }
   const data = await listSalesContracts(ctx.tenantId, {
     status: searchParams.get('status') ?? undefined,
     page: parseInt(searchParams.get('page') || '1', 10),
     limit: parseInt(searchParams.get('limit') || '50', 10),
+    customerId,
   })
   return jsonOk(data)
 }, 'v2/commerce/contracts')

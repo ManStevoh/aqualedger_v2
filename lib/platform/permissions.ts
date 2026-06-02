@@ -308,6 +308,7 @@ export const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
     'commerce.catalog.read', 'commerce.listings.read', 'commerce.listings.write',
     'commerce.orders.read',
     'commerce.payouts.read',
+    'commerce.vendors.read',
     'commerce.reviews.read', 'commerce.reviews.write',
     'commerce.storefront.read', 'commerce.storefront.write',
     'accounting.wallet.read',
@@ -328,6 +329,9 @@ export const ROLE_PERMISSIONS: Record<TenantMemberRole, Permission[]> = {
     'commerce.wishlist.read', 'commerce.wishlist.write',
     'commerce.checkout.write',
     'commerce.orders.read', 'commerce.orders.write',
+    'commerce.contracts.read',
+    'fishing.traceability.read',
+    'accounting.wallet.read', 'accounting.wallet.write',
     'notifications.read',
     'auth.sessions.read', 'auth.sessions.write',
   ],
@@ -360,6 +364,7 @@ export function legacyRoleToMemberRole(
   const map: Record<string, TenantMemberRole> = {
     super_admin: 'tenant_owner',
     investor: 'tenant_owner',
+    fish_buyer: 'customer',
   }
   return map[role] || 'fisherman'
 }

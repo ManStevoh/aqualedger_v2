@@ -32,6 +32,11 @@ export async function GET(request: NextRequest) {
     const params: unknown[] = []
     pushTenantCondition(conditions, params, 'fl', auth.tenantId)
 
+    if (auth.memberRole === 'vendor') {
+      conditions.push('fl.seller_id = ?')
+      params.push(auth.userId)
+    }
+
     if (status && status !== 'all') {
       conditions.push('fl.status = ?')
       params.push(status)

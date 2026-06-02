@@ -71,7 +71,7 @@ async function ensurePlatformSettings(adminId: string): Promise<void> {
     {
       key: 'announcement',
       value: {
-        enabled: true,
+        enabled: false,
         title: 'AquaERP platform demo',
         body: '20 demo tenants are loaded with full module data. Super admins can manage tenants, payments, and branding from Admin Hub.',
       },

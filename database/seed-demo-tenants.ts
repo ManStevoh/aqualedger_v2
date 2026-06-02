@@ -25,6 +25,7 @@ import {
 
 const DEMO_PASSWORD = 'Demo@123'
 const BUYER_EMAIL = 'buyer@demo.aquaerp.local'
+const VENDOR_EMAIL = 'vendor@demo.aquaerp.local'
 
 const DEMO_TENANTS: Array<{
   slug: string
@@ -44,6 +45,8 @@ interface TenantSeedCtx {
   slug: string
   name: string
   ownerId: string
+  buyerId: string
+  vendorUserId: string
   branchId: string
   county: string
   businessType: BusinessType
@@ -94,6 +97,19 @@ async function ensureBuyer(passwordHash: string): Promise<string> {
     await execute(
       `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
        VALUES (?, 'tenant-default-0001', ?, 50000, 'KES', 'active')`,
+      [generateId(), id],
+    )
+  }
+  return id
+}
+
+async function ensureVendor(passwordHash: string): Promise<string> {
+  const id = await ensureUser(VENDOR_EMAIL, 'Demo', 'Vendor', 'user', passwordHash)
+  const wallet = await queryOne<{ id: string }>(`SELECT id FROM wallets WHERE user_id = ? LIMIT 1`, [id])
+  if (!wallet) {
+    await execute(
+      `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
+       VALUES (?, 'tenant-default-0001', ?, 0, 'KES', 'active')`,
       [generateId(), id],
     )
   }
@@ -171,8 +187,8 @@ async function clearDemoTenants(): Promise<void> {
   }
 
   await execute(
-    `DELETE FROM users WHERE email LIKE '%@demo.aquaerp.local' AND email != ?`,
-    [BUYER_EMAIL],
+    `DELETE FROM users WHERE email LIKE '%@demo.aquaerp.local' AND email != ? AND email != ?`,
+    [BUYER_EMAIL, VENDOR_EMAIL],
   )
 }
 
@@ -181,6 +197,7 @@ async function provisionTenant(
   index: number,
   passwordHash: string,
   buyerId: string,
+  vendorUserId: string,
 ): Promise<TenantSeedCtx> {
   const email = ownerEmail(def.slug)
   const ownerId = await ensureUser(
@@ -219,11 +236,27 @@ async function provisionTenant(
     )
   }
 
+  // Add buyer to tenant_members
+  await execute(
+    `INSERT IGNORE INTO tenant_members (id, tenant_id, user_id, branch_id, role, status)
+     VALUES (?, ?, ?, ?, 'customer', 'active')`,
+    [generateId(), tenantId, buyerId, branchId],
+  )
+
+  // Add vendor to tenant_members
+  await execute(
+    `INSERT IGNORE INTO tenant_members (id, tenant_id, user_id, branch_id, role, status)
+     VALUES (?, ?, ?, ?, 'vendor', 'active')`,
+    [generateId(), tenantId, vendorUserId, branchId],
+  )
+
   const ctx: TenantSeedCtx = {
     tenantId,
     slug,
     name: def.name,
     ownerId,
+    buyerId,
+    vendorUserId,
     branchId,
     county: def.county,
     businessType: def.businessType,
@@ -253,11 +286,26 @@ async function provisionTenant(
   await seedAI(ctx)
   await seedMisc(ctx)
 
+  // Seed wallets
   await execute(
     `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
      VALUES (?, ?, ?, ?, 'KES', 'active')
      ON DUPLICATE KEY UPDATE tenant_id = VALUES(tenant_id), balance = VALUES(balance)`,
     [generateId(), tenantId, ownerId, 25000 + index * 1500],
+  )
+
+  await execute(
+    `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
+     VALUES (?, ?, ?, 100000, 'KES', 'active')
+     ON DUPLICATE KEY UPDATE balance = 100000`,
+    [generateId(), tenantId, buyerId],
+  )
+
+  await execute(
+    `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
+     VALUES (?, ?, ?, 0, 'KES', 'active')
+     ON DUPLICATE KEY UPDATE balance = 0`,
+    [generateId(), tenantId, vendorUserId],
   )
 
   return ctx
@@ -339,17 +387,35 @@ async function seedFishing(
   )
 
   const speciesId = ctx.speciesIds[ctx.index % ctx.speciesIds.length]
+  const catchId = generateId()
   await execute(
     `INSERT INTO catches (id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price, storage_method, recorded_by)
      VALUES (?, ?, ?, ?, ?, 'A', ?, 'iced', ?)`,
     [
-      generateId(),
+      catchId,
       ctx.tenantId,
       tripId,
       speciesId,
       catchKg,
       unitPrice,
       ctx.ownerId,
+    ],
+  )
+
+  const lotCode = `LOT-${ctx.slug.toUpperCase()}-001`
+  const spName = ctx.speciesIds[0] === speciesId ? `${ctx.slug} Nile Perch` : `${ctx.slug} Tilapia`
+  await execute(
+    `INSERT INTO traceability_lots (id, tenant_id, lot_code, catch_id, species_name, vessel_name, landing_site, catch_date, grading, msc_certified, fao_area, storage_temp_c, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'A', 1, 'FAO-51', -22.0, 'active')`,
+    [
+      generateId(),
+      ctx.tenantId,
+      lotCode,
+      catchId,
+      spName,
+      `${ctx.name} Vessel`,
+      `${def.county} Landing`,
+      departure,
     ],
   )
 
@@ -382,6 +448,13 @@ async function seedCommerce(ctx: TenantSeedCtx, buyerId: string): Promise<void> 
     `INSERT INTO marketplace_vendors (id, tenant_id, user_id, shop_name, commission_rate, status)
      VALUES (?, ?, ?, ?, 10, 'active')`,
     [vendorId, ctx.tenantId, ctx.ownerId, `${ctx.name} Seafood Shop`],
+  )
+
+  const sharedVendorId = generateId()
+  await execute(
+    `INSERT INTO marketplace_vendors (id, tenant_id, user_id, shop_name, commission_rate, status)
+     VALUES (?, ?, ?, ?, 12, 'active')`,
+    [sharedVendorId, ctx.tenantId, ctx.vendorUserId, `${ctx.name} Shared Vendor Shop`],
   )
 
   const sku = `SKU-${ctx.slug.toUpperCase().slice(0, 12)}`
@@ -505,11 +578,12 @@ async function seedCRM(ctx: TenantSeedCtx): Promise<void> {
   const customerId = generateId()
   ctx.customerId = customerId
   await execute(
-    `INSERT INTO crm_customers (id, tenant_id, name, email, phone, segment, lifetime_value, status)
-     VALUES (?, ?, ?, ?, ?, 'wholesale', ?, 'active')`,
+    `INSERT INTO crm_customers (id, tenant_id, user_id, name, email, phone, segment, lifetime_value, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'wholesale', ?, 'active')`,
     [
       customerId,
       ctx.tenantId,
+      ctx.buyerId,
       `${ctx.county} Wholesale Ltd`,
       `wholesale-${ctx.slug}@example.com`,
       `+2547${String(10000000 + ctx.index).slice(0, 8)}`,
@@ -762,6 +836,7 @@ async function main(): Promise<void> {
   }
 
   const buyerId = await ensureBuyer(passwordHash)
+  const vendorUserId = await ensureVendor(passwordHash)
 
   const manifest: Array<{
     slug: string
@@ -789,7 +864,7 @@ async function main(): Promise<void> {
           continue
         }
       }
-      await provisionTenant(def, i, passwordHash, buyerId)
+      await provisionTenant(def, i, passwordHash, buyerId, vendorUserId)
       manifest.push({
         slug: def.slug,
         name: def.name,

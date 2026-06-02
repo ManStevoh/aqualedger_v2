@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-handler'
 import { queryOne } from '@/lib/db'
-import { withApiPermission } from '@/lib/platform/api-auth'
+import { withApiPermissionAny } from '@/lib/platform/api-auth'
 
 export async function GET() {
   try {
-    const auth = await withApiPermission('crm.customers.read')
+    const auth = await withApiPermissionAny(['crm.customers.read', 'accounting.wallet.read'])
     const row = await queryOne(
       `SELECT cs.*, u.first_name, u.last_name
        FROM credit_scores cs

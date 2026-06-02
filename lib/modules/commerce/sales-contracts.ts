@@ -32,7 +32,7 @@ function contractNumber(): string {
 
 export async function listSalesContracts(
   tenantId: string,
-  opts: { status?: string; page?: number; limit?: number } = {},
+  opts: { status?: string; page?: number; limit?: number; customerId?: string } = {},
 ) {
   const tid = resolveTenantId(tenantId)
   const page = opts.page ?? 1
@@ -43,6 +43,10 @@ export async function listSalesContracts(
   if (opts.status) {
     conditions.push('c.status = ?')
     params.push(opts.status)
+  }
+  if (opts.customerId) {
+    conditions.push('c.customer_id = ?')
+    params.push(opts.customerId)
   }
   const where = `WHERE ${conditions.join(' AND ')}`
 
@@ -190,8 +194,14 @@ export async function updateSalesContractStatus(
   return row
 }
 
-export async function getSalesContractSummary(tenantId: string) {
+export async function getSalesContractSummary(tenantId: string, customerId?: string) {
   const tid = resolveTenantId(tenantId)
+  const conditions = [tenantWhere()]
+  const params = [tid]
+  if (customerId) {
+    conditions.push('customer_id = ?')
+    params.push(customerId)
+  }
   const [row] = await query<{
     active: number
     draft: number
@@ -203,8 +213,8 @@ export async function getSalesContractSummary(tenantId: string) {
       SUM(status = 'draft') as draft,
       COALESCE(SUM((contracted_kg - delivered_kg) * price_per_kg), 0) as total_value,
       COALESCE(SUM(GREATEST(contracted_kg - delivered_kg, 0)), 0) as open_kg
-     FROM sales_contracts WHERE ${tenantWhere()} AND status IN ('draft', 'active')`,
-    [tid],
+     FROM sales_contracts WHERE ${conditions.join(' AND ')} AND status IN ('draft', 'active')`,
+    params,
   )
   return {
     active: Number(row?.active ?? 0),
