@@ -13,7 +13,7 @@ import { getTenantRolePermissions } from './tenant-role-permissions'
 
 export interface AuthContext extends JWTPayload {
   tenantId: string
-  memberRole: TenantMemberRole
+  memberRole: TenantMemberRole | null
   /** Tenant-customized portal permissions (vendor/customer); null = use built-in role map */
   rolePermissions: Permission[] | null
 }
@@ -22,12 +22,16 @@ export async function getTenantMemberRole(
   userId: string,
   tenantId: string,
   legacyRole: UserRole,
-): Promise<TenantMemberRole> {
+): Promise<TenantMemberRole | null> {
   const row = await queryOne<{ role: TenantMemberRole }>(
     `SELECT role FROM tenant_members WHERE user_id = ? AND tenant_id = ? AND status = 'active' LIMIT 1`,
     [userId, tenantId],
   )
-  return row?.role ?? legacyRoleToMemberRole(legacyRole)
+  if (row) return row.role
+  if (legacyRole === 'super_admin' || legacyRole === 'investor') {
+    return legacyRoleToMemberRole(legacyRole)
+  }
+  return null
 }
 
 export async function getAuthContext(): Promise<AuthContext> {
@@ -46,14 +50,14 @@ export async function getAuthContext(): Promise<AuthContext> {
 
 export async function requirePermission(permission: Permission): Promise<AuthContext> {
   const ctx = await getAuthContext()
-  if (!hasPermission(ctx.memberRole, permission, ctx.role, ctx.rolePermissions)) {
+  if (!ctx.memberRole || !hasPermission(ctx.memberRole, permission, ctx.role, ctx.rolePermissions)) {
     throw new Error('Forbidden')
   }
   return ctx
 }
 
 export function tenantContextFromAuth(ctx: AuthContext): TenantContext {
-  return { tenantId: ctx.tenantId, memberRole: ctx.memberRole }
+  return { tenantId: ctx.tenantId, memberRole: ctx.memberRole ?? undefined }
 }
 
 /** Super-admin only — platform command center APIs */

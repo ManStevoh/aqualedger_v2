@@ -18,7 +18,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
   const scope = searchParams.get('scope')
 
   const canViewTenant =
-    hasFullSystemAccess(ctx.role) || TENANT_WIDE_SALES_ROLES.includes(ctx.memberRole)
+    hasFullSystemAccess(ctx.role) || (ctx.memberRole !== null && TENANT_WIDE_SALES_ROLES.includes(ctx.memberRole))
 
   const sellerUserId =
     scope === 'mine' || !canViewTenant ? ctx.userId : null

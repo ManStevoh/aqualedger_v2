@@ -32,7 +32,8 @@ npm run db:seed:demo:fresh    # wipe demo tenants/users first, then re-seed
 ```
 
 - **Owners:** `owner-coastfish@demo.aquaerp.local` (Coast Fish), `owner-lamusea@demo.aquaerp.local` (Lamu Sea), `owner-aquaerp-demo@demo.aquaerp.local` (Showcase) / `Demo@123`
-- **Buyer (orders):** `buyer@demo.aquaerp.local` / `Demo@123`
+- **B2B Buyer (Wholesale):** `buyer-b2b@demo.aquaerp.local` / `Demo@123`
+- **Storefront Buyer (Retail):** `buyer@demo.aquaerp.local` / `Demo@123`
 - **Subdomains:** `{slug}.localhost:3000` (see `PLATFORM_HOST` in production)
 - Script: `database/seed-demo-tenants.ts` — onboarding complete, chart of accounts, fishing, commerce, cold chain, CRM, HR, accounting, procurement, logistics, insurance, IoT, AI insights
 

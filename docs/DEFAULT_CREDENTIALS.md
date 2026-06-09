@@ -15,12 +15,32 @@ Use this account to access the **Platform Command Center** (`/dashboard/admin`) 
 
 ---
 
-## 🛒 2. Shared Marketplace Buyer
-Use this account to test the fish buyer storefront experience. This account is pre-loaded with **50,000 KES** in its digital wallet to test checkouts and STK payments.
+## 🛒 2. B2B / Wholesale Buyer
+Use this account to test the commercial purchasing and wholesale workflows. Logging in with this account redirects you to the **B2B Buyer Command Center** (`/dashboard`), where you can manage bulk orders, settle outstanding invoices, view credit scores, and track active forward contracts.
+* **Email:** `buyer-b2b@demo.aquaerp.local`
+* **Password:** `Demo@123`
+* **Global Role:** `user`
+* **Tenant Member Role:** `customer` (Wholesale Client)
+* **Wallet Balance:** Pre-loaded with **100,000 KES** per tenant.
 
+---
+
+## 🛍️ 2b. Storefront / Retail Buyer
+Use this account to test the customer-facing storefront experience. Since this account is not registered as an internal tenant team member, logging in directly will not grant access to the tenant dashboards, but it can be used to checkout on any public cooperative storefront (`/store/{slug}`).
 * **Email:** `buyer@demo.aquaerp.local`
 * **Password:** `Demo@123`
-* **Role:** `fish_buyer`
+* **Global Role:** `user`
+* **Tenant Member Role:** None (Storefront Guest/Retail Buyer)
+* **Wallet Balance:** Pre-loaded with **50,000 KES** in its default wallet.
+
+---
+
+## 🏪 2c. Marketplace Vendor / Seller
+Use this account to test the vendor selling and listing workflows. Logging in with this account redirects you to the **Vendor Command Center** (`/dashboard/vendor`), where you can manage your listings, view reviews, track commissions, and check payouts.
+* **Email:** `vendor@demo.aquaerp.local`
+* **Password:** `Demo@123`
+* **Global Role:** `user`
+* **Tenant Member Role:** `vendor` (Marketplace Seller)
 
 ---
 

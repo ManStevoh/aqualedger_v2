@@ -28,6 +28,7 @@ async function seed() {
     const users = [
       { email: 'owner-coastfish@demo.aquaerp.local', firstName: 'Demo', lastName: 'Owner', role: 'user' },
       { email: 'buyer@demo.aquaerp.local', firstName: 'Jane', lastName: 'Buyer', role: 'user' },
+      { email: 'buyer-b2b@demo.aquaerp.local', firstName: 'B2B', lastName: 'Buyer', role: 'user' },
       { email: 'vendor@demo.aquaerp.local', firstName: 'Jack', lastName: 'Vendor', role: 'user' },
     ]
     
@@ -300,7 +301,8 @@ async function seed() {
     console.log('')
     console.log('Test accounts (password: Test@123):')
     console.log('  - owner-coastfish@demo.aquaerp.local (Tenant Owner)')
-    console.log('  - buyer@demo.aquaerp.local (Fish Buyer)')
+    console.log('  - buyer@demo.aquaerp.local (Storefront Buyer)')
+    console.log('  - buyer-b2b@demo.aquaerp.local (B2B Buyer)')
     console.log('  - vendor@demo.aquaerp.local (Marketplace Vendor)')
     console.log('')
     console.log('Admin account (password: Admin@123):')

@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { query, queryOne, execute, generateId } from './db'
 
 // Types
@@ -107,19 +107,28 @@ export async function createUser(data: {
     [id, data.email.toLowerCase(), passwordHash, data.firstName, data.lastName, data.phone || null, data.role || 'user', status]
   )
   
-  // Create wallet for user
-  await query(
-    `INSERT INTO wallets (id, user_id, balance, currency, status)
-     VALUES (?, ?, 0, 'KES', 'active')`,
-    [generateId(), id]
-  )
+  // Create wallet and credit score — non-blocking: wallets require a tenant_id
+  // which is not always available at the user-creation stage (e.g. storefront signups).
+  // Tenant-scoped wallets are created separately during tenant onboarding.
+  try {
+    await query(
+      `INSERT INTO wallets (id, user_id, balance, currency, status, tenant_id)
+       VALUES (?, ?, 0, 'KES', 'active', (SELECT id FROM tenants LIMIT 1))`,
+      [generateId(), id]
+    )
+  } catch {
+    // Non-critical: wallet will be provisioned when the user joins a tenant
+  }
   
-  // Create credit score record
-  await query(
-    `INSERT INTO credit_scores (id, user_id, score, grade)
-     VALUES (?, ?, 300, 'E')`,
-    [generateId(), id]
-  )
+  try {
+    await query(
+      `INSERT INTO credit_scores (id, user_id, score, grade)
+       VALUES (?, ?, 300, 'E')`,
+      [generateId(), id]
+    )
+  } catch {
+    // Non-critical: credit score is created on first financial activity
+  }
   
   const user = await getUserById(id)
   if (!user) throw new Error('Failed to create user')
@@ -211,6 +220,57 @@ export async function deleteAllUserSessions(userId: string): Promise<void> {
   await execute(`DELETE FROM sessions WHERE user_id = ?`, [userId])
 }
 
+// Domain helper
+async function getCookieDomain(): Promise<string | undefined> {
+  try {
+    const hdrs = await headers()
+    const host = hdrs.get('host')
+    if (!host) return undefined
+    
+    const hostname = host.split(':')[0].toLowerCase()
+
+    // If it's an IP address, do not set domain (must be host-only cookie)
+    const ipRegex = /^(?:\d{1,3}\.){3}\d{1,3}$/
+    if (ipRegex.test(hostname) || hostname === '[::1]') {
+      return undefined
+    }
+
+    // Do NOT set domain for localhost or *.localhost — Chrome treats 'localhost'
+    // as a public suffix and silently rejects cookies with domain=.localhost,
+    // so we use host-only cookies (no domain attribute) for local development.
+    if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+      return undefined
+    }
+
+    // If there's a PLATFORM_HOST configured, use it (prefixed with a dot)
+    const platformHost = process.env.PLATFORM_HOST
+    if (platformHost) {
+      const cleanPlatformHost = platformHost.split(':')[0].toLowerCase()
+      if (hostname === cleanPlatformHost || hostname.endsWith('.' + cleanPlatformHost)) {
+        return '.' + cleanPlatformHost
+      }
+    }
+
+    // Fallback: if hostname has subdomains, try to find a base domain.
+    const parts = hostname.split('.')
+    if (parts.length >= 2) {
+      if (parts.length === 2) {
+        return '.' + hostname
+      }
+      const last = parts[parts.length - 1]
+      const prev = parts[parts.length - 2]
+      const slds = ['co', 'com', 'org', 'net', 'gov', 'ac', 'edu', 'or', 'go', 'ne']
+      if (slds.includes(prev) && parts.length >= 3) {
+        return '.' + parts.slice(-3).join('.')
+      }
+      return '.' + parts.slice(-2).join('.')
+    }
+  } catch {
+    // If headers() is called outside of request context (e.g. in some build/test environment)
+  }
+  return undefined
+}
+
 // Cookie helpers
 export async function setAuthCookies(
   accessToken: string,
@@ -220,6 +280,7 @@ export async function setAuthCookies(
 ): Promise<void> {
   const cookieStore = await cookies()
   const rememberMe = options?.rememberMe ?? false
+  const domain = await getCookieDomain()
   
   cookieStore.set('access_token', accessToken, {
     httpOnly: true,
@@ -227,6 +288,7 @@ export async function setAuthCookies(
     sameSite: 'lax',
     path: '/',
     maxAge: rememberMe ? 60 * 60 : 15 * 60,
+    ...(domain ? { domain } : {}),
   })
   
   cookieStore.set('refresh_token', refreshToken, {
@@ -236,19 +298,31 @@ export async function setAuthCookies(
     path: '/',
     maxAge: rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60,
     expires: expiresAt,
+    ...(domain ? { domain } : {}),
   })
 }
 
 export async function clearAuthCookies(): Promise<void> {
   const cookieStore = await cookies()
+  const domain = await getCookieDomain()
+  
+  // Clear host-only cookies (without domain)
   cookieStore.delete('access_token')
   cookieStore.delete('refresh_token')
   cookieStore.delete('admin_refresh_token')
+  
+  // Clear wildcard/subdomain cookies if domain is resolved
+  if (domain) {
+    cookieStore.delete({ name: 'access_token', domain, path: '/' })
+    cookieStore.delete({ name: 'refresh_token', domain, path: '/' })
+    cookieStore.delete({ name: 'admin_refresh_token', domain, path: '/' })
+  }
 }
 
 /** Preserve super-admin refresh token while impersonating another user */
 export async function setAdminRefreshCookie(refreshToken: string, expiresAt: Date): Promise<void> {
   const cookieStore = await cookies()
+  const domain = await getCookieDomain()
   cookieStore.set('admin_refresh_token', refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -256,6 +330,7 @@ export async function setAdminRefreshCookie(refreshToken: string, expiresAt: Dat
     path: '/',
     expires: expiresAt,
     maxAge: 7 * 24 * 60 * 60,
+    ...(domain ? { domain } : {}),
   })
 }
 

@@ -34,7 +34,7 @@ export interface Tenant {
 export interface TenantContext {
   tenantId: string
   branchId?: string | null
-  memberRole?: TenantMemberRole
+  memberRole?: TenantMemberRole | null
 }
 
 /** SQL fragment helper — use with params [tenantId, ...] */

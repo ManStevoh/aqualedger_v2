@@ -7,6 +7,7 @@ interface AppState {
   currentUser: User | null
   currentRole: UserRole
   memberRole: TenantMemberRole | null
+  tenantSlug: string | null
   rolePermissions: Permission[] | null
   enabledModuleIds: string[]
   modulesLoaded: boolean
@@ -15,6 +16,7 @@ interface AppState {
   setCurrentUser: (user: User | null) => void
   setCurrentRole: (role: UserRole) => void
   setMemberRole: (role: TenantMemberRole | null) => void
+  setTenantSlug: (slug: string | null) => void
   setRolePermissions: (perms: Permission[] | null) => void
   setEnabledModuleIds: (ids: string[]) => void
   setModulesLoaded: (loaded: boolean) => void
@@ -27,6 +29,7 @@ export const useAppStore = create<AppState>((set) => ({
   currentUser: null,
   currentRole: 'user',
   memberRole: null,
+  tenantSlug: null,
   rolePermissions: null,
   enabledModuleIds: ['platform'],
   modulesLoaded: false,
@@ -35,6 +38,7 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentUser: (user) => set({ currentUser: user }),
   setCurrentRole: (role) => set({ currentRole: role }),
   setMemberRole: (role) => set({ memberRole: role }),
+  setTenantSlug: (slug) => set({ tenantSlug: slug }),
   setRolePermissions: (perms) => set({ rolePermissions: perms }),
   setEnabledModuleIds: (ids) => set({ enabledModuleIds: ids, modulesLoaded: true }),
   setModulesLoaded: (loaded) => set({ modulesLoaded: loaded }),

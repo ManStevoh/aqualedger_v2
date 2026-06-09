@@ -50,10 +50,12 @@ export default function OrdersPage() {
     title: 'Orders',
     description: 'Track and manage your fish orders (live data)',
   })
-  const { currentUser } = useAppStore()
-  const [orderRole, setOrderRole] = useState<'buyer' | 'seller'>(() =>
-    defaultOrderRole(currentUser?.role),
-  )
+  const { currentUser, memberRole } = useAppStore()
+  const [orderRole, setOrderRole] = useState<'buyer' | 'seller'>(() => {
+    if (memberRole === 'customer') return 'buyer'
+    if (memberRole === 'vendor') return 'seller'
+    return defaultOrderRole(currentUser?.role)
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [page, setPage] = useState(1)

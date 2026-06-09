@@ -226,11 +226,8 @@ export const ERP_MODULES: ErpModule[] = [
     apiPrefix: '/api/v2/crm',
     nav: [
       { title: 'Customers', href: '/dashboard/crm/customers', permission: 'crm.customers.read', icon: Users },
-      { title: 'Segments', href: '/dashboard/crm/segments', permission: 'crm.customers.read', icon: Users },
-      { title: 'Sales forecast', href: '/dashboard/crm/forecast', permission: 'crm.customers.read', icon: BarChart3 },
       { title: 'Leads pipeline', href: '/dashboard/crm/leads', permission: 'crm.leads.read', icon: UserCircle },
       { title: 'Campaigns', href: '/dashboard/crm/campaigns', permission: 'crm.customers.read', icon: Bell },
-      { title: 'Credit', href: '/dashboard/credit-score', permission: 'crm.customers.read', icon: Calculator },
     ],
   },
   {
@@ -371,6 +368,38 @@ export function getNavForRole(
   enabledModuleIds?: Iterable<string>,
   tenantRolePermissions?: import('./permissions').Permission[] | null,
 ): ErpModule[] {
+  if (memberRole === 'customer') {
+    return [
+      {
+        id: 'platform',
+        label: 'Wholesale Portal',
+        description: 'B2B Wholesale Portal',
+        icon: LayoutDashboard,
+        color: 'from-sky-500 to-blue-600',
+        nav: [
+          { title: 'Command Center', href: '/dashboard', permission: 'commerce.orders.read', icon: LayoutDashboard },
+        ],
+      },
+    ] as ErpModule[]
+  }
+
+  if (memberRole === 'vendor') {
+    return [
+      {
+        id: 'platform',
+        label: 'Vendor Portal',
+        description: 'Marketplace Seller Hub',
+        icon: LayoutDashboard,
+        color: 'from-emerald-500 to-green-600',
+        nav: [
+          { title: 'Command Center', href: '/dashboard/vendor', permission: 'commerce.listings.read' as Permission, icon: LayoutDashboard },
+          { title: 'My Listings', href: '/dashboard/marketplace', permission: 'commerce.listings.read' as Permission, icon: ShoppingCart },
+          { title: 'My Orders', href: '/dashboard/orders', permission: 'commerce.orders.read' as Permission, icon: ClipboardList },
+        ],
+      },
+    ] as ErpModule[]
+  }
+
   if (legacyRole === 'super_admin') {
     return [
       {

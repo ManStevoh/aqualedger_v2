@@ -36,13 +36,18 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get('from') || '/dashboard'
+  const errorParam = searchParams.get('error')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    errorParam === 'no_membership'
+      ? 'Your account does not have access to any business dashboards. Please log in to your cooperative storefront instead.'
+      : null
+  )
   const [mfaRequired, setMfaRequired] = useState(false)
   const [mfaChallenge, setMfaChallenge] = useState('')
   const [mfaToken, setMfaToken] = useState('')
@@ -64,24 +69,48 @@ function LoginForm() {
     }
 
     const { hostname, protocol, port } = window.location
+    const portSuffix = port ? `:${port}` : ''
+    const currentHost = hostname.toLowerCase()
 
-    // 1. Localhost environment (Fully supports wildcard subdomains out-of-the-box!)
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      const portSuffix = port ? `:${port}` : ''
-      window.location.href = `${protocol}//${tenantSlug}.localhost${portSuffix}/dashboard`
+    // For localhost development: cookies are host-only so a cross-origin redirect
+    // to a different subdomain would lose the session. Always stay on the same origin.
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost.endsWith('.localhost')) {
+      // If already on the correct subdomain (e.g. coastfish.localhost) or on bare localhost,
+      // just navigate within the same origin.
+      router.push(from.startsWith('/') ? from : '/dashboard')
+      router.refresh()
       return
     }
 
-    // 2. Public Home Lab testing (Bypasses nested subdomain redirects to avoid Cloudflare SSL depth limit)
+    // Public Home Lab testing — no nested subdomain redirects (Cloudflare SSL depth limit)
     if (hostname === 'aqua.kenwafula.cv') {
       router.push(from.startsWith('/') ? from : '/dashboard')
       router.refresh()
       return
     }
 
-    // 3. cPanel Production Domain (Fully supports standard free SSL wildcards)
-    const baseHost = hostname.replace(/^www\./i, '')
-    window.location.href = `${protocol}//${tenantSlug}.${baseHost}/dashboard`
+    // Production: build the base host by stripping any existing tenant prefix / reserved subdomain.
+    let baseHost = currentHost.replace(/^www\./i, '')
+    if (baseHost.startsWith(tenantSlug + '.')) {
+      baseHost = baseHost.slice(tenantSlug.length + 1)
+    } else {
+      const RESERVED = ['app', 'api', 'admin', 'dashboard', 'store', 'login', 'register']
+      for (const sub of RESERVED) {
+        if (baseHost.startsWith(sub + '.')) {
+          baseHost = baseHost.slice(sub.length + 1)
+          break
+        }
+      }
+    }
+
+    // Only do a cross-origin redirect in production where shared-domain cookies work.
+    const targetHost = `${tenantSlug}.${baseHost}`
+    if (targetHost !== currentHost) {
+      window.location.href = `${protocol}//${targetHost}${portSuffix}/dashboard`
+    } else {
+      router.push(from.startsWith('/') ? from : '/dashboard')
+      router.refresh()
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

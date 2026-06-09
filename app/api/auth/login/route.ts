@@ -16,6 +16,7 @@ import { getMfaStatus } from '@/lib/modules/auth/mfa'
 import { signMfaChallengeToken } from '@/lib/modules/auth/mfa-challenge'
 import { getMaintenanceStatus } from '@/lib/platform/platform-settings'
 import { assertRecaptcha } from '@/lib/modules/security/recaptcha'
+import { queryOne } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +62,19 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Your account is inactive. Please contact support.', code: 'ACCOUNT_INACTIVE' },
         { status: 403 },
       )
+    }
+
+    if (user.role !== 'super_admin' && user.role !== 'investor') {
+      const member = await queryOne<{ id: string }>(
+        `SELECT id FROM tenant_members WHERE user_id = ? AND status = 'active' LIMIT 1`,
+        [user.id]
+      )
+      if (!member) {
+        return NextResponse.json(
+          { success: false, error: 'Your account does not have access to any business dashboards. Please log in to your cooperative storefront instead.', code: 'NO_MEMBERSHIP' },
+          { status: 403 }
+        )
+      }
     }
 
     const maintenance = await getMaintenanceStatus()

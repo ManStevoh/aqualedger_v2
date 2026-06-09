@@ -19,7 +19,8 @@ export const GET = apiHandler(async (request: NextRequest) => {
     listingId: searchParams.get('listingId') ?? undefined,
   })
 
-  const data = await listMarketplaceReviews(ctx.tenantId, query)
+  const sellerId = ctx.memberRole === 'vendor' ? ctx.userId : undefined
+  const data = await listMarketplaceReviews(ctx.tenantId, { ...query, sellerId })
   return jsonOk(data)
 }, 'v2/commerce/reviews')
 

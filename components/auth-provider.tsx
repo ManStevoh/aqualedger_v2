@@ -24,6 +24,7 @@ type MeResponse = {
       createdAt: string
     }
     memberRole?: TenantMemberRole | null
+    tenantSlug?: string | null
     permissions?: Permission[] | null
   }
   error?: string
@@ -51,7 +52,7 @@ async function tryRefreshSession(): Promise<boolean> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { setCurrentUser, setCurrentRole, setMemberRole, setRolePermissions, setEnabledModuleIds } =
+  const { setCurrentUser, setCurrentRole, setMemberRole, setTenantSlug, setRolePermissions, setEnabledModuleIds } =
     useAppStore()
 
   useEffect(() => {
@@ -90,10 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.replace('/admin')
           return
         }
+        if (pathname.startsWith('/dashboard') && !me.data?.memberRole) {
+          apiFetch('/auth/logout', { method: 'POST' }).finally(() => {
+            router.replace(`/login?error=no_membership&from=${encodeURIComponent(pathname || '/dashboard')}`)
+          })
+          return
+        }
+        if (pathname.startsWith('/dashboard') && me.data?.memberRole === 'customer' && pathname !== '/dashboard') {
+          router.replace('/dashboard')
+          return
+        }
 
         setCurrentUser(user)
         setCurrentRole(user.role)
         setMemberRole(me.data.memberRole ?? null)
+        setTenantSlug(me.data.tenantSlug ?? null)
         setRolePermissions(me.data.permissions ?? null)
 
         try {

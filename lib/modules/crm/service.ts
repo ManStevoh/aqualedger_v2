@@ -4,6 +4,7 @@ import { dispatchNotification } from '@/lib/notifications/dispatch'
 import { resolveTenantId, tenantWhere } from '@/lib/tenant'
 import type {
   CustomerCreateInput,
+  CustomerUpdateInput,
   LeadCreateInput,
   ActivityCreateInput,
   CampaignCreateInput,
@@ -47,29 +48,84 @@ export async function listCustomers(
   const page = opts.page || 1
   const limit = Math.min(Math.max(opts.limit || 20, 1), 100)
   const pagination = buildPagination(page, limit)
-  const conditions = [tenantWhere('c')]
-  const params: unknown[] = [tid]
+
+  // Outer conditions applied to the UNION results
+  const outerConditions: string[] = []
+  const outerParams: unknown[] = []
 
   if (opts.segment) {
-    conditions.push('c.segment = ?')
-    params.push(opts.segment)
+    outerConditions.push('c.segment = ?')
+    outerParams.push(opts.segment)
   }
   if (opts.status) {
-    conditions.push('c.status = ?')
-    params.push(opts.status)
+    outerConditions.push('c.status = ?')
+    outerParams.push(opts.status)
   }
 
-  const where = `WHERE ${conditions.join(' AND ')}`
+  const outerWhere = outerConditions.length > 0 ? `WHERE ${outerConditions.join(' AND ')}` : ''
 
+  // Subquery params (each subquery uses `tid`)
+  const subQueryParams = [tid, tid, tid]
+
+  const unionQuery = `
+    SELECT 
+      COALESCE(cc.id, CONCAT('tm-', tm.id)) as id,
+      tm.tenant_id,
+      tm.user_id,
+      COALESCE(cc.name, CONCAT(u.first_name, ' ', u.last_name)) as name,
+      COALESCE(cc.email, u.email) as email,
+      COALESCE(cc.phone, u.phone) as phone,
+      COALESCE(cc.segment, 'retail') as segment,
+      COALESCE(
+        (SELECT SUM(total) FROM orders WHERE buyer_id = tm.user_id AND status = 'delivered'),
+        cc.lifetime_value,
+        0
+      ) as lifetime_value,
+      COALESCE(cc.status, 'active') as status,
+      cc.notes,
+      COALESCE(cc.created_at, tm.joined_at) as created_at,
+      cs.score as credit_score,
+      cs.grade as credit_grade
+    FROM tenant_members tm
+    JOIN users u ON tm.user_id = u.id
+    LEFT JOIN crm_customers cc ON cc.user_id = tm.user_id AND cc.tenant_id = tm.tenant_id
+    LEFT JOIN credit_scores cs ON cs.user_id = tm.user_id
+    WHERE tm.tenant_id = ? AND tm.role = 'customer'
+
+    UNION ALL
+
+    SELECT 
+      cc.id,
+      cc.tenant_id,
+      cc.user_id,
+      cc.name,
+      cc.email,
+      cc.phone,
+      cc.segment,
+      cc.lifetime_value,
+      cc.status,
+      cc.notes,
+      cc.created_at,
+      cs.score as credit_score,
+      cs.grade as credit_grade
+    FROM crm_customers cc
+    LEFT JOIN credit_scores cs ON cs.user_id = cc.user_id
+    WHERE cc.tenant_id = ? AND (cc.user_id IS NULL OR cc.user_id NOT IN (
+      SELECT tm2.user_id FROM tenant_members tm2 WHERE tm2.tenant_id = ? AND tm2.role = 'customer'
+    ))
+  `
+
+  const countParams = [...subQueryParams, ...outerParams]
   const [countRow] = await query<{ total: number }>(
-    `SELECT COUNT(*) as total FROM crm_customers c ${where}`,
-    params,
+    `SELECT COUNT(*) as total FROM (${unionQuery}) as c ${outerWhere}`,
+    countParams,
   )
   const total = countRow?.total || 0
 
-  const customers = await query<CustomerRow>(
-    `SELECT c.* FROM crm_customers c ${where} ORDER BY c.name ASC ${pagination.clause}`,
-    params,
+  const selectParams = [...subQueryParams, ...outerParams]
+  const customers = await query<any>(
+    `SELECT * FROM (${unionQuery}) as c ${outerWhere} ORDER BY c.name ASC ${pagination.clause}`,
+    selectParams,
   )
 
   return {
@@ -108,6 +164,102 @@ export async function createCustomer(
 
   const customer = await queryOne<CustomerRow>('SELECT * FROM crm_customers WHERE id = ?', [id])
   if (!customer) throw new Error('Failed to create customer')
+  return customer
+}
+
+export async function updateCustomer(
+  tenantId: string | null | undefined,
+  customerId: string,
+  input: CustomerUpdateInput,
+): Promise<CustomerRow> {
+  const tid = resolveTenantId(tenantId)
+
+  // Check if it's a tenant_member id (tm-...)
+  let id = customerId
+  let isNewCrmRow = false
+
+  let existing = await queryOne<CustomerRow>(
+    `SELECT * FROM crm_customers WHERE id = ? AND tenant_id = ?`,
+    [id, tid],
+  )
+
+  if (!existing && id.startsWith('tm-')) {
+    // It's a storefront/portal customer. Let's find their user details.
+    const memberId = id.slice(3) // remove 'tm-' prefix
+    const tm = await queryOne<{ user_id: string; email: string; first_name: string; last_name: string; phone: string | null }>(
+      `SELECT tm.user_id, u.email, u.first_name, u.last_name, u.phone
+       FROM tenant_members tm
+       JOIN users u ON tm.user_id = u.id
+       WHERE tm.id = ? AND tm.tenant_id = ?`,
+      [memberId, tid],
+    )
+    if (!tm) throw notFound('Customer not found')
+
+    // Create a new crm_customers row
+    id = generateId()
+    await execute(
+      `INSERT INTO crm_customers (id, tenant_id, user_id, name, email, phone, segment, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        tid,
+        tm.user_id,
+        input.name ?? `${tm.first_name} ${tm.last_name}`.trim(),
+        input.email !== undefined ? input.email : tm.email,
+        input.phone !== undefined ? input.phone : tm.phone,
+        input.segment ?? 'retail',
+        input.status ?? 'active',
+        input.notes ?? null,
+      ],
+    )
+    isNewCrmRow = true
+  } else if (!existing) {
+    throw notFound('Customer not found')
+  }
+
+  if (!isNewCrmRow) {
+    const sets: string[] = []
+    const params: unknown[] = []
+
+    if (input.name !== undefined) {
+      sets.push('name = ?')
+      params.push(input.name)
+    }
+    if (input.email !== undefined) {
+      sets.push('email = ?')
+      params.push(input.email)
+    }
+    if (input.phone !== undefined) {
+      sets.push('phone = ?')
+      params.push(input.phone)
+    }
+    if (input.segment !== undefined) {
+      sets.push('segment = ?')
+      params.push(input.segment)
+    }
+    if (input.status !== undefined) {
+      sets.push('status = ?')
+      params.push(input.status)
+    }
+    if (input.notes !== undefined) {
+      sets.push('notes = ?')
+      params.push(input.notes)
+    }
+
+    if (sets.length > 0) {
+      params.push(id, tid)
+      await execute(
+        `UPDATE crm_customers SET ${sets.join(', ')} WHERE id = ? AND tenant_id = ?`,
+        params,
+      )
+    }
+  }
+
+  const customer = await queryOne<CustomerRow>(
+    `SELECT * FROM crm_customers WHERE id = ? AND tenant_id = ?`,
+    [id, tid],
+  )
+  if (!customer) throw new Error('Failed to update customer')
   return customer
 }
 

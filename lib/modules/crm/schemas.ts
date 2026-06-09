@@ -26,6 +26,16 @@ export const customerListQuerySchema = paginationSchema.extend({
   status: customerStatusSchema.optional(),
 })
 
+export const customerUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  email: z.string().email().optional().nullable().or(z.literal('')),
+  phone: z.string().max(30).optional().nullable(),
+  segment: customerSegmentSchema.optional(),
+  status: customerStatusSchema.optional(),
+  notes: z.string().optional().nullable(),
+})
+
+
 export const leadStageSchema = z.enum([
   'new',
   'contacted',
@@ -117,6 +127,7 @@ export const campaignListQuerySchema = paginationSchema.extend({
 })
 
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>
+export type CustomerUpdateInput = z.infer<typeof customerUpdateSchema>
 export type CampaignCreateInput = z.infer<typeof campaignCreateSchema>
 export type CampaignUpdateInput = z.infer<typeof campaignUpdateSchema>
 export type LeadCreateInput = z.infer<typeof leadCreateSchema>

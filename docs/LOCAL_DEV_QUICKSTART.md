@@ -56,7 +56,8 @@ npm run test:e2e
 | Super admin | admin@aqualedger.co.ke | Admin@123 |
 | Tenant owner (Coast Fish) | owner-coastfish@demo.aquaerp.local | Demo@123 |
 | Tenant owner (Lamu Sea) | owner-lamusea@demo.aquaerp.local | Demo@123 |
-| Marketplace Buyer | buyer@demo.aquaerp.local | Demo@123 |
+| B2B Buyer (Wholesale) | buyer-b2b@demo.aquaerp.local | Demo@123 |
+| Storefront Buyer (Retail) | buyer@demo.aquaerp.local | Demo@123 |
 
 ## Troubleshooting
 

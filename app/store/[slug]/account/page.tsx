@@ -175,7 +175,7 @@ export default function StoreAccountPage() {
               </ul>
             </div>
 
-            {!user && (
+            {!user ? (
               <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm h-fit">
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 mb-3">
                   <Search className="h-4.5 w-4.5 text-slate-600" />
@@ -210,6 +210,22 @@ export default function StoreAccountPage() {
                     Log in to your account
                   </Link>
                 </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm h-fit animate-in fade-in duration-300">
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 mb-3">
+                  <ShoppingBag className="h-4.5 w-4.5 text-sky-600" />
+                  <span>B2B Wholesale Portal</span>
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                  Are you a wholesale client or bulk buyer? Access the B2B portal to place large orders, view pricing agreements, and manage logistics.
+                </p>
+                <Link
+                  href="/login"
+                  className="w-full flex items-center justify-center rounded-lg bg-sky-600 py-2.5 text-white text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow hover:shadow-md cursor-pointer text-center"
+                >
+                  Go to B2B Portal
+                </Link>
               </div>
             )}
           </div>

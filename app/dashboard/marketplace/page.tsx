@@ -62,7 +62,7 @@ function StarDisplay({ rating }: { rating: number }) {
 export default function MarketplacePage() {
   const meta = useDashboardPageMeta()
 
-  const { currentUser } = useAppStore()
+  const { currentUser, memberRole } = useAppStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [showFilterDialog, setShowFilterDialog] = useState(false)
   const [filterGrade, setFilterGrade] = useState('')
@@ -316,7 +316,8 @@ export default function MarketplacePage() {
           onClick={() => setShowListDialog(true)}
           disabled={
             !currentUser ||
-            !['boat_owner', 'fisherman', 'super_admin', 'investor'].includes(currentUser.role)
+            (!['boat_owner', 'fisherman', 'super_admin', 'investor'].includes(currentUser.role) &&
+              memberRole !== 'vendor')
           }
         >
           <Plus className="w-4 h-4" />

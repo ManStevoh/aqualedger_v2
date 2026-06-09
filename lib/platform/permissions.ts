@@ -370,7 +370,7 @@ export function legacyRoleToMemberRole(
 }
 
 export function hasPermission(
-  memberRole: TenantMemberRole,
+  memberRole: TenantMemberRole | null,
   permission: Permission,
   legacyRole?: string,
   tenantRolePermissions?: Permission[] | null,
@@ -378,6 +378,7 @@ export function hasPermission(
   if (permission.startsWith('platform.')) {
     return legacyRole === 'super_admin' && PLATFORM_PERMISSIONS.includes(permission)
   }
+  if (!memberRole) return false
   if (tenantRolePermissions != null) {
     return tenantRolePermissions.includes(permission)
   }
@@ -385,12 +386,12 @@ export function hasPermission(
 }
 
 export function assertPermission(
-  memberRole: TenantMemberRole,
+  memberRole: TenantMemberRole | null,
   permission: Permission,
   legacyRole?: string,
   tenantRolePermissions?: Permission[] | null,
 ): void {
-  if (!hasPermission(memberRole, permission, legacyRole, tenantRolePermissions)) {
+  if (!memberRole || !hasPermission(memberRole, permission, legacyRole, tenantRolePermissions)) {
     throw new Error('Forbidden')
   }
 }

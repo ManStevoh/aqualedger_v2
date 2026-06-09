@@ -2,6 +2,7 @@
 
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,8 +34,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Users, Loader2, Download, Clock, Phone, Mail, MessageSquare, LogIn } from 'lucide-react'
+import { Plus, Pencil, Users, Loader2, Download, Clock, Phone, Mail, MessageSquare, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAppStore } from '@/lib/store'
 import {
   PortalInviteDialog,
   portalDefaultsFromCustomer,
@@ -48,6 +50,9 @@ interface Customer {
   segment: string
   lifetime_value: number
   status: string
+  notes?: string | null
+  credit_score?: number | null
+  credit_grade?: string | null
 }
 
 interface Activity {
@@ -71,6 +76,7 @@ const ACTIVITY_ICONS: Record<string, typeof Phone> = {
 }
 
 export default function CustomersPage() {
+  const { tenantSlug } = useAppStore()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
@@ -78,13 +84,28 @@ export default function CustomersPage() {
   const [activitiesLoading, setActivitiesLoading] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [activityDialog, setActivityDialog] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [typeFilter, setTypeFilter] = useState<'all' | 'b2b' | 'storefront'>('all')
+
+  // Create Form State
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [segment, setSegment] = useState('retail')
   const [status, setStatus] = useState('active')
+  
+  // Edit Form State
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editSegment, setEditSegment] = useState('retail')
+  const [editStatus, setEditStatus] = useState('active')
+  const [editNotes, setEditNotes] = useState('')
+
+  // Activity Form State
   const [activityType, setActivityType] = useState('call')
   const [activitySubject, setActivitySubject] = useState('')
   const [activityBody, setActivityBody] = useState('')
@@ -176,6 +197,53 @@ export default function CustomersPage() {
     }
   }
 
+  const handleEdit = async () => {
+    if (!editingCustomer) return
+    if (!editName.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/v2/crm/customers/${editingCustomer.id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName.trim(),
+          email: editEmail.trim() || null,
+          phone: editPhone.trim() || null,
+          segment: editSegment,
+          status: editStatus,
+          notes: editNotes.trim() || null,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        toast.error(data.error || 'Failed to update customer')
+        return
+      }
+      toast.success('Customer updated successfully')
+      setEditDialogOpen(false)
+      await fetchCustomers()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openEditDialog = (customer: Customer) => {
+    setEditingCustomer(customer)
+    setEditName(customer.name)
+    setEditEmail(customer.email || '')
+    setEditPhone(customer.phone || '')
+    setEditSegment(customer.segment)
+    setEditStatus(customer.status)
+    setEditNotes(customer.notes || '')
+    setEditDialogOpen(true)
+  }
+
   const handleCreateActivity = async () => {
     if (!activitySubject.trim()) {
       toast.error('Subject is required')
@@ -259,6 +327,13 @@ export default function CustomersPage() {
     setPortalInviteOpen(true)
   }
 
+  const filteredCustomers = customers.filter((c) => {
+    if (typeFilter === 'all') return true
+    if (typeFilter === 'storefront') return c.segment === 'retail'
+    if (typeFilter === 'b2b') return c.segment !== 'retail'
+    return true
+  })
+
   return (
     <DashboardPageLayout
       title="Customers"
@@ -283,14 +358,42 @@ export default function CustomersPage() {
 
         <TabsContent value="directory" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Customer Directory
-              </CardTitle>
-              <CardDescription>
-                {loading ? 'Loading…' : `${customers.length} customer${customers.length !== 1 ? 's' : ''}`}
-              </CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Customer Directory
+                </CardTitle>
+                <CardDescription>
+                  {loading ? 'Loading…' : `${filteredCustomers.length} customer${filteredCustomers.length !== 1 ? 's' : ''}`}
+                </CardDescription>
+              </div>
+              <div className="flex gap-1 border rounded-lg p-0.5 bg-muted/50 w-fit shrink-0">
+                <Button
+                  variant={typeFilter === 'all' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 text-xs font-semibold px-3"
+                  onClick={() => setTypeFilter('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={typeFilter === 'b2b' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 text-xs font-semibold px-3"
+                  onClick={() => setTypeFilter('b2b')}
+                >
+                  B2B Wholesale
+                </Button>
+                <Button
+                  variant={typeFilter === 'storefront' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-8 text-xs font-semibold px-3"
+                  onClick={() => setTypeFilter('storefront')}
+                >
+                  Storefront Retail
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -298,10 +401,10 @@ export default function CustomersPage() {
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Loading customers…
                 </div>
-              ) : customers.length === 0 ? (
+              ) : filteredCustomers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Users className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                  <p className="font-medium">No customers yet</p>
+                  <p className="font-medium">No customers found</p>
                   <Button className="mt-4 gap-2" onClick={() => setShowDialog(true)}>
                     <Plus className="h-4 w-4" />
                     Add Customer
@@ -314,30 +417,47 @@ export default function CustomersPage() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Segment</TableHead>
+                      <TableHead>Credit Score</TableHead>
                       <TableHead>Lifetime Value</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {customers.map((c) => (
+                    {filteredCustomers.map((c) => (
                       <TableRow
                         key={c.id}
-                        className={selectedCustomerId === c.id ? 'bg-muted/50' : ''}
+                        className={`${selectedCustomerId === c.id ? 'bg-muted/50 cursor-pointer' : 'cursor-pointer'}`}
                         onClick={() => setSelectedCustomerId(c.id)}
                       >
                         <TableCell className="font-medium">{c.name}</TableCell>
                         <TableCell>{c.email || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={c.segment === 'retail' ? 'secondary' : 'default'} className={c.segment === 'retail' ? 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100' : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'}>
+                            {c.segment === 'retail' ? 'Storefront' : 'B2B Buyer'}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{c.phone || '—'}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{segmentLabel(c.segment)}</Badge>
                         </TableCell>
                         <TableCell>
+                          {c.segment !== 'retail' && c.credit_score != null ? (
+                            <span className="font-semibold text-slate-700" title={`Grade: ${c.credit_grade}`}>
+                              {c.credit_score} ({c.credit_grade})
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           {new Intl.NumberFormat('en-KE', {
                             style: 'currency',
                             currency: 'KES',
+                            maximumFractionDigits: 0,
                           }).format(Number(c.lifetime_value))}
                         </TableCell>
                         <TableCell>
@@ -345,17 +465,48 @@ export default function CustomersPage() {
                             {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right space-x-1">
+                        <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                          {c.segment === 'retail' && tenantSlug && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-sky-600 hover:text-sky-700 hover:bg-sky-50"
+                              asChild
+                            >
+                              <Link href={`/store/${tenantSlug}`} target="_blank">
+                                <LogIn className="h-4 w-4" />
+                                Storefront
+                              </Link>
+                            </Button>
+                          )}
+                          {c.segment !== 'retail' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                              asChild
+                            >
+                              <Link href="/dashboard/credit-score">
+                                Credit
+                              </Link>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => openEditDialog(c)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="gap-1"
                             disabled={!c.email}
                             title={c.email ? 'Grant buyer portal login' : 'Add email first'}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openPortalInvite(c)
-                            }}
+                            onClick={() => openPortalInvite(c)}
                           >
                             <LogIn className="h-4 w-4" />
                             Portal
@@ -365,10 +516,7 @@ export default function CustomersPage() {
                             size="sm"
                             className="gap-1"
                             disabled={exporting}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleExport(c.id)
-                            }}
+                            onClick={() => handleExport(c.id)}
                           >
                             <Download className="h-4 w-4" />
                             Export
@@ -445,6 +593,7 @@ export default function CustomersPage() {
         </TabsContent>
       </Tabs>
 
+      {/* Add Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -472,11 +621,11 @@ export default function CustomersPage() {
                 <Select value={segment} onValueChange={setSegment}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="retail">Retail</SelectItem>
-                    <SelectItem value="wholesale">Wholesale</SelectItem>
-                    <SelectItem value="export">Export</SelectItem>
-                    <SelectItem value="restaurant">Restaurant</SelectItem>
-                    <SelectItem value="cooperative">Cooperative</SelectItem>
+                    <SelectItem value="retail">Retail (Storefront)</SelectItem>
+                    <SelectItem value="wholesale">Wholesale (B2B)</SelectItem>
+                    <SelectItem value="export">Export (B2B)</SelectItem>
+                    <SelectItem value="restaurant">Restaurant (B2B)</SelectItem>
+                    <SelectItem value="cooperative">Cooperative (B2B)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -497,6 +646,68 @@ export default function CustomersPage() {
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
             <Button onClick={handleCreate} disabled={submitting}>
               {submitting ? 'Saving…' : 'Create Customer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogDescription>Update details for {editingCustomer?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Segment</Label>
+                <Select value={editSegment} onValueChange={setEditSegment}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="retail">Retail (Storefront)</SelectItem>
+                    <SelectItem value="wholesale">Wholesale (B2B)</SelectItem>
+                    <SelectItem value="export">Export (B2B)</SelectItem>
+                    <SelectItem value="restaurant">Restaurant (B2B)</SelectItem>
+                    <SelectItem value="cooperative">Cooperative (B2B)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editStatus} onValueChange={setEditStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={submitting}>
+              {submitting ? 'Saving…' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

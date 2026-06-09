@@ -118,9 +118,9 @@ export async function backfillAllTenantRolePermissions(): Promise<number> {
 
 export async function getTenantRolePermissions(
   tenantId: string,
-  role: TenantMemberRole,
+  role: TenantMemberRole | null,
 ): Promise<Permission[] | null> {
-  if (!isPortalRole(role)) return null
+  if (!role || !isPortalRole(role)) return null
 
   const row = await queryOne<{ permissions: unknown }>(
     `SELECT permissions FROM tenant_role_permissions WHERE tenant_id = ? AND role = ?`,

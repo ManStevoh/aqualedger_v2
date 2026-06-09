@@ -492,7 +492,7 @@ export async function updateProductVariant(
 
 export async function listMarketplaceReviews(
   tenantId: string,
-  opts: { page?: number; limit?: number; listingId?: string } = {},
+  opts: { page?: number; limit?: number; listingId?: string; sellerId?: string } = {},
 ) {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 50, 100)
@@ -503,6 +503,10 @@ export async function listMarketplaceReviews(
   if (opts.listingId) {
     conditions.push('mr.listing_id = ?')
     params.push(opts.listingId)
+  }
+  if (opts.sellerId) {
+    conditions.push('EXISTS (SELECT 1 FROM fish_listings WHERE id = mr.listing_id AND seller_id = ?)')
+    params.push(opts.sellerId)
   }
 
   const where = `WHERE ${conditions.join(' AND ')}`

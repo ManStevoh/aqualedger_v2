@@ -25,6 +25,7 @@ import {
 
 const DEMO_PASSWORD = 'Demo@123'
 const BUYER_EMAIL = 'buyer@demo.aquaerp.local'
+const B2B_BUYER_EMAIL = 'buyer-b2b@demo.aquaerp.local'
 const VENDOR_EMAIL = 'vendor@demo.aquaerp.local'
 
 const DEMO_TENANTS: Array<{
@@ -97,6 +98,19 @@ async function ensureBuyer(passwordHash: string): Promise<string> {
     await execute(
       `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
        VALUES (?, 'tenant-default-0001', ?, 50000, 'KES', 'active')`,
+      [generateId(), id],
+    )
+  }
+  return id
+}
+
+async function ensureB2BBuyer(passwordHash: string): Promise<string> {
+  const id = await ensureUser(B2B_BUYER_EMAIL, 'B2B', 'Buyer', 'user', passwordHash)
+  const wallet = await queryOne<{ id: string }>(`SELECT id FROM wallets WHERE user_id = ? LIMIT 1`, [id])
+  if (!wallet) {
+    await execute(
+      `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
+       VALUES (?, 'tenant-default-0001', ?, 100000, 'KES', 'active')`,
       [generateId(), id],
     )
   }
@@ -187,8 +201,8 @@ async function clearDemoTenants(): Promise<void> {
   }
 
   await execute(
-    `DELETE FROM users WHERE email LIKE '%@demo.aquaerp.local' AND email != ? AND email != ?`,
-    [BUYER_EMAIL, VENDOR_EMAIL],
+    `DELETE FROM users WHERE email LIKE '%@demo.aquaerp.local' AND email != ? AND email != ? AND email != ?`,
+    [BUYER_EMAIL, B2B_BUYER_EMAIL, VENDOR_EMAIL],
   )
 }
 
@@ -197,6 +211,7 @@ async function provisionTenant(
   index: number,
   passwordHash: string,
   buyerId: string,
+  b2bBuyerId: string,
   vendorUserId: string,
 ): Promise<TenantSeedCtx> {
   const email = ownerEmail(def.slug)
@@ -236,11 +251,11 @@ async function provisionTenant(
     )
   }
 
-  // Add buyer to tenant_members
+  // Add B2B buyer to tenant_members
   await execute(
     `INSERT IGNORE INTO tenant_members (id, tenant_id, user_id, branch_id, role, status)
      VALUES (?, ?, ?, ?, 'customer', 'active')`,
-    [generateId(), tenantId, buyerId, branchId],
+    [generateId(), tenantId, b2bBuyerId, branchId],
   )
 
   // Add vendor to tenant_members
@@ -255,7 +270,7 @@ async function provisionTenant(
     slug,
     name: def.name,
     ownerId,
-    buyerId,
+    buyerId: b2bBuyerId,
     vendorUserId,
     branchId,
     county: def.county,
@@ -273,8 +288,8 @@ async function provisionTenant(
     customerId: '',
   }
 
-  await seedFishing(ctx, def, buyerId)
-  await seedCommerce(ctx, buyerId)
+  await seedFishing(ctx, def, b2bBuyerId)
+  await seedCommerce(ctx, b2bBuyerId)
   await seedColdChain(ctx)
   await seedCRM(ctx)
   await seedHR(ctx)
@@ -298,7 +313,7 @@ async function provisionTenant(
     `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status)
      VALUES (?, ?, ?, 100000, 'KES', 'active')
      ON DUPLICATE KEY UPDATE balance = 100000`,
-    [generateId(), tenantId, buyerId],
+    [generateId(), tenantId, b2bBuyerId],
   )
 
   await execute(
@@ -836,6 +851,7 @@ async function main(): Promise<void> {
   }
 
   const buyerId = await ensureBuyer(passwordHash)
+  const b2bBuyerId = await ensureB2BBuyer(passwordHash)
   const vendorUserId = await ensureVendor(passwordHash)
 
   const manifest: Array<{
@@ -864,7 +880,7 @@ async function main(): Promise<void> {
           continue
         }
       }
-      await provisionTenant(def, i, passwordHash, buyerId, vendorUserId)
+      await provisionTenant(def, i, passwordHash, buyerId, b2bBuyerId, vendorUserId)
       manifest.push({
         slug: def.slug,
         name: def.name,
@@ -882,8 +898,9 @@ async function main(): Promise<void> {
   console.log('')
   console.log('✅ Demo seed complete')
   console.log('')
-  console.log(`Password (all owners + buyer): ${DEMO_PASSWORD}`)
-  console.log(`Shared buyer: ${BUYER_EMAIL}`)
+  console.log(`Password (all owners + buyers): ${DEMO_PASSWORD}`)
+  console.log(`Shared Storefront buyer: ${BUYER_EMAIL}`)
+  console.log(`Shared B2B buyer: ${B2B_BUYER_EMAIL}`)
   console.log('')
   console.log('Tenant manifest:')
   console.table(manifest)

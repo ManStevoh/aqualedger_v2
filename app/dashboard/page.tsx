@@ -14,24 +14,8 @@ import {
   ShoppingCart,
   Snowflake,
   Sparkles,
-  Wallet,
-  Calculator,
-  FileSpreadsheet,
-  Plus,
-  Star,
-  Activity,
-  Clock,
-  CheckCircle2,
   Truck,
-  FileCheck,
-  CreditCard,
-  Phone,
   MapPin,
-  Calendar,
-  DollarSign,
-  Search,
-  PlusCircle,
-  TrendingUp,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +41,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { useBrand } from '@/components/branding/brand-provider'
 
 const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
@@ -138,20 +123,11 @@ type OnboardingStatus = {
 }
 
 function BulkBuyerDashboard() {
-  const { currentUser } = useAppStore()
-  const [wallet, setWallet] = useState<{ balance: number } | null>(null)
-  const [creditScore, setCreditScore] = useState<{ score: number; grade: string } | null>(null)
-  const [contracts, setContracts] = useState<any[]>([])
-  const [invoices, setInvoices] = useState<any[]>([])
+  const brand = useBrand()
+  const { currentUser, tenantSlug } = useAppStore()
   const [listings, setListings] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Topup Wallet State
-  const [topUpModal, setTopUpModal] = useState(false)
-  const [topUpAmount, setTopUpAmount] = useState('')
-  const [topUpPhone, setTopUpPhone] = useState(currentUser?.phone || '')
-  const [topUpLoading, setTopUpLoading] = useState(false)
 
   // Order Placement State
   const [orderModal, setOrderModal] = useState(false)
@@ -159,33 +135,15 @@ function BulkBuyerDashboard() {
   const [orderQty, setOrderQty] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [deliveryNotes, setDeliveryNotes] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'invoice'>('wallet')
   const [orderLoading, setOrderLoading] = useState(false)
-
-  // Pay Invoice State
-  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null)
-
-  // Trace State
-  const [traceModal, setTraceModal] = useState(false)
-  const [traceChain, setTraceChain] = useState<any>(null)
-  const [traceLoading, setTraceLoading] = useState(false)
-  const [traceLotCode, setTraceLotCode] = useState('')
 
   const loadData = useCallback(async () => {
     try {
-      const [wRes, csRes, cRes, iRes, lRes, oRes] = await Promise.all([
-        authFetchJson<{ success: boolean; data?: { wallet: { balance: number } } }>('/api/v2/wallet?action=balance'),
-        authFetchJson<{ success: boolean; data?: { score: number; grade: string } }>('/api/v2/credit-score'),
-        authFetchJson<{ success: boolean; data?: { contracts: any[] } }>('/api/v2/commerce/contracts'),
-        authFetchJson<{ success: boolean; data?: { invoices: any[] } }>('/api/v2/accounting/ar'),
+      const [lRes, oRes] = await Promise.all([
         authFetchJson<{ success: boolean; data?: { listings: any[] } }>('/api/v2/marketplace?status=available&limit=50'),
         authFetchJson<{ success: boolean; data?: { orders: any[] } }>('/api/v2/orders?role=buyer&limit=50'),
       ])
 
-      if (wRes.success && wRes.data?.wallet) setWallet(wRes.data.wallet)
-      if (csRes.success && csRes.data) setCreditScore(csRes.data)
-      if (cRes.success && cRes.data?.contracts) setContracts(cRes.data.contracts)
-      if (iRes.success && iRes.data?.invoices) setInvoices(iRes.data.invoices)
       if (lRes.success && lRes.data?.listings) setListings(lRes.data.listings)
       if (oRes.success && oRes.data?.orders) setOrders(oRes.data.orders)
     } catch (err) {
@@ -198,38 +156,6 @@ function BulkBuyerDashboard() {
   useEffect(() => {
     loadData()
   }, [loadData])
-
-  const handleTopUp = async () => {
-    if (!topUpAmount || parseFloat(topUpAmount) <= 0) {
-      toast.error('Enter a valid amount')
-      return
-    }
-    setTopUpLoading(true)
-    try {
-      const res = await authFetchJson<{ success: boolean; message?: string }>('/api/v2/wallet', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'deposit',
-          paymentMethod: 'mpesa',
-          amount: parseFloat(topUpAmount),
-          phoneNumber: topUpPhone,
-          description: 'B2B Portal deposit',
-        }),
-      })
-      if (res.success) {
-        toast.success(res.message || 'Deposit simulated successfully!')
-        setTopUpModal(false)
-        setTopUpAmount('')
-        loadData()
-      } else {
-        toast.error('Deposit failed')
-      }
-    } catch {
-      toast.error('Network error')
-    } finally {
-      setTopUpLoading(false)
-    }
-  }
 
   const handlePlaceOrder = async () => {
     if (!orderQty || parseFloat(orderQty) <= 0) {
@@ -265,29 +191,6 @@ function BulkBuyerDashboard() {
       toast.success('Wholesale order placed!')
       setOrderModal(false)
 
-      const orderId = res.data?.orderId
-
-      const invRes = await authFetchJson<{ success: boolean; error?: string; data?: { invoice?: { id: string } } }>('/api/v2/accounting/ar/from-order', {
-        method: 'POST',
-        body: JSON.stringify({ orderId, postToGl: true }),
-      })
-
-      if (paymentMethod === 'wallet' && orderId) {
-        const arRes = await authFetchJson<{ success: boolean; data?: { invoices: any[] } }>(`/api/v2/accounting/ar?status=sent`)
-        const matchingInvoice = arRes.data?.invoices?.find((i) => i.order_id === orderId)
-        if (matchingInvoice) {
-          toast.info('Settling invoice instantly from wallet...')
-          const payRes = await authFetchJson<{ success: boolean; error?: string }>(`/api/v2/accounting/ar/${matchingInvoice.id}/pay`, {
-            method: 'POST',
-          })
-          if (payRes.success) {
-            toast.success('Order paid instantly via Wallet balance!')
-          } else {
-            toast.error(payRes.error || 'Auto-payment failed. Please pay manually.')
-          }
-        }
-      }
-
       setOrderQty('')
       setDeliveryAddress('')
       setDeliveryNotes('')
@@ -296,44 +199,6 @@ function BulkBuyerDashboard() {
       toast.error('Network error')
     } finally {
       setOrderLoading(false)
-    }
-  }
-
-  const handlePayInvoice = async (invoiceId: string) => {
-    setPayingInvoiceId(invoiceId)
-    try {
-      const res = await authFetchJson<{ success: boolean; error?: string }>(`/api/v2/accounting/ar/${invoiceId}/pay`, {
-        method: 'POST',
-      })
-      if (res.success) {
-        toast.success('Invoice paid successfully via wallet!')
-        loadData()
-      } else {
-        toast.error(res.error || 'Payment failed')
-      }
-    } catch {
-      toast.error('Network error')
-    } finally {
-      setPayingInvoiceId(null)
-    }
-  }
-
-  const handleTraceLot = async (lotCode: string) => {
-    setTraceLotCode(lotCode)
-    setTraceModal(true)
-    setTraceLoading(true)
-    try {
-      const res = await authFetchJson<{ success: boolean; data?: { chain: any } }>(`/api/v2/traceability/chain?lotCode=${lotCode}`)
-      if (res.success && res.data?.chain) {
-        setTraceChain(res.data.chain)
-      } else {
-        setTraceChain(null)
-        toast.error('Trace data not found')
-      }
-    } catch {
-      toast.error('Failed to load trace chain')
-    } finally {
-      setTraceLoading(false)
     }
   }
 
@@ -348,13 +213,11 @@ function BulkBuyerDashboard() {
     )
   }
 
-  const unpaidInvoices = invoices.filter((i) => i.status !== 'paid' && i.status !== 'void')
-
   return (
     <DashboardPageLayout
-      title="B2B Buyer Command Center"
-      description="Commercial bulk purchasing, forward contracts, and wallet reconciliation."
-      breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'B2B Command Center' }]}
+      title={`${brand.appName} B2B Command Center`}
+      description="Direct wholesale purchasing and logistics tracking."
+      breadcrumbs={[{ label: 'B2B Portal', href: '/dashboard' }, { label: 'Command Center' }]}
     >
       <div className="space-y-8 animate-in fade-in duration-300">
         {/* Premium Hero Header */}
@@ -365,155 +228,55 @@ function BulkBuyerDashboard() {
             <div className="space-y-1.5">
               <Badge className="bg-primary/20 hover:bg-primary/30 text-primary-foreground border-primary/35">B2B Wholesale Portal</Badge>
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome back, {currentUser?.name}</h1>
-              <p className="text-sm text-slate-300/90 max-w-md">Manage your active forward contracts, wallet balances, invoices, and purchase fresh fish catalog directly from landing sites.</p>
+              <p className="text-sm text-slate-300/90 max-w-md">Browse available wholesale catches and track your order logistics in real-time.</p>
             </div>
-            <Button onClick={() => setTopUpModal(true)} className="w-fit bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md transition-all shrink-0">
-              <Plus className="h-4 w-4 mr-2" /> Top-Up Wallet
-            </Button>
+            {tenantSlug && (
+              <Button asChild variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white shrink-0 gap-2">
+                <Link href={`/store/${tenantSlug}`} target="_blank">
+                  Visit Retail Storefront
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
         {/* KPI Summary Cards Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Card className="relative overflow-hidden border-border/40 bg-card transition-all hover:shadow-md">
             <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-emerald-500 to-teal-600" />
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardDescription className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Wallet Balance</CardDescription>
-              <Wallet className="h-4 w-4 text-emerald-500" />
+              <CardDescription className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Available Batches</CardDescription>
+              <Package className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">{kes(wallet?.balance ?? 0)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Available for B2B instant checkout</p>
+              <div className="text-2xl font-bold">{listings.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Active wholesale listings on the marketplace</p>
             </CardContent>
           </Card>
 
           <Card className="relative overflow-hidden border-border/40 bg-card transition-all hover:shadow-md">
             <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-blue-500 to-indigo-600" />
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardDescription className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">B2B Credit Score</CardDescription>
-              <TrendingUp className="h-4 w-4 text-blue-500" />
+              <CardDescription className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">My Orders</CardDescription>
+              <ShoppingCart className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{creditScore?.score ?? '—'}</span>
-                <Badge className={
-                  creditScore?.grade === 'A' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                  creditScore?.grade === 'B' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                  'bg-amber-100 text-amber-800 border-amber-200'
-                }>Grade {creditScore?.grade ?? '—'}</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Trust rating for wholesale credit</p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden border-border/40 bg-card transition-all hover:shadow-md">
-            <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-purple-500 to-pink-600" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardDescription className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Active Contracts</CardDescription>
-              <FileSpreadsheet className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{contracts.filter(c => c.status === 'active').length}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total wholesale forward agreements</p>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden border-border/40 bg-card transition-all hover:shadow-md">
-            <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-amber-500 to-orange-600" />
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardDescription className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Unpaid Invoices</CardDescription>
-              <CreditCard className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">{unpaidInvoices.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">Value: {kes(unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0))}</p>
+              <div className="text-2xl font-bold">{orders.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Total wholesale purchases placed</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content Layout */}
         <div className="grid gap-6 lg:grid-cols-5">
-          {/* Left Column: Contracts, Invoices, Logistics (3/5 cols) */}
+          {/* Left Column: Logistics (3/5 cols) */}
           <div className="space-y-6 lg:col-span-3">
-            {/* Active Forward Contracts */}
-            <Card className="border-border/60">
-              <CardHeader className="pb-3 border-b border-border/40">
-                <CardTitle className="text-lg flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-purple-500" /> Active B2B Forward Contracts</CardTitle>
-                <CardDescription>Deliveries are tracked against your contracted volumes in real-time.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {contracts.length === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground text-sm">No active contracts found. Contact sales to open one.</div>
-                ) : (
-                  <div className="divide-y divide-border/40">
-                    {contracts.map((c) => {
-                      const progress = Number(c.contracted_kg) > 0 ? Math.min(100, Math.round((Number(c.delivered_kg) / Number(c.contracted_kg)) * 100)) : 0
-                      return (
-                        <div key={c.id} className="p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-sm font-semibold">{c.contract_number}</span>
-                            <Badge variant="outline">{c.species_name || 'All Species'}</Badge>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-xs font-medium">
-                              <span>Delivered Volume</span>
-                              <span>{Number(c.delivered_kg).toLocaleString()} / {Number(c.contracted_kg).toLocaleString()} kg ({progress}%)</span>
-                            </div>
-                            <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: `${progress}%` }} />
-                            </div>
-                          </div>
-                          <div className="flex justify-between text-xs text-muted-foreground pt-1">
-                            <span>Price: <strong className="text-foreground">{kes(Number(c.price_per_kg))}/kg</strong></span>
-                            <span>Terms: <strong className="text-foreground">{c.payment_terms || 'Net 30'}</strong></span>
-                            <span>Expires: <strong className="text-foreground">{new Date(c.end_date).toLocaleDateString()}</strong></span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Outstanding Invoices */}
-            <Card className="border-border/60">
-              <CardHeader className="pb-3 border-b border-border/40">
-                <CardTitle className="text-lg flex items-center gap-2"><CreditCard className="h-5 w-5 text-amber-500" /> Unpaid Invoices</CardTitle>
-                <CardDescription>Settle B2B accounts instantly using your wallet balance.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {unpaidInvoices.length === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground text-sm">All invoices are settled. Outstanding balance is KES 0.</div>
-                ) : (
-                  <div className="divide-y divide-border/40">
-                    {unpaidInvoices.map((inv) => (
-                      <div key={inv.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-semibold">{inv.invoice_number}</span>
-                            <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-800 border-amber-100">{inv.status}</Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">Order: #{inv.order_number || inv.order_id?.slice(0, 8)} · Due {new Date(inv.due_date).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-4">
-                          <span className="text-base font-bold text-slate-800 dark:text-slate-100">{kes(Number(inv.total_amount))}</span>
-                          <Button size="sm" onClick={() => handlePayInvoice(inv.id)} disabled={payingInvoiceId === inv.id} className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm h-8 px-3 text-xs">
-                            {payingInvoiceId === inv.id ? 'Paying...' : 'Pay with Wallet'}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Orders & Logistics Tracking */}
             <Card className="border-border/60">
               <CardHeader className="pb-3 border-b border-border/40">
-                <CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-blue-500" /> Logistics & Traceability</CardTitle>
-                <CardDescription>Track your pending delivery logistics and inspect catch provenance chains.</CardDescription>
+                <CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-blue-500" /> Logistics Tracking</CardTitle>
+                <CardDescription>Track your pending delivery logistics and status.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 {orders.length === 0 ? (
@@ -535,11 +298,6 @@ function BulkBuyerDashboard() {
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> {o.delivery_address || 'Wholesale Depot'}</span>
-                          {o.items?.[0]?.lot_code && (
-                            <Button size="sm" variant="link" onClick={() => handleTraceLot(o.items[0].lot_code)} className="h-auto p-0 text-xs text-primary font-semibold flex items-center gap-0.5">
-                              <Activity className="h-3 w-3" /> Trace provenance
-                            </Button>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -588,31 +346,6 @@ function BulkBuyerDashboard() {
           </div>
         </div>
 
-        {/* Topup Wallet Dialog */}
-        <Dialog open={topUpModal} onOpenChange={setTopUpModal}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Top-Up Wallet via M-Pesa</DialogTitle>
-              <DialogDescription>Simulate instant sandbox wallet deposits by entering amount and phone number.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="topUpAmount">Amount (KES)</Label>
-                <Input id="topUpAmount" type="number" placeholder="Enter deposit amount" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="topUpPhone">Phone number (M-Pesa)</Label>
-                <Input id="topUpPhone" placeholder="+2547XXXXXXXX" value={topUpPhone} onChange={(e) => setTopUpPhone(e.target.value)} />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleTopUp} disabled={topUpLoading} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white">
-                {topUpLoading ? 'Processing simulated deposit...' : 'Fund Wallet (instant)'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         {/* Order Batch Dialog */}
         <Dialog open={orderModal} onOpenChange={setOrderModal}>
           <DialogContent className="sm:max-w-lg">
@@ -656,14 +389,6 @@ function BulkBuyerDashboard() {
                   <Input id="deliveryNotes" placeholder="Ice specifications, timing, driver contact info..." value={deliveryNotes} onChange={(e) => setDeliveryNotes(e.target.value)} />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Payment Mode</Label>
-                  <div className="grid grid-cols-2 gap-3 mt-1">
-                    <Button type="button" variant={paymentMethod === 'wallet' ? 'default' : 'outline'} onClick={() => setPaymentMethod('wallet')} className="text-xs h-9 justify-center">Instant checkout (Wallet)</Button>
-                    <Button type="button" variant={paymentMethod === 'invoice' ? 'default' : 'outline'} onClick={() => setPaymentMethod('invoice')} className="text-xs h-9 justify-center">On Credit (Invoice Me)</Button>
-                  </div>
-                </div>
-
                 {orderQty && parseFloat(orderQty) > 0 && (
                   <div className="border-t border-border/40 pt-3 text-sm space-y-1">
                     <div className="flex justify-between text-muted-foreground">
@@ -689,54 +414,6 @@ function BulkBuyerDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Traceability Lot Dialog */}
-        <Dialog open={traceModal} onOpenChange={setTraceModal}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-emerald-500 animate-pulse" /> Provenance Audit: {traceLotCode}</DialogTitle>
-              <DialogDescription>Full blockchain-style traceability from landing catches to cold chain compliance logs.</DialogDescription>
-            </DialogHeader>
-            {traceLoading ? (
-              <div className="flex py-12 justify-center items-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            ) : traceChain ? (
-              <div className="space-y-4 py-2 text-sm">
-                <div className="space-y-3 relative border-l border-emerald-500/30 pl-4 ml-2">
-                  <div className="relative">
-                    <div className="absolute -left-[21px] top-1 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-950 shadow-sm" />
-                    <strong className="block text-foreground text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-500">Catch Recorded</strong>
-                    <p className="text-muted-foreground text-xs mt-0.5">Vessel: <strong className="text-foreground">{traceChain.lot?.vessel_name || 'Co-op Vessel'}</strong></p>
-                    <p className="text-muted-foreground text-xs">Species: <strong className="text-foreground">{traceChain.lot?.species_name || 'Fresh Catch'}</strong></p>
-                    <p className="text-muted-foreground text-xs">Date: <strong className="text-foreground">{traceChain.lot?.catch_date ? new Date(traceChain.lot.catch_date).toLocaleDateString() : 'Recent'}</strong></p>
-                  </div>
-
-                  <div className="relative pt-2">
-                    <div className="absolute -left-[21px] top-3 h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-white dark:border-slate-950 shadow-sm" />
-                    <strong className="block text-foreground text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-500">Landing Verification</strong>
-                    <p className="text-muted-foreground text-xs mt-0.5">Port: <strong className="text-foreground">{traceChain.lot?.landing_site || 'Shimoni Port'}</strong></p>
-                    <p className="text-muted-foreground text-xs">Grade: <strong className="text-foreground">Grade {traceChain.lot?.grading || 'A'}</strong></p>
-                    <p className="text-muted-foreground text-xs">Zone: <strong className="text-foreground">{traceChain.lot?.fao_area || 'FAO-51 (Indian Ocean)'}</strong></p>
-                  </div>
-
-                  <div className="relative pt-2">
-                    <div className="absolute -left-[21px] top-3 h-3.5 w-3.5 rounded-full bg-indigo-500 border-2 border-white dark:border-slate-950 shadow-sm" />
-                    <strong className="block text-foreground text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-500">Cold Chain Storage</strong>
-                    <p className="text-muted-foreground text-xs mt-0.5">Facility: <strong className="text-foreground">Shimoni Cold Room</strong></p>
-                    <p className="text-muted-foreground text-xs">Current temperature: <strong className="text-emerald-500">{traceChain.lot?.storage_temp_c ? `${traceChain.lot.storage_temp_c}°C` : '-22.5°C'}</strong></p>
-                    <p className="text-muted-foreground text-xs">Status: <strong className="text-emerald-500">HACCP Compliant</strong></p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="py-8 text-center text-muted-foreground">Trace details not found.</div>
-            )}
-            <DialogFooter>
-              <Button onClick={() => setTraceModal(false)} className="w-full bg-slate-900 hover:bg-slate-800 text-white">Close Audit</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardPageLayout>
   )
@@ -749,8 +426,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (currentRole === 'super_admin') {
       router.replace('/admin')
+    } else if (memberRole === 'vendor') {
+      router.replace('/dashboard/vendor')
     }
-  }, [currentRole, router])
+  }, [currentRole, memberRole, router])
 
   const meta = useDashboardPageMeta({
     title: `${APP_NAME} Command Center`,
@@ -800,6 +479,14 @@ export default function DashboardPage() {
 
   if (memberRole === 'customer') {
     return <BulkBuyerDashboard />
+  }
+
+  if (memberRole === 'vendor') {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   const showSetupChecklist =

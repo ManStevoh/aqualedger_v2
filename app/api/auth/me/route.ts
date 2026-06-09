@@ -49,10 +49,15 @@ export async function GET() {
     }
 
     let tenantId: string | null = null
+    let tenantSlug: string | null = null
     let memberRole: TenantMemberRole | null = null
     let permissions: string[] | null = null
     try {
       tenantId = await resolveUserTenantId(user.id)
+      if (tenantId) {
+        const tenant = await queryOne<{ slug: string }>('SELECT slug FROM tenants WHERE id = ?', [tenantId])
+        tenantSlug = tenant?.slug ?? null
+      }
       memberRole = await getTenantMemberRole(user.id, tenantId, user.role)
       const perms = await getTenantRolePermissions(tenantId, memberRole)
       permissions = perms
@@ -79,6 +84,7 @@ export async function GET() {
         },
         impersonation,
         tenantId,
+        tenantSlug,
         memberRole,
         permissions,
       },

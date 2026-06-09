@@ -6,9 +6,11 @@ import { getTenantRolePermissions } from './tenant-role-permissions'
 import { resolveUserTenantId } from '@/lib/modules/tenant/service'
 import { forbidden, unauthorized } from '@/lib/api-handler'
 
+import { type TenantMemberRole } from '@/lib/tenant'
+
 export interface ApiAuthContext extends JWTPayload {
   tenantId: string
-  memberRole: ReturnType<typeof legacyRoleToMemberRole>
+  memberRole: TenantMemberRole | null
   rolePermissions: Permission[] | null
 }
 
@@ -21,7 +23,7 @@ export async function withApiPermission(
   const memberRole = await getTenantMemberRole(auth.userId, tenantId, auth.role)
   const rolePermissions = await getTenantRolePermissions(tenantId, memberRole)
 
-  if (!hasPermission(memberRole, permission, auth.role, rolePermissions)) {
+  if (!memberRole || !hasPermission(memberRole, permission, auth.role, rolePermissions)) {
     throw forbidden()
   }
 
@@ -37,7 +39,7 @@ export async function withApiPermissionAny(
   const memberRole = await getTenantMemberRole(auth.userId, tenantId, auth.role)
   const rolePermissions = await getTenantRolePermissions(tenantId, memberRole)
 
-  if (!permissions.some((p) => hasPermission(memberRole, p, auth.role, rolePermissions))) {
+  if (!memberRole || !permissions.some((p) => hasPermission(memberRole, p, auth.role, rolePermissions))) {
     throw forbidden()
   }
 

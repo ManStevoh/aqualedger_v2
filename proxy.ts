@@ -192,9 +192,13 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const cookies = request.cookies as any
   const accessToken = cookies.get('access_token')?.value
+  const refreshToken = cookies.get('refresh_token')?.value
   const payload = accessToken ? await verifyToken(accessToken) : null
   const hasValidAccess = Boolean(payload)
 
+  // Block unauthenticated API requests at the edge.
+  // For /dashboard pages we let the AuthProvider handle refresh + redirect
+  // so that short-lived (15 min) access tokens don't cause logout loops.
   if (requiresApiAuth(pathname) && !hasValidAccess) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
@@ -203,25 +207,15 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith('/dashboard')) {
-    if (!hasValidAccess) {
+    // Only hard-block when there is truly no session at all (no tokens whatsoever).
+    // If the access token just expired but a refresh token exists, let the client-side
+    // AuthProvider call /api/auth/refresh and then retry /api/auth/me.
+    if (!hasValidAccess && !refreshToken) {
       const login = new URL('/login', request.url)
       login.searchParams.set('from', pathname)
-      const response = NextResponse.redirect(login)
-      if (accessToken) {
-        const respCookies = response.cookies as any
-        respCookies.delete('access_token')
-        respCookies.delete('refresh_token')
-      }
-      return response
+      return NextResponse.redirect(login)
     }
 
-    return tenantResponse
-  }
-
-  if (pathname === '/login' || pathname === '/register') {
-    if (hasValidAccess) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
     return tenantResponse
   }
 
