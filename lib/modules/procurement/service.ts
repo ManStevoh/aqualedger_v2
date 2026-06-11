@@ -26,6 +26,7 @@ export interface SupplierRow {
   created_by: string | null
   created_at: string
   updated_at: string
+  is_vendor?: boolean | number
 }
 
 export interface PurchaseOrderRow {
@@ -107,6 +108,7 @@ export async function listSuppliers(
     minRating?: number
     page?: number
     limit?: number
+    type?: 'all' | 'vendor' | 'standard'
   } = {},
 ) {
   const tid = resolveTenantId(tenantId)
@@ -129,6 +131,11 @@ export async function listSuppliers(
     conditions.push('s.rating >= ?')
     params.push(opts.minRating)
   }
+  if (opts.type === 'vendor') {
+    conditions.push('EXISTS (SELECT 1 FROM marketplace_vendors mv WHERE mv.id = s.id)')
+  } else if (opts.type === 'standard') {
+    conditions.push('NOT EXISTS (SELECT 1 FROM marketplace_vendors mv WHERE mv.id = s.id)')
+  }
 
   const where = `WHERE ${conditions.join(' AND ')}`
 
@@ -139,12 +146,15 @@ export async function listSuppliers(
   const total = countRow?.total || 0
 
   const suppliers = await query<SupplierRow>(
-    `SELECT s.* FROM suppliers s ${where} ORDER BY s.rating DESC, s.name ASC ${pagination.clause}`,
+    `SELECT s.*, 
+            (SELECT COUNT(*) FROM marketplace_vendors mv WHERE mv.id = s.id) > 0 AS is_vendor
+     FROM suppliers s ${where} ORDER BY s.rating DESC, s.name ASC ${pagination.clause}`,
     params,
   )
 
   const withHistory = suppliers.map((s) => ({
     ...s,
+    is_vendor: !!s.is_vendor,
     ratingHistory: parseRatingHistory(s.notes),
   }))
 
@@ -453,6 +463,56 @@ export async function updateSupplier(
       `UPDATE suppliers SET ${sets.join(', ')} WHERE id = ? AND tenant_id = ?`,
       params,
     )
+
+    // Sync to marketplace_vendors and users tables if this supplier is a marketplace vendor
+    const vendorRow = await queryOne<{ user_id: string }>(
+      `SELECT user_id FROM marketplace_vendors WHERE id = ?`,
+      [supplierId],
+    )
+    if (vendorRow) {
+      const setsVendor: string[] = []
+      const paramsVendor: unknown[] = []
+      if (input.name !== undefined) {
+        setsVendor.push('shop_name = ?')
+        paramsVendor.push(input.name)
+      }
+      if (input.status !== undefined) {
+        setsVendor.push('status = ?')
+        paramsVendor.push(input.status === 'active' ? 'active' : 'suspended')
+      }
+      if (setsVendor.length > 0) {
+        paramsVendor.push(supplierId)
+        await execute(
+          `UPDATE marketplace_vendors SET ${setsVendor.join(', ')} WHERE id = ?`,
+          paramsVendor,
+        )
+      }
+
+      const setsUser: string[] = []
+      const paramsUser: unknown[] = []
+      if (input.email !== undefined) {
+        setsUser.push('email = ?')
+        paramsUser.push(input.email || null)
+      }
+      if (input.phone !== undefined) {
+        setsUser.push('phone = ?')
+        paramsUser.push(input.phone || null)
+      }
+      if (input.contactName !== undefined) {
+        const nameParts = (input.contactName || '').trim().split(/\s+/)
+        const firstName = nameParts[0] || ''
+        const lastName = nameParts.slice(1).join(' ') || ''
+        setsUser.push('first_name = ?, last_name = ?')
+        paramsUser.push(firstName, lastName)
+      }
+      if (setsUser.length > 0) {
+        paramsUser.push(vendorRow.user_id)
+        await execute(
+          `UPDATE users SET ${setsUser.join(', ')} WHERE id = ?`,
+          paramsUser,
+        )
+      }
+    }
   }
 
   const supplier = await queryOne<SupplierRow>('SELECT * FROM suppliers WHERE id = ?', [supplierId])

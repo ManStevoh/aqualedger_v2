@@ -52,6 +52,8 @@ interface Supplier {
   status: string
   created_at?: string
   ratingHistory?: RatingHistoryEntry[]
+  is_vendor?: boolean
+  notes?: string | null
 }
 
 export default function SuppliersPage() {
@@ -69,15 +71,29 @@ export default function SuppliersPage() {
   const [ratingValue, setRatingValue] = useState('3')
   const [savingRating, setSavingRating] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [minRating, setMinRating] = useState('')
   const [scorecardId, setScorecardId] = useState<string | null>(null)
+
+  // Edit Supplier Dialog States
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+  const [editCode, setEditCode] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editContactName, setEditContactName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editStatus, setEditStatus] = useState('active')
+  const [editNotes, setEditNotes] = useState('')
+  const [updating, setUpdating] = useState(false)
 
   const fetchSuppliers = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({ limit: '100' })
       if (statusFilter !== 'all') params.set('status', statusFilter)
+      if (typeFilter !== 'all') params.set('type', typeFilter)
       if (search.trim()) params.set('search', search.trim())
       if (minRating) params.set('minRating', minRating)
       const res = await fetch(`/api/v2/procurement/suppliers?${params}`, {
@@ -95,7 +111,7 @@ export default function SuppliersPage() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, search, minRating])
+  }, [statusFilter, typeFilter, search, minRating])
 
   useEffect(() => {
     fetchSuppliers()
@@ -172,6 +188,44 @@ export default function SuppliersPage() {
     }
   }
 
+  const handleUpdate = async () => {
+    if (!selectedSupplier) return
+    if (!editCode.trim() || !editName.trim()) {
+      toast.error('Code and name are required')
+      return
+    }
+    setUpdating(true)
+    try {
+      const res = await fetch('/api/v2/procurement/suppliers', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId: selectedSupplier.id,
+          code: editCode.trim(),
+          name: editName.trim(),
+          contactName: editContactName.trim() || null,
+          email: editEmail.trim() || null,
+          phone: editPhone.trim() || null,
+          status: editStatus,
+          notes: editNotes.trim() || null,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) {
+        toast.error(data.error || 'Failed to update supplier')
+        return
+      }
+      toast.success('Supplier updated')
+      setShowEditDialog(false)
+      await fetchSuppliers()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   const statusVariant = (s: string) => {
     if (s === 'active') return 'default'
     if (s === 'blocked') return 'destructive'
@@ -203,6 +257,14 @@ export default function SuppliersPage() {
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="blocked">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="filter-control w-44"><SelectValue placeholder="Supplier Type" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="vendor">Fish Vendors</SelectItem>
+            <SelectItem value="standard">Standard Suppliers</SelectItem>
           </SelectContent>
         </Select>
         <Input
@@ -253,6 +315,7 @@ export default function SuppliersPage() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
@@ -261,6 +324,7 @@ export default function SuppliersPage() {
                   <TableHead>Scorecard</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Since</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -268,6 +332,17 @@ export default function SuppliersPage() {
                   <TableRow key={s.id}>
                     <TableCell className="font-mono text-sm">{s.code}</TableCell>
                     <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell>
+                      {s.is_vendor ? (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Fish Vendor
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                          Standard Supplier
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{s.contact_name || '—'}</TableCell>
                     <TableCell>{s.email || '—'}</TableCell>
                     <TableCell>{s.phone || '—'}</TableCell>
@@ -300,6 +375,25 @@ export default function SuppliersPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {s.created_at ? new Date(s.created_at).toLocaleDateString() : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedSupplier(s)
+                          setEditCode(s.code)
+                          setEditName(s.name)
+                          setEditContactName(s.contact_name || '')
+                          setEditEmail(s.email || '')
+                          setEditPhone(s.phone || '')
+                          setEditStatus(s.status)
+                          setEditNotes(s.notes || '')
+                          setShowEditDialog(true)
+                        }}
+                      >
+                        Edit
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -413,6 +507,71 @@ export default function SuppliersPage() {
             <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
             <Button onClick={handleCreate} disabled={submitting}>
               {submitting ? 'Saving…' : 'Create Supplier'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Supplier</DialogTitle>
+            <DialogDescription>
+              {selectedSupplier?.is_vendor ? 'Update fish vendor details. Shop name and status will be synced.' : 'Update standard supplier details.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Code</Label>
+                <Input 
+                  value={editCode} 
+                  onChange={(e) => setEditCode(e.target.value)} 
+                  disabled={selectedSupplier?.is_vendor} 
+                  placeholder="SUP-001" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editStatus} onValueChange={setEditStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{selectedSupplier?.is_vendor ? 'Shop Name' : 'Name'}</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Contact Name</Label>
+              <Input value={editContactName} onChange={(e) => setEditContactName(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Additional information..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+            <Button onClick={handleUpdate} disabled={updating}>
+              {updating ? 'Saving…' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

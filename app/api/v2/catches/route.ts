@@ -232,11 +232,11 @@ export async function POST(request: NextRequest) {
     await query(
       `INSERT INTO catches (
         id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price,
-        total_value, storage_method, recorded_by, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        storage_method, recorded_by, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, auth.tenantId, tripId, resolvedSpeciesId, quantityKg, dbGrade, unitPrice,
-        totalValue, storageMethod || 'iced', auth.userId, notes || null
+        storageMethod || 'iced', auth.userId, notes || null
       ]
     )
     
@@ -332,13 +332,7 @@ export async function PUT(request: NextRequest) {
       }
     }
     
-    // Recalculate total value if quantity or price changed
-    if (updates.quantityKg || updates.unitPrice) {
-      const newQty = updates.quantityKg || catchRecord.quantity_kg
-      const newPrice = updates.unitPrice || catchRecord.unit_price
-      updateParts.push('total_value = ?')
-      updateParams.push(parseFloat(newQty) * parseFloat(newPrice))
-    }
+
     
     if (updateParts.length > 0) {
       updateParams.push(id, auth.tenantId)

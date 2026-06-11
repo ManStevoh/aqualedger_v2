@@ -82,8 +82,8 @@ function LoginForm() {
       return
     }
 
-    // Public Home Lab testing — no nested subdomain redirects (Cloudflare SSL depth limit)
-    if (hostname === 'aqua.kenwafula.cv') {
+    // Public Home Lab testing / Subdomain staging — no nested subdomain redirects (Cloudflare SSL depth limit / no wildcard DNS)
+    if (hostname === 'aqua.kenwafula.cv' || hostname === 'fishos.aqualedger.co.ke') {
       router.push(from.startsWith('/') ? from : '/dashboard')
       router.refresh()
       return

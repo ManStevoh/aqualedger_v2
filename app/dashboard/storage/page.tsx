@@ -75,7 +75,7 @@ export default function StoragePage() {
             capacity: Number(f.capacity_kg) || 0,
             currentStock: Number(f.current_stock_kg) || 0,
             temperature: Number(f.current_temperature) || 0,
-            humidity: 0,
+            humidity: Number(f.current_humidity) || 0,
             fishTypes: [],
             lastRestockDate: '',
             status: ((f.status as string) || 'operational') as StorageFacility['status'],
@@ -126,14 +126,19 @@ export default function StoragePage() {
 
   const totalCapacity = facilities.reduce((sum, f) => sum + f.capacity, 0)
   const totalStock = facilities.reduce((sum, f) => sum + f.currentStock, 0)
-  const capacityUtilization = Math.round((totalStock / totalCapacity) * 100)
+  const capacityUtilization = totalCapacity > 0 ? Math.round((totalStock / totalCapacity) * 100) : 0
   const operationalFacilities = facilities.filter(f => f.status === 'operational').length
+
+  const operationalWithTemp = facilities.filter(f => f.status === 'operational')
+  const avgTemp = operationalWithTemp.length > 0 
+    ? Math.round(operationalWithTemp.reduce((sum, f) => sum + f.temperature, 0) / operationalWithTemp.length * 10) / 10
+    : 0
 
   const chartData = facilities.map(f => ({
     name: f.name.split(' ')[0],
     capacity: f.capacity,
     current: f.currentStock,
-    utilization: Math.round((f.currentStock / f.capacity) * 100),
+    utilization: f.capacity > 0 ? Math.round((f.currentStock / f.capacity) * 100) : 0,
   }))
 
   const getStatusColor = (status: string) => {
@@ -184,7 +189,7 @@ export default function StoragePage() {
         />
         <StatCard
           title="Avg Temperature"
-          value="-4°C"
+          value={`${avgTemp}°C`}
           icon={<Thermometer className="h-4 w-4 text-muted-foreground" />}
           trend={{ value: 0, isPositive: true }}
         />

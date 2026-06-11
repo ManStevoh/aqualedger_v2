@@ -1,0 +1,260 @@
+Creating database: aquaerp_operating
+Database ready: aquaerp_operating
+Running database/schema.sql ...
+Error: Duplicate foreign key constraint name 'fk_landing_sites_bmu'
+    at runSqlFile (file:///home/staticlumen/Projects/aqualedger_v2/scripts/setup-fresh-database.mjs:92:16)
+    at main (file:///home/staticlumen/Projects/aqualedger_v2/scripts/setup-fresh-database.mjs:144:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: 'ER_FK_DUP_NAME',
+  errno: 1826,
+  sqlState: 'HY000',
+  sqlMessage: "Duplicate foreign key constraint name 'fk_landing_sites_bmu'",
+  sql: '-- ===========================================\n' +
+    '-- AquaLedger V2 - Database Schema\n' +
+    '-- ===========================================\n' +
+    '-- Initial schema for the Fisheries Operating System\n' +
+    '-- Run with: mysql -u root -p aqualedger < database/schema.sql\n' +
+    '\n' +
+    'USE aquaerp_operating;\n' +
+    '\n' +
+    '-- ===========================================\n' +
+    '-- Core Authentication & Users\n' +
+    '-- ===========================================\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS users (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  email VARCHAR(255) UNIQUE NOT NULL,\n' +
+    '  password_hash VARCHAR(255) NOT NULL,\n' +
+    '  first_name VARCHAR(100) NOT NULL,\n' +
+    '  last_name VARCHAR(100) NOT NULL,\n' +
+    '  phone VARCHAR(20),\n' +
+    '  county VARCHAR(100),\n' +
+    "  role ENUM('super_admin', 'investor', 'user') DEFAULT 'user',\n" +
+    "  status ENUM('active', 'suspended', 'pending', 'inactive') DEFAULT 'active',\n" +
+    '  avatar_url VARCHAR(500),\n' +
+    '  kyc_verified BOOLEAN DEFAULT FALSE,\n' +
+    '  email_verified BOOLEAN DEFAULT FALSE,\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  last_login TIMESTAMP NULL,\n' +
+    '  notification_preferences JSON NULL,\n' +
+    '  INDEX idx_email (email),\n' +
+    '  INDEX idx_role (role),\n' +
+    '  INDEX idx_status (status)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS sessions (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  user_id VARCHAR(36) NOT NULL,\n' +
+    '  refresh_token VARCHAR(500) NOT NULL,\n' +
+    '  expires_at TIMESTAMP NOT NULL,\n' +
+    '  ip_address VARCHAR(45) NULL,\n' +
+    '  user_agent TEXT NULL,\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_user_id (user_id)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    '-- ===========================================\n' +
+    '-- Financial & Wallets\n' +
+    '-- ===========================================\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS wallets (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  user_id VARCHAR(36) NOT NULL UNIQUE,\n' +
+    '  balance DECIMAL(15, 2) DEFAULT 0.00,\n' +
+    "  currency VARCHAR(3) DEFAULT 'KES',\n" +
+    "  status ENUM('active', 'frozen', 'closed') DEFAULT 'active',\n" +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_user_id (user_id)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS transactions (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  wallet_id VARCHAR(36) NOT NULL,\n' +
+    "  type ENUM('deposit', 'withdrawal', 'transfer', 'purchase', 'refund', 'commission') NOT NULL,\n" +
+    '  amount DECIMAL(15, 2) NOT NULL,\n' +
+    "  currency VARCHAR(3) DEFAULT 'KES',\n" +
+    '  balance_before DECIMAL(15, 2),\n' +
+    '  balance_after DECIMAL(15, 2),\n' +
+    '  description VARCHAR(255),\n' +
+    '  reference_type VARCHAR(50),\n' +
+    '  reference_id VARCHAR(36),\n' +
+    "  status ENUM('pending', 'completed', 'failed', 'reversed') DEFAULT 'completed',\n" +
+    '  payment_method VARCHAR(50),\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_wallet_id (wallet_id),\n' +
+    '  INDEX idx_type (type),\n' +
+    '  INDEX idx_created_at (created_at)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS credit_scores (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  user_id VARCHAR(36) NOT NULL UNIQUE,\n' +
+    '  score INT DEFAULT 400,\n' +
+    "  grade CHAR(1) DEFAULT 'C',\n" +
+    '  payment_history INT DEFAULT 0,\n' +
+    '  default_count INT DEFAULT 0,\n' +
+    '  accounts_opened INT DEFAULT 0,\n' +
+    '  credit_inquiries INT DEFAULT 0,\n' +
+    '  last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_user_id (user_id),\n' +
+    '  INDEX idx_score (score)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    '-- ===========================================\n' +
+    '-- Investment & Packages\n' +
+    '-- ===========================================\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS investment_packages (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  name VARCHAR(200) NOT NULL,\n' +
+    '  description TEXT,\n' +
+    '  min_investment DECIMAL(15, 2) NOT NULL,\n' +
+    '  max_investment DECIMAL(15, 2),\n' +
+    '  expected_return_rate DECIMAL(5, 2) DEFAULT 12.00,\n' +
+    '  duration_months INT NOT NULL,\n' +
+    "  risk_level ENUM('low', 'medium', 'high') DEFAULT 'medium',\n" +
+    '  total_pool DECIMAL(15, 2) DEFAULT 0.00,\n' +
+    '  available_amount DECIMAL(15, 2) DEFAULT 0.00,\n' +
+    "  status ENUM('active', 'inactive', 'closed', 'completed') DEFAULT 'active',\n" +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  INDEX idx_status (status),\n' +
+    '  INDEX idx_risk_level (risk_level)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS investments (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  user_id VARCHAR(36) NOT NULL,\n' +
+    '  package_id VARCHAR(36) NOT NULL,\n' +
+    '  amount DECIMAL(15, 2) NOT NULL,\n' +
+    '  expected_return DECIMAL(15, 2),\n' +
+    '  actual_return DECIMAL(15, 2) DEFAULT 0.00,\n' +
+    "  status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',\n" +
+    '  start_date DATE NOT NULL,\n' +
+    '  end_date DATE NOT NULL,\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  FOREIGN KEY (package_id) REFERENCES investment_packages(id) ON DELETE RESTRICT,\n' +
+    '  INDEX idx_user_id (user_id),\n' +
+    '  INDEX idx_package_id (package_id),\n' +
+    '  INDEX idx_status (status)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    '-- ===========================================\n' +
+    '-- Fishing Operations - Fleet & Trips\n' +
+    '-- ===========================================\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS boats (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  owner_id VARCHAR(36) NOT NULL,\n' +
+    '  registration_number VARCHAR(50) UNIQUE NOT NULL,\n' +
+    '  name VARCHAR(200) NOT NULL,\n' +
+    "  type ENUM('fiber', 'wooden', 'steel', 'aluminum') DEFAULT 'fiber',\n" +
+    '  capacity_kg INT NOT NULL,\n' +
+    '  length_meters DECIMAL(5, 2),\n' +
+    '  engine_power_hp INT,\n' +
+    '  engine_type VARCHAR(100),\n' +
+    '  year_built INT,\n' +
+    '  gps_enabled BOOLEAN DEFAULT FALSE,\n' +
+    '  imei_number VARCHAR(50),\n' +
+    "  status ENUM('active', 'inactive', 'maintenance', 'decommissioned') DEFAULT 'active',\n" +
+    '  registration_expires_at DATE,\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_owner_id (owner_id),\n' +
+    '  INDEX idx_status (status)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS boat_crew (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  boat_id VARCHAR(36) NOT NULL,\n' +
+    '  crew_member_id VARCHAR(36) NOT NULL,\n' +
+    "  role ENUM('captain', 'engineer', 'deckhand', 'nets_officer') DEFAULT 'deckhand',\n" +
+    "  status ENUM('active', 'inactive') DEFAULT 'active',\n" +
+    '  joined_date DATE NOT NULL,\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (boat_id) REFERENCES boats(id) ON DELETE CASCADE,\n' +
+    '  FOREIGN KEY (crew_member_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  UNIQUE KEY unique_boat_crew (boat_id, crew_member_id),\n' +
+    '  INDEX idx_boat_id (boat_id),\n' +
+    '  INDEX idx_crew_member_id (crew_member_id)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS boat_maintenance (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  boat_id VARCHAR(36) NOT NULL,\n' +
+    '  maintenance_type VARCHAR(100) NOT NULL,\n' +
+    '  description TEXT,\n' +
+    '  cost DECIMAL(10, 2),\n' +
+    '  maintenance_date DATE NOT NULL,\n' +
+    '  completion_date DATE,\n' +
+    "  status ENUM('scheduled', 'in_progress', 'completed') DEFAULT 'scheduled',\n" +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (boat_id) REFERENCES boats(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_boat_id (boat_id),\n' +
+    '  INDEX idx_maintenance_date (maintenance_date)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS landing_sites (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  name VARCHAR(200) NOT NULL,\n' +
+    '  code VARCHAR(20) UNIQUE NOT NULL,\n' +
+    '  county VARCHAR(100) NOT NULL,\n' +
+    '  latitude DECIMAL(10, 8),\n' +
+    '  longitude DECIMAL(11, 8),\n' +
+    '  bmu_id VARCHAR(36) NULL,\n' +
+    "  status ENUM('active', 'inactive') DEFAULT 'active',\n" +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  INDEX idx_code (code),\n' +
+    '  INDEX idx_county (county),\n' +
+    '  INDEX idx_bmu_id (bmu_id)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS fishing_trips (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  boat_id VARCHAR(36) NOT NULL,\n' +
+    '  captain_id VARCHAR(36) NOT NULL,\n' +
+    '  landing_site_id VARCHAR(36),\n' +
+    '  departure_time DATETIME NOT NULL,\n' +
+    '  return_time DATETIME,\n' +
+    '  fishing_zone VARCHAR(100),\n' +
+    '  weather_conditions VARCHAR(200),\n' +
+    "  sea_state ENUM('calm', 'moderate', 'rough', 'very_rough') DEFAULT 'calm',\n" +
+    '  fuel_used_liters DECIMAL(8, 2) DEFAULT 0,\n' +
+    '  fuel_cost DECIMAL(10, 2) DEFAULT 0,\n' +
+    '  total_catch_kg DECIMAL(10, 2) DEFAULT 0,\n' +
+    '  total_revenue DECIMAL(15, 2) DEFAULT 0,\n' +
+    "  status ENUM('planned', 'ongoing', 'completed', 'cancelled') DEFAULT 'planned',\n" +
+    '  notes TEXT,\n' +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (boat_id) REFERENCES boats(id) ON DELETE CASCADE,\n' +
+    '  FOREIGN KEY (captain_id) REFERENCES users(id) ON DELETE RESTRICT,\n' +
+    '  FOREIGN KEY (landing_site_id) REFERENCES landing_sites(id) ON DELETE SET NULL,\n' +
+    '  INDEX idx_boat_id (boat_id),\n' +
+    '  INDEX idx_captain_id (captain_id),\n' +
+    '  INDEX idx_departure_time (departure_time),\n' +
+    '  INDEX idx_status (status)\n' +
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n' +
+    '\n' +
+    'CREATE TABLE IF NOT EXISTS trip_crew (\n' +
+    '  id VARCHAR(36) PRIMARY KEY,\n' +
+    '  trip_id VARCHAR(36) NOT NULL,\n' +
+    '  crew_member_id VARCHAR(36) NOT NULL,\n' +
+    '  role VARCHAR(100),\n' +
+    "  status ENUM('active', 'inactive') DEFAULT 'active',\n" +
+    '  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n' +
+    '  FOREIGN KEY (trip_id) REFERENCES fishing_trips(id) ON DELETE CASCADE,\n' +
+    '  FOREIGN KEY (crew_member_id) REFERENCES users(id) ON DELETE CASCADE,\n' +
+    '  INDEX idx_trip_i'... 12951 more characters
+}

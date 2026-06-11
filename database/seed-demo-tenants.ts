@@ -556,7 +556,7 @@ async function seedColdChain(ctx: TenantSeedCtx): Promise<void> {
   ctx.facilityId = facilityId
   await execute(
     `INSERT INTO storage_facilities (id, tenant_id, name, code, type, capacity_kg, current_stock_kg, county, status, temperature_min, temperature_max, current_temperature, daily_rate_per_kg)
-     VALUES (?, ?, ?, ?, 'cold_room', 8000, 3200, ?, 'operational', -25, -18, -20, 5)`,
+     VALUES (?, ?, ?, ?, 'cold_room', 12000, 5200, ?, 'operational', -45, 5, -20, 5)`,
     [
       facilityId,
       ctx.tenantId,
@@ -566,26 +566,40 @@ async function seedColdChain(ctx: TenantSeedCtx): Promise<void> {
     ],
   )
 
-  const zoneId = generateId()
-  ctx.zoneId = zoneId
-  await execute(
-    `INSERT INTO storage_zones (id, facility_id, tenant_id, code, name, target_temp_c, min_temp_c, max_temp_c, capacity_kg, status)
-     VALUES (?, ?, ?, 'ZONE-A', 'Main chill zone', -20, -22, -18, 4000, 'active')`,
-    [zoneId, facilityId, ctx.tenantId],
-  )
+  const zones = [
+    { code: 'FZ-1', name: 'Freezer Room', target: -20, min: -25, max: -18, cap: 6000, temp: -20.5, hum: 65 },
+    { code: 'CZ-1', name: 'Fresh Fish Chiller', target: 2, min: 0, max: 4, cap: 3000, temp: 1.8, hum: 85 },
+    { code: 'SFZ-1', name: 'Ultra-low Tuna Vault', target: -40, min: -45, max: -35, cap: 3000, temp: -41.2, hum: 55 }
+  ]
 
-  for (let i = 0; i < 5; i++) {
+  for (const z of zones) {
+    const zoneId = generateId()
+    if (z.code === 'FZ-1') {
+      ctx.zoneId = zoneId // Keep reference to first zone for device registration compatibility
+    }
     await execute(
-      `INSERT INTO temperature_readings (id, tenant_id, zone_id, facility_id, reading_c, humidity_pct, recorded_at, source)
-       VALUES (?, ?, ?, ?, ?, 65, DATE_SUB(NOW(), INTERVAL ? HOUR), 'iot')`,
-      [generateId(), ctx.tenantId, zoneId, facilityId, -19.5 + i * 0.1, i * 4],
+      `INSERT INTO storage_zones (id, facility_id, tenant_id, code, name, target_temp_c, min_temp_c, max_temp_c, capacity_kg, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      [zoneId, facilityId, ctx.tenantId, z.code, z.name, z.target, z.min, z.max, z.cap],
     )
+
+    // Seed 5 temperature readings for each zone with realistic timeframe distribution
+    for (let i = 0; i < 5; i++) {
+      const variation = (i - 2) * 0.2
+      await execute(
+        `INSERT INTO temperature_readings (id, tenant_id, zone_id, facility_id, reading_c, humidity_pct, recorded_at, source)
+         VALUES (?, ?, ?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? HOUR), 'iot')`,
+        [generateId(), ctx.tenantId, zoneId, facilityId, z.temp + variation, z.hum, i * 4],
+      )
+    }
   }
 
+  // Seed unresolved critical alert for Tuna Vault and resolved alert for Freezer Room
   await execute(
     `INSERT INTO coldchain_alerts (id, tenant_id, facility_id, alert_type, severity, message, reading_value, resolved)
-     VALUES (?, ?, ?, 'temperature', 'warning', 'Zone A briefly above target', -17.5, 1)`,
-    [generateId(), ctx.tenantId, facilityId],
+     VALUES (?, ?, ?, 'temperature', 'warning', 'Freezer Room temperature briefly above target', -17.5, 1),
+            (?, ?, ?, 'temperature', 'critical', 'Ultra-low Tuna Vault exceeded critical limit of -35°C', -32.8, 0)`,
+    [generateId(), ctx.tenantId, facilityId, generateId(), ctx.tenantId, facilityId],
   )
 }
 

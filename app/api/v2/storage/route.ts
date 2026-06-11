@@ -73,7 +73,21 @@ export async function GET(request: NextRequest) {
     const total = countRow?.total || 0
 
     const facilities = await query(
-      `SELECT sf.*, CONCAT(u.first_name, ' ', u.last_name) as manager_name
+      `SELECT sf.*, 
+              CONCAT(u.first_name, ' ', u.last_name) as manager_name,
+              COALESCE(
+                (SELECT tr.reading_c FROM temperature_readings tr 
+                 WHERE tr.facility_id = sf.id AND tr.tenant_id = sf.tenant_id 
+                 ORDER BY tr.recorded_at DESC LIMIT 1),
+                sf.current_temperature,
+                0
+              ) as current_temperature,
+              COALESCE(
+                (SELECT tr.humidity_pct FROM temperature_readings tr 
+                 WHERE tr.facility_id = sf.id AND tr.tenant_id = sf.tenant_id 
+                 ORDER BY tr.recorded_at DESC LIMIT 1),
+                0
+              ) as current_humidity
        FROM storage_facilities sf
        LEFT JOIN users u ON sf.manager_id = u.id
        ${where}

@@ -77,6 +77,7 @@ const migrations = [
   'database/migrations/20260617_platform_payments_pass.sql',
   'database/migrations/20260618_product_image_url.sql',
   'database/migrations/20260619_add_bmu_to_landing_sites.sql',
+  'database/migrations/20260620_sync_vendors_to_suppliers.sql',
 ]
 
 async function main() {

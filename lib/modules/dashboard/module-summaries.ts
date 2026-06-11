@@ -222,6 +222,15 @@ async function coldchainDashboard(tenantId: string) {
     [tenantId, PERIOD_DAYS],
   ).catch(() => [{ breaches: 0 }])
 
+  const trend = await query<{ d: string; temp: number }>(
+    `SELECT DATE(recorded_at) d, ROUND(AVG(reading_c), 1) temp
+     FROM temperature_readings
+     WHERE ${tw} AND recorded_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+     GROUP BY DATE(recorded_at)
+     ORDER BY d`,
+    [tenantId, PERIOD_DAYS],
+  ).catch(() => [])
+
   const recent = await query<ModuleRecentItem>(
     `SELECT id, alert_type title, message subtitle, severity status,
       DATE_FORMAT(created_at,'%Y-%m-%d %H:%i') date
@@ -236,7 +245,13 @@ async function coldchainDashboard(tenantId: string) {
       { id: 'open', label: 'Open alerts', value: Number(alerts?.open ?? 0), severity: (alerts?.open ?? 0) > 0 ? 'critical' : 'success', href: '/dashboard/coldchain/alerts' },
       { id: 'breaches', label: 'Temp breaches (30d)', value: readings?.breaches ?? 0, severity: (readings?.breaches ?? 0) > 0 ? 'warning' : 'default' },
     ],
-    trends: [],
+    trends: [
+      {
+        id: 'temp_trend',
+        name: 'Daily Avg Temp (°C)',
+        points: trend.map((t) => ({ label: String(t.d), value: Number(t.temp) })),
+      },
+    ],
     recent: recent.map((r) => ({ ...r, href: '/dashboard/coldchain/alerts' })),
     alerts: (alerts?.open ?? 0) > 0 ? [{ message: `${alerts?.open} unresolved cold-chain alert(s)`, severity: 'critical' as const, href: '/dashboard/coldchain/alerts' }] : [],
     quickLinks: [

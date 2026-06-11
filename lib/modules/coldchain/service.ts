@@ -358,5 +358,20 @@ export async function createHaccpChecklist(
   if (!checklist) {
     throw new Error('Failed to create HACCP checklist')
   }
+
+  if (input.overallPass === false) {
+    try {
+      const { createColdchainAlert } = await import('@/lib/modules/coldchain/alerts')
+      await createColdchainAlert(tenantId, {
+        facilityId: input.facilityId ?? null,
+        alertType: 'temperature',
+        severity: 'critical',
+        message: `HACCP daily checklist failed on ${input.checklistDate} (Inspector: ${input.inspectorName || 'N/A'}). Corrective Action: ${input.correctiveActions || 'None'}.`,
+      })
+    } catch (err) {
+      console.error('Failed to trigger coldchain alert for failed HACCP checklist:', err)
+    }
+  }
+
   return checklist
 }

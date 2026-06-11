@@ -19,6 +19,7 @@ export const supplierListQuerySchema = paginationSchema.extend({
   status: supplierStatusSchema.optional(),
   search: z.string().max(100).optional(),
   minRating: z.coerce.number().min(0).max(5).optional(),
+  type: z.enum(['all', 'vendor', 'standard']).optional().default('all'),
 })
 
 export const purchaseOrderStatusSchema = z.enum([

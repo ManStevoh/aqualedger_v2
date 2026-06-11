@@ -55,6 +55,10 @@ export async function inviteMarketplaceVendor(
       `UPDATE marketplace_vendors SET shop_name = ?, commission_rate = ?, status = 'active' WHERE id = ?`,
       [input.shopName, input.commissionRate ?? 10, existingVendor.id],
     )
+    await execute(
+      `UPDATE suppliers SET name = ?, status = 'active' WHERE id = ?`,
+      [input.shopName, existingVendor.id],
+    )
     return {
       vendorId: existingVendor.id,
       userId,

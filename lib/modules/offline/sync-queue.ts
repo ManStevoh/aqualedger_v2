@@ -30,8 +30,8 @@ export async function processOfflineQueue(
   }>(
     `SELECT id, action_type, payload FROM offline_sync_queue
      WHERE ${tenantWhere()} AND user_id = ? AND status = 'pending'
-     ORDER BY created_at ASC LIMIT ?`,
-    [tenantId, userId, limit],
+     ORDER BY created_at ASC LIMIT ${Math.min(Math.max(limit, 1), 100)}`,
+    [tenantId, userId],
   )
 
   let synced = 0
@@ -39,7 +39,7 @@ export async function processOfflineQueue(
 
   for (const row of rows) {
     try {
-      const payload = JSON.parse(row.payload) as Record<string, unknown>
+      const payload = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as Record<string, unknown>
       await applyOfflineAction(tenantId, userId, row.action_type, payload)
       await execute(
         `UPDATE offline_sync_queue SET status = 'synced', synced_at = NOW() WHERE id = ?`,
@@ -72,19 +72,26 @@ async function applyOfflineAction(
       const qty = Number(payload.quantityKg || 0)
       if (!tripId || !speciesId || qty <= 0) throw new Error('Invalid catch payload')
       await execute(
-        `INSERT INTO catches (id, trip_id, species_id, quantity_kg, grade, unit_price, total_value, storage_method, recorded_by)
+        `INSERT INTO catches (id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price, storage_method, recorded_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           generateId(),
+          tenantId,
           tripId,
           speciesId,
           qty,
           payload.grade || 'B',
           payload.unitPrice || 0,
-          qty * Number(payload.unitPrice || 0),
           payload.storageMethod || 'fresh',
           userId,
         ],
+      )
+      await execute(
+        `UPDATE fishing_trips SET
+          total_catch_kg = (SELECT COALESCE(SUM(quantity_kg), 0) FROM catches WHERE trip_id = ?),
+          total_revenue = (SELECT COALESCE(SUM(total_value), 0) FROM catches WHERE trip_id = ?)
+        WHERE id = ?`,
+        [tripId, tripId, tripId]
       )
       break
     }

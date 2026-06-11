@@ -21,6 +21,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
     status: searchParams.get('status') ?? undefined,
     search: searchParams.get('search') ?? undefined,
     minRating: searchParams.get('minRating') ?? undefined,
+    type: searchParams.get('type') ?? undefined,
   })
 
   const data = await listSuppliers(ctx.tenantId, query)
