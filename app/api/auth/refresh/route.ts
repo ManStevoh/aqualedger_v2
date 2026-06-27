@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { refreshSession, setAuthCookies, clearAuthCookies } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export async function POST() {
   try {
@@ -31,12 +32,9 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       message: 'Token refreshed successfully',
-      data: {
-        accessToken: session.accessToken,
-      },
     })
   } catch (error) {
-    console.error('Token refresh error:', error)
+    logger.error('Token refresh error', { route: 'auth/refresh', error: error instanceof Error ? error.message : String(error) })
     await clearAuthCookies()
     return NextResponse.json(
       { success: false, error: 'Token refresh failed' },

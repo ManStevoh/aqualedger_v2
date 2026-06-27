@@ -52,9 +52,6 @@ export function getJwtSecret(): string {
   return secret || DEV_JWT_FALLBACK
 }
 
-function getJwtSecretOrThrow(): string {
-  return getJwtSecret()
-}
 const JWT_EXPIRES_IN = '15m' // Access token expires in 15 minutes
 const REFRESH_TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
 const REFRESH_TOKEN_REMEMBER_ME = 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
@@ -71,7 +68,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 // JWT functions
 export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, getJwtSecretOrThrow(), { expiresIn: JWT_EXPIRES_IN })
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: JWT_EXPIRES_IN })
 }
 
 export function generateRefreshToken(): string {
@@ -80,7 +77,7 @@ export function generateRefreshToken(): string {
 
 export function verifyAccessToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, getJwtSecretOrThrow()) as JWTPayload
+    return jwt.verify(token, getJwtSecret()) as JWTPayload
   } catch {
     return null
   }

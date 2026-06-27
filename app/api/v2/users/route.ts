@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
        FROM users u
        INNER JOIN tenant_members tm ON tm.user_id = u.id AND tm.tenant_id = ?
        ORDER BY u.created_at DESC
-       LIMIT ${limit} OFFSET ${offset}`,
-      [auth.tenantId],
+       LIMIT ? OFFSET ?`,
+      [auth.tenantId, limit, offset],
     )
 
     return NextResponse.json({

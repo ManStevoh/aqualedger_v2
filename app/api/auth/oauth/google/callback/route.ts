@@ -6,8 +6,7 @@ import {
 import { apiPath, appUrl, getAppBaseUrlFromRequest } from '@/lib/config/urls'
 import { queryOne, execute, generateId } from '@/lib/db'
 import { getSignupLocked } from '@/lib/platform/platform-settings'
-import jwt from 'jsonwebtoken'
-import type { JWTPayload } from '@/lib/auth'
+import { createSession, setAuthCookies } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const base = getAppBaseUrlFromRequest(request)
@@ -81,23 +80,11 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const secret = process.env.JWT_SECRET || 'dev-only-jwt-secret-not-for-production'
-  const payload: JWTPayload = {
-    userId: user.id,
-    email: user.email,
-    role: user.role as JWTPayload['role'],
-  }
-  const accessToken = jwt.sign(payload, secret, { expiresIn: '15m' })
+  const { accessToken, refreshToken, expiresAt } = await createSession(user.id)
+  await setAuthCookies(accessToken, refreshToken, expiresAt)
 
   const redirectUrl = user.role === 'super_admin' ? '/admin' : '/dashboard'
   const res = NextResponse.redirect(appUrl(redirectUrl, base))
-  res.cookies.set('access_token', accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 15,
-    path: '/',
-  })
   res.cookies.delete('oauth_state')
   return res
 }

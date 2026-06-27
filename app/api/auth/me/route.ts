@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth, getUserById } from '@/lib/auth'
 import { queryOne } from '@/lib/db'
+import { logger } from '@/lib/logger'
 import { getTenantMemberRole } from '@/lib/platform/access'
 import { getTenantRolePermissions } from '@/lib/platform/tenant-role-permissions'
 import { resolveUserTenantId } from '@/lib/modules/tenant/service'
@@ -93,7 +94,7 @@ export async function GET() {
     if ((error as Error).message === 'Unauthorized') {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
-    console.error('auth/me GET', error)
+    logger.error('auth/me GET', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json({ success: false, error: 'Failed to load session' }, { status: 500 })
   }
 }

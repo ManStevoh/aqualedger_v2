@@ -45,7 +45,7 @@ async function ensureSuperAdmin(passwordHash: string): Promise<string> {
   const wallet = await queryOne<{ id: string }>(`SELECT id FROM wallets WHERE user_id = ? LIMIT 1`, [id])
   if (!wallet) {
     await execute(
-      `INSERT INTO wallets (id, user_id, balance, currency, status) VALUES (?, ?, 0, 'KES', 'active')`,
+      `INSERT IGNORE INTO wallets (id, tenant_id, user_id, balance, currency, status) VALUES (?, 'tenant-default-0001', ?, 0, 'KES', 'active')`,
       [generateId(), id],
     )
   }
@@ -59,6 +59,46 @@ async function ensureSuperAdmin(passwordHash: string): Promise<string> {
   }
 
   return id
+}
+
+async function ensureDemoSuperUser(passwordHash: string): Promise<void> {
+  const email = 'demo@aqualedger.co.ke'
+  const existing = await queryOne<{ id: string }>(`SELECT id FROM users WHERE email = ?`, [email])
+  const id = existing?.id ?? generateId()
+
+  await execute(
+    `INSERT IGNORE INTO users (id, email, password_hash, first_name, last_name, role, status, kyc_verified)
+     VALUES (?, ?, ?, 'Demo', 'SuperUser', 'super_admin', 'active', TRUE)`,
+    [id, email, passwordHash],
+  )
+
+  const tenant = await queryOne<{ id: string }>(`SELECT id FROM tenants WHERE slug = 'aquaerp-demo'`)
+  const tenantId = tenant?.id || 'tenant-default-0001'
+
+  const wallet = await queryOne<{ id: string }>(`SELECT id FROM wallets WHERE user_id = ? LIMIT 1`, [id])
+  if (!wallet) {
+    await execute(
+      `INSERT INTO wallets (id, tenant_id, user_id, balance, currency, status) VALUES (?, ?, ?, 100000, 'KES', 'active')`,
+      [generateId(), tenantId, id],
+    )
+  }
+
+  const credit = await queryOne<{ id: string }>(`SELECT id FROM credit_scores WHERE user_id = ? LIMIT 1`, [id])
+  if (!credit) {
+    await execute(
+      `INSERT INTO credit_scores (id, user_id, score, grade) VALUES (?, ?, 800, 'A')`,
+      [generateId(), id],
+    )
+  }
+
+  // Link to 'aquaerp-demo' tenant as tenant_owner
+  if (tenant) {
+    await execute(
+      `INSERT IGNORE INTO tenant_members (id, tenant_id, user_id, role, status)
+       VALUES (?, ?, ?, 'tenant_owner', 'active')`,
+      [generateId(), tenant.id, id]
+    )
+  }
 }
 
 async function ensurePlatformSettings(adminId: string): Promise<void> {
@@ -420,11 +460,14 @@ async function main(): Promise<void> {
   await execute(`DELETE FROM tenants WHERE id = 'tenant-default-0001' OR slug = 'default'`)
   await execute(`SET FOREIGN_KEY_CHECKS = 1`)
 
+  await ensureDemoSuperUser(await bcrypt.hash('Demo@123', 12))
+
   console.log('')
   console.log('✅ Platform seed complete')
   console.log('')
-  console.log('Super admin login:')
-  console.log(`  ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`)
+  console.log('Super Admin Logins:')
+  console.log(`  1. Standard: ${SUPER_ADMIN_EMAIL} / ${SUPER_ADMIN_PASSWORD}`)
+  console.log(`  2. Demo User: demo@aqualedger.co.ke / Demo@123 (Linked to fully-loaded 'aquaerp-demo' tenant)`)
   console.log('')
   console.log(`Tenants plan/status updated: ${plansUpdated}`)
   console.log(`Payment intents seeded: ${payments}`)

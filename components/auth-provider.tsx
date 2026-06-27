@@ -161,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [pathname, router, setCurrentRole, setCurrentUser])
+  }, [pathname, router, setCurrentRole, setCurrentUser, setMemberRole, setTenantSlug, setRolePermissions, setEnabledModuleIds])
 
   return <>{children}</>
 }
