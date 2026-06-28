@@ -48,14 +48,25 @@ export async function createQualityInspection(
 }
 
 export async function listQualityInspections(tenantId: string, tripId?: string) {
-  const conditions = [tenantWhere()]
+  const conditions = [tenantWhere('qi.tenant_id')]
   const params: unknown[] = [tenantId]
   if (tripId) {
-    conditions.push('trip_id = ?')
+    conditions.push('qi.trip_id = ?')
     params.push(tripId)
   }
   return query(
-    `SELECT * FROM catch_quality_inspections WHERE ${conditions.join(' AND ')} ORDER BY inspected_at DESC LIMIT 100`,
+    `SELECT qi.*, 
+            CONCAT(u.first_name, ' ', u.last_name) as inspector_name,
+            b.name as boat_name,
+            fs.name as species_name,
+            c.quantity_kg as catch_qty
+     FROM catch_quality_inspections qi
+     LEFT JOIN users u ON qi.inspector_id = u.id
+     LEFT JOIN catches c ON qi.catch_id = c.id
+     LEFT JOIN fishing_trips t ON qi.trip_id = t.id
+     LEFT JOIN boats b ON t.boat_id = b.id
+     LEFT JOIN fish_species fs ON c.species_id = fs.id
+     WHERE ${conditions.join(' AND ')} ORDER BY qi.inspected_at DESC LIMIT 100`,
     params,
   )
 }

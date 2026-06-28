@@ -22,6 +22,12 @@ const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   defaultCurrency: z.string().length(3).optional(),
   timezone: z.string().max(64).optional(),
+  bankName: z.string().max(200).optional(),
+  bankBranch: z.string().max(200).optional(),
+  bankAccountNumber: z.string().max(50).optional(),
+  bankAccountName: z.string().max(200).optional(),
+  bankSwiftCode: z.string().max(20).optional(),
+  mpesaPaybill: z.string().max(20).optional(),
 })
 
 export const GET = apiHandler(async () => {

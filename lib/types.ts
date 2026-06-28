@@ -143,6 +143,8 @@ export interface Catch {
   soldAt?: string
   /** ISO-ish timestamp from `recorded_at` when present */
   loggedAt?: string
+  boatName?: string
+  recordedByName?: string
 }
 
 export interface TripExpense {

@@ -2,7 +2,7 @@
 
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
-import { Fish, DollarSign, Scale, Star, Plus, Filter, Award } from 'lucide-react'
+import { Fish, DollarSign, Scale, Star, Plus, Filter, Award, Printer, QrCode, Receipt, ShieldCheck, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,6 +63,7 @@ export default function CatchesPage() {
     description: 'Log, track, and sell your fish catches',
   })
   const [showLogDialog, setShowLogDialog] = useState(false)
+  const [selectedReceiptCatch, setSelectedReceiptCatch] = useState<Catch | null>(null)
   const [gradeFilter, setGradeFilter] = useState<string>('all')
   const [selectedTrip, setSelectedTrip] = useState('')
   const [fishType, setFishType] = useState('')
@@ -171,6 +172,15 @@ export default function CatchesPage() {
       header: 'Sold At',
       cell: (item: Catch) => item.soldAt ? new Date(item.soldAt).toLocaleDateString() : '-',
     },
+    {
+      key: 'actions',
+      header: 'Actions',
+      cell: (item: Catch) => (
+        <Button variant="outline" size="sm" onClick={() => setSelectedReceiptCatch(item)}>
+          View Receipt
+        </Button>
+      ),
+    },
   ]
 
   return (
@@ -179,10 +189,17 @@ export default function CatchesPage() {
         description={meta.description}
         breadcrumbs={meta.breadcrumbs}
         actions={
-          <Button onClick={() => setShowLogDialog(true)} disabled={ongoingTrips.length === 0}>
-            <Plus className="mr-2 h-4 w-4" />
-            Log Catch
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <a href="/api/v2/analytics/export?type=fishing-operations&format=csv" download>
+                <Download className="mr-2 h-4 w-4" /> Export Report
+              </a>
+            </Button>
+            <Button onClick={() => setShowLogDialog(true)} disabled={ongoingTrips.length === 0}>
+              <Plus className="mr-2 h-4 w-4" />
+              Log Catch
+            </Button>
+          </div>
         }
       >
 
@@ -455,6 +472,143 @@ export default function CatchesPage() {
             >
               {isLogging ? 'Logging...' : 'Log Catch'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Digital Catch Receipt Dialog */}
+      <Dialog open={selectedReceiptCatch !== null} onOpenChange={(open) => !open && setSelectedReceiptCatch(null)}>
+        <DialogContent className="sm:max-w-md max-w-full">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              Digital Catch Receipt &amp; Evidence Trail
+            </DialogTitle>
+            <DialogDescription>
+              ERP generated transaction evidence of catch &amp; sale
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedReceiptCatch && (
+            <div className="space-y-4 py-2 text-sm" id="printable-receipt">
+              {/* Receipt Body */}
+              <div className="border border-dashed border-muted-foreground/30 rounded-lg p-5 bg-muted/20 space-y-4 relative overflow-hidden">
+                {/* Watermark/Stamp */}
+                <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 pointer-events-none">
+                  <ShieldCheck className="h-32 w-32 text-green-600" />
+                </div>
+
+                <div className="flex justify-between items-start border-b pb-3 border-dashed">
+                  <div>
+                    <h4 className="font-bold text-lg text-primary">AQUA-ERP RECEIPT</h4>
+                    <p className="text-xs text-muted-foreground">ID: #{selectedReceiptCatch.id.slice(0, 16)}...</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                      <ShieldCheck className="h-3 w-3" />
+                      SECURE LOG
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs border-b pb-3 border-dashed">
+                  <div>
+                    <span className="text-muted-foreground block">Vessel / Boat</span>
+                    <span className="font-semibold">{selectedReceiptCatch.boatName || 'Showcase Vessel'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Logged By</span>
+                    <span className="font-semibold">{selectedReceiptCatch.recordedByName || 'BMU Official'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Date &amp; Time</span>
+                    <span className="font-semibold">
+                      {selectedReceiptCatch.loggedAt ? new Date(selectedReceiptCatch.loggedAt).toLocaleString() : new Date().toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Trip Reference</span>
+                    <span className="font-mono font-semibold text-[10px] truncate max-w-[120px] block">
+                      {selectedReceiptCatch.tripId.slice(0, 12)}...
+                    </span>
+                  </div>
+                </div>
+
+                {/* Catch Details */}
+                <div className="space-y-2 border-b pb-3 border-dashed">
+                  <div className="flex justify-between font-semibold">
+                    <span>Species / Grade</span>
+                    <span>Total Value</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>
+                      {selectedReceiptCatch.fishType} (Grade {displayGrade(selectedReceiptCatch.grade)})
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      KES {selectedReceiptCatch.totalValue.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground pl-3">
+                    <span>{selectedReceiptCatch.weight} kg @ KES {selectedReceiptCatch.pricePerKg}/kg</span>
+                    <span>MSC Certified: {selectedReceiptCatch.grade === 'premium' ? 'Yes' : 'No'}</span>
+                  </div>
+                </div>
+
+                {/* Proof of Sale */}
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground font-semibold uppercase block tracking-wider">Sale &amp; Transfer Evidence</span>
+                  {selectedReceiptCatch.buyerName ? (
+                    <div className="rounded bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 space-y-1">
+                      <p className="font-semibold flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                        Transaction Completed
+                      </p>
+                      <p>Sold to: <strong className="text-emerald-900">{selectedReceiptCatch.buyerName}</strong></p>
+                      <p>Transfer Date: {selectedReceiptCatch.soldAt ? new Date(selectedReceiptCatch.soldAt).toLocaleDateString() : new Date().toLocaleDateString()}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-800 space-y-1">
+                      <p className="font-semibold">Listing / Stock Status</p>
+                      <p>Available in Marketplace or Cold Chain Storage.</p>
+                      <p className="text-[10px] text-amber-700">Awaiting purchase dispatch / contract call.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* QR Code Placeholder for Traceability Verification */}
+                <div className="flex items-center gap-3 pt-2 bg-background border rounded p-2.5">
+                  <QrCode className="h-10 w-10 text-muted-foreground shrink-0" />
+                  <div className="text-[10px] text-muted-foreground">
+                    <p className="font-semibold text-foreground">Scan for Traceability Audit</p>
+                    <p className="leading-tight">Verify vessel safety checks, crew licenses, cold storage log, and landing cert on-chain.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const style = document.createElement('style')
+                style.innerHTML = `
+                  @media print {
+                    body * { visibility: hidden; }
+                    #printable-receipt, #printable-receipt * { visibility: visible; }
+                    #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; border: none; }
+                  }
+                `
+                document.head.appendChild(style)
+                window.print()
+                document.head.removeChild(style)
+              }}
+              className="gap-1.5"
+            >
+              <Printer className="h-4 w-4" />
+              Print / PDF
+            </Button>
+            <Button onClick={() => setSelectedReceiptCatch(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

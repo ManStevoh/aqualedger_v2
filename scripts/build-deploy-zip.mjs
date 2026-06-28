@@ -101,6 +101,13 @@ async function main() {
       fs.copyFileSync(cpanelDoc, path.join(TEMP_DIR, 'README.md'));
     }
 
+    // Explicitly delete any .env file copied from .next/standalone (which Next.js adds by default)
+    const envDestPath = path.join(TEMP_DIR, '.env');
+    if (fs.existsSync(envDestPath)) {
+      console.log('Removing .env file copied by Next.js standalone compiler from the deployment package...');
+      fs.rmSync(envDestPath, { force: true });
+    }
+
     // 4. Compress the deployment folder
     console.log('\nCreating deployment ZIP archive...');
     

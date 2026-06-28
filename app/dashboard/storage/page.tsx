@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StatCard } from '@/components/dashboard/stat-card'
 import Link from 'next/link'
-import { Warehouse, Thermometer, AlertTriangle, TrendingUp, Plus, Layers } from 'lucide-react'
+import { Warehouse, Thermometer, AlertTriangle, TrendingUp, Plus, Layers, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { authFetchJson, createStorageFacility } from '@/lib/api'
 import {
@@ -156,6 +156,11 @@ export default function StoragePage() {
 
   return (
     <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <a href="/api/v2/analytics/export?type=coldchain-compliance&format=csv" download>
+              <Download className="mr-2 h-4 w-4" /> Export Report
+            </a>
+          </Button>
           <Button variant="outline" className="gap-2" asChild>
             <Link href="/dashboard/coldchain/zones">
               <Layers className="w-4 h-4" />

@@ -292,7 +292,7 @@ async function generateFishing(tenantId: string, days: number): Promise<Generate
     [tenantId, days],
   )
   return {
-    meta: meta('fishing-operations', 'Fishing Operations', tenantId, ['FAO', 'ISO 8601'], trips.length, days),
+    meta: meta('fishing-operations', 'BMU Operations', tenantId, ['FAO', 'ISO 8601'], trips.length, days),
     sections: [
       {
         id: 'trips',

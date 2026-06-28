@@ -77,8 +77,11 @@ export async function updateReturnStatus(
 
 export async function listOrderReturns(tenantId: string, limit = 50) {
   return query(
-    `SELECT r.*, o.order_number FROM order_returns r
+    `SELECT r.*, o.order_number, o.total as order_total,
+            CONCAT(u.first_name, ' ', u.last_name) as buyer_name, u.email as buyer_email
+     FROM order_returns r
      JOIN orders o ON r.order_id = o.id
+     LEFT JOIN users u ON o.buyer_id = u.id
      WHERE r.tenant_id = ?
      ORDER BY r.created_at DESC LIMIT ?`,
     [tenantId, limit],

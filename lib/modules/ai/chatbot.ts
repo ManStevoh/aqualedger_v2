@@ -45,7 +45,7 @@ function ruleBasedReply(message: string, ctx?: Awaited<ReturnType<typeof buildTe
     return 'Hello! I am the AquaERP AI assistant with live tenant metrics when LLM is enabled. Ask about catches, margins, inventory, or cold chain.'
   }
   if (/catch|landing|trip|fleet|boat/.test(lower)) {
-    return 'Fishing operations: log catches under Trips & Catches, track lots in Traceability, and schedule landing-site auctions.'
+    return 'BMU operations: log catches under Trips & Catches, track lots in Traceability, and schedule landing-site auctions.'
   }
   if (/cold|temperature|haccp|storage|spoilage/.test(lower)) {
     return 'Cold chain: monitor zones and readings in Cold Storage. Critical temperature events trigger workflow alerts.'

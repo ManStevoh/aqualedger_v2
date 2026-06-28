@@ -24,6 +24,7 @@ import {
   MapPin,
   Phone,
   Calendar,
+  Download,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { useFishOrders, updateOrderStatus } from '@/lib/api'
@@ -93,72 +94,68 @@ export default function OrdersPage() {
     .filter((o: FishOrder) => o.status === 'delivered')
     .reduce((sum: number, o: FishOrder) => sum + o.totalAmount, 0)
 
-  const runStatusUpdate = async (orderId: string, action: string) => {
-    setUpdatingId(orderId)
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    setUpdatingId(id)
     try {
-      const json = await updateOrderStatus(orderId, action)
-      if (!json.success) {
-        toast.error(json.error || 'Update failed')
-        return
+      const result = await updateOrderStatus(id, newStatus)
+      if (result.success) {
+        toast.success(`Order status updated to ${newStatus}`)
+        mutate()
+      } else {
+        toast.error(result.error || 'Failed to update order status')
       }
-      toast.success('Order updated')
-      await mutate()
     } catch {
-      toast.error('Network error')
+      toast.error('Network error updating order status')
     } finally {
       setUpdatingId(null)
     }
   }
 
   const sellerActions = (order: FishOrder) => {
-    const busy = updatingId === order.id
     if (order.status === 'pending') {
       return (
-        <>
-          <Button size="sm" disabled={busy} onClick={() => runStatusUpdate(order.id, 'confirmed')}>
-            Confirm
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => runStatusUpdate(order.id, 'cancelled')}
-          >
-            Cancel
-          </Button>
-        </>
+        <Button
+          size="sm"
+          onClick={() => handleUpdateStatus(order.id, 'confirmed')}
+          disabled={updatingId === order.id}
+        >
+          Confirm order
+        </Button>
       )
     }
     if (order.status === 'confirmed') {
       return (
-        <Button size="sm" disabled={busy} onClick={() => runStatusUpdate(order.id, 'shipped')}>
-          Mark shipped
+        <Button
+          size="sm"
+          onClick={() => handleUpdateStatus(order.id, 'shipped')}
+          disabled={updatingId === order.id}
+        >
+          Ship order
         </Button>
       )
     }
     if (order.status === 'shipped') {
       return (
-        <Button size="sm" disabled={busy} onClick={() => runStatusUpdate(order.id, 'delivered')}>
-          Mark delivered
+        <Button
+          size="sm"
+          onClick={() => handleUpdateStatus(order.id, 'delivered')}
+          disabled={updatingId === order.id}
+        >
+          Deliver order
         </Button>
       )
     }
-    return (
-      <Button size="sm" variant="outline" disabled>
-        No action
-      </Button>
-    )
+    return null
   }
 
   const buyerActions = (order: FishOrder) => {
-    const busy = updatingId === order.id
     if (order.status === 'pending') {
       return (
         <Button
           size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={() => runStatusUpdate(order.id, 'cancelled')}
+          variant="destructive"
+          onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+          disabled={updatingId === order.id}
         >
           Cancel order
         </Button>
@@ -173,12 +170,19 @@ export default function OrdersPage() {
       description={meta.description}
       breadcrumbs={meta.breadcrumbs}
       actions={
-        <Tabs value={orderRole} onValueChange={(v) => setOrderRole(v as 'buyer' | 'seller')}>
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="buyer" className="min-h-11">As buyer</TabsTrigger>
-            <TabsTrigger value="seller" className="min-h-11">As seller</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" asChild>
+            <a href="/api/v2/analytics/export?type=commerce-orders&format=csv" download>
+              <Download className="mr-2 h-4 w-4" /> Export Report
+            </a>
+          </Button>
+          <Tabs value={orderRole} onValueChange={(v) => setOrderRole(v as 'buyer' | 'seller')}>
+            <TabsList className="flex-wrap h-auto">
+              <TabsTrigger value="buyer" className="min-h-11">As buyer</TabsTrigger>
+              <TabsTrigger value="seller" className="min-h-11">As seller</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       }
     >
       <StatCardGrid>

@@ -58,18 +58,38 @@ export function DashboardSidebar() {
 
   const [openModules, setOpenModules] = useState<Record<string, boolean>>({})
 
+  const activeNavHref = useMemo(() => {
+    const hrefs = modules.flatMap((mod) => mod.nav.map((item) => item.href))
+    const matchingHrefs = hrefs.filter((href) => {
+      if (pathname === href) return true
+      if (href === '/dashboard') return false
+      return pathname.startsWith(href + '/') || pathname.startsWith(href + '?')
+    })
+    if (matchingHrefs.length > 0) {
+      return matchingHrefs.reduce((longest, current) => 
+        current.length > longest.length ? current : longest
+      , '')
+    }
+    const fallbackHrefs = hrefs.filter((href) => {
+      if (href === '/dashboard') return pathname === '/dashboard'
+      return pathname.startsWith(href)
+    })
+    if (fallbackHrefs.length > 0) {
+      return fallbackHrefs.reduce((longest, current) => 
+        current.length > longest.length ? current : longest
+      , '')
+    }
+    return null
+  }, [pathname, modules])
+
   useEffect(() => {
     const activeModule = modules.find((mod) =>
-      mod.nav.some(
-        (item) =>
-          pathname === item.href ||
-          (item.href !== '/dashboard' && pathname.startsWith(item.href)),
-      ),
+      mod.nav.some((item) => item.href === activeNavHref),
     )
     if (activeModule) {
       setOpenModules((prev) => ({ ...prev, [activeModule.id]: true }))
     }
-  }, [pathname, modules])
+  }, [activeNavHref, modules])
 
   const toggleModule = (id: string) => {
     setOpenModules((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -118,9 +138,7 @@ export function DashboardSidebar() {
             {modules.map((mod) => {
               const ModuleIcon = mod.icon
               const isModuleActive = mod.nav.some(
-                (item) =>
-                  pathname === item.href ||
-                  (item.href !== '/dashboard' && pathname.startsWith(item.href)),
+                (item) => item.href === activeNavHref,
               )
               const isOpen = openModules[mod.id] ?? isModuleActive
 
@@ -157,9 +175,7 @@ export function DashboardSidebar() {
                   <CollapsibleContent className="space-y-0.5 pb-2 pl-1 pt-1">
                     {mod.nav.map((item) => {
                       const Icon = item.icon
-                      const isActive =
-                        pathname === item.href ||
-                        (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                      const isActive = item.href === activeNavHref
 
                       return (
                         <div key={item.href} className="space-y-0.5">

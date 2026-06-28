@@ -13,7 +13,7 @@ import { authFetchJson } from '@/lib/api'
 import { urlInputPlaceholder } from '@/lib/config/urls'
 import { BrandPreview } from '@/components/branding/brand-preview'
 import { useBrand } from '@/components/branding/brand-provider'
-import { Building2, Globe, MapPin, Save } from 'lucide-react'
+import { Building2, Globe, MapPin, Save, Landmark, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 
@@ -29,6 +29,12 @@ interface Tenant {
     tax_tin?: string
     vat_number?: string
     branding?: { logo_url?: string; primary_color?: string }
+    bank_name?: string
+    bank_branch?: string
+    bank_account_number?: string
+    bank_account_name?: string
+    bank_swift_code?: string
+    mpesa_paybill?: string
   } | null
   logo_url?: string | null
   primary_color?: string | null
@@ -63,6 +69,12 @@ export default function OrganizationPage() {
   const [vatNumber, setVatNumber] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [primaryColor, setPrimaryColor] = useState('#0ea5e9')
+  const [bankName, setBankName] = useState('')
+  const [bankBranch, setBankBranch] = useState('')
+  const [bankAccountNumber, setBankAccountNumber] = useState('')
+  const [bankAccountName, setBankAccountName] = useState('')
+  const [bankSwiftCode, setBankSwiftCode] = useState('')
+  const [mpesaPaybill, setMpesaPaybill] = useState('')
 
   const loadTenant = () => {
     setLoading(true)
@@ -85,6 +97,12 @@ export default function OrganizationPage() {
               res.data.tenant.primary_color ??
               '#0ea5e9',
           )
+          setBankName(res.data.tenant.settings?.bank_name ?? '')
+          setBankBranch(res.data.tenant.settings?.bank_branch ?? '')
+          setBankAccountNumber(res.data.tenant.settings?.bank_account_number ?? '')
+          setBankAccountName(res.data.tenant.settings?.bank_account_name ?? '')
+          setBankSwiftCode(res.data.tenant.settings?.bank_swift_code ?? '')
+          setMpesaPaybill(res.data.tenant.settings?.mpesa_paybill ?? '')
         }
       })
       .catch(() => {
@@ -111,6 +129,12 @@ export default function OrganizationPage() {
             logo_url: logoUrl.trim() || undefined,
             primary_color: primaryColor.trim() || undefined,
           },
+          bankName: bankName.trim() || undefined,
+          bankBranch: bankBranch.trim() || undefined,
+          bankAccountNumber: bankAccountNumber.trim() || undefined,
+          bankAccountName: bankAccountName.trim() || undefined,
+          bankSwiftCode: bankSwiftCode.trim() || undefined,
+          mpesaPaybill: mpesaPaybill.trim() || undefined,
         }),
       })
       if (!res.success) {
@@ -240,6 +264,53 @@ export default function OrganizationPage() {
           <Button className="gap-2" onClick={handleSaveSettings} disabled={saving}>
             <Save className="h-4 w-4" />
             {saving ? 'Saving…' : 'Save settings'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Landmark className="h-5 w-5" />
+            Bank &amp; Payment Details
+          </CardTitle>
+          <CardDescription>
+            Organization bank account and mobile money details for receiving payments and disbursements
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Bank Name</Label>
+              <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Kenya Commercial Bank" />
+            </div>
+            <div className="space-y-2">
+              <Label>Branch</Label>
+              <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} placeholder="Mombasa Branch" />
+            </div>
+            <div className="space-y-2">
+              <Label>Account Number</Label>
+              <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="1234567890" />
+            </div>
+            <div className="space-y-2">
+              <Label>Account Name</Label>
+              <Input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} placeholder="BMU Cooperative" />
+            </div>
+            <div className="space-y-2">
+              <Label>SWIFT / BIC Code</Label>
+              <Input value={bankSwiftCode} onChange={(e) => setBankSwiftCode(e.target.value)} placeholder="KCBLKENX" />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Smartphone className="h-3.5 w-3.5" />
+                M-Pesa Paybill / Till
+              </Label>
+              <Input value={mpesaPaybill} onChange={(e) => setMpesaPaybill(e.target.value)} placeholder="123456" />
+            </div>
+          </div>
+          <Button className="gap-2" onClick={handleSaveSettings} disabled={saving}>
+            <Save className="h-4 w-4" />
+            {saving ? 'Saving…' : 'Save bank details'}
           </Button>
         </CardContent>
       </Card>

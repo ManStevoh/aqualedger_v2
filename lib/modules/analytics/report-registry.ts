@@ -110,7 +110,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
   },
   {
     id: 'fishing-operations',
-    name: 'Fishing Operations',
+    name: 'BMU Operations',
     description: 'Trips, catches, fleet utilization',
     category: 'operations',
     standards: ['FAO area codes', 'ISO 8601'],

@@ -227,7 +227,7 @@ export default function ScheduledReportsPage() {
                   <SelectItem value="commerce-orders">Commerce Orders</SelectItem>
                   <SelectItem value="coldchain-compliance">Cold Chain / HACCP</SelectItem>
                   <SelectItem value="procurement">Procurement</SelectItem>
-                  <SelectItem value="fishing-operations">Fishing Operations</SelectItem>
+                  <SelectItem value="fishing-operations">BMU Operations</SelectItem>
                 </SelectContent>
               </Select>
             </div>

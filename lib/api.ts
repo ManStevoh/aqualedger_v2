@@ -128,6 +128,8 @@ function mapCatchRow(row: Record<string, unknown>): Catch {
       : row.recorded_at
         ? String(row.recorded_at)
         : undefined,
+    boatName: row.boat_name ? String(row.boat_name) : undefined,
+    recordedByName: row.recorded_by_name ? String(row.recorded_by_name) : undefined,
   }
 }
 

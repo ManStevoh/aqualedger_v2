@@ -1,8 +1,9 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiHandler, jsonOk } from '@/lib/api-handler'
 import { requirePermission } from '@/lib/platform/access'
 import { listWholesaleTiers, upsertWholesaleTier, resolveUnitPrice } from '@/lib/modules/commerce/wholesale-pricing'
+import { execute } from '@/lib/db'
 
 const upsertSchema = z.object({
   productId: z.string().uuid(),
@@ -31,4 +32,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const body = upsertSchema.parse(await request.json())
   const id = await upsertWholesaleTier(ctx.tenantId, body)
   return jsonOk({ id }, 201)
+}, 'v2/commerce/wholesale-pricing')
+
+export const DELETE = apiHandler(async (request: NextRequest) => {
+  const ctx = await requirePermission('commerce.catalog.write')
+  const id = new URL(request.url).searchParams.get('id')
+  if (!id) {
+    return NextResponse.json({ success: false, error: 'Tier ID is required' }, { status: 400 })
+  }
+  await execute(
+    `DELETE FROM wholesale_price_tiers WHERE id = ? AND tenant_id = ?`,
+    [id, ctx.tenantId],
+  )
+  return jsonOk({ success: true, message: 'Pricing tier deleted successfully' })
 }, 'v2/commerce/wholesale-pricing')

@@ -128,7 +128,7 @@ export const ERP_MODULES: ErpModule[] = [
   },
   {
     id: 'fishing',
-    label: 'Fishing Operations',
+    label: 'BMU Operations',
     description: 'Fleet, trips, catches, BMU, compliance',
     icon: Ship,
     color: 'from-cyan-500 to-teal-600',

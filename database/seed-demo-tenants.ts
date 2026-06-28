@@ -323,6 +323,10 @@ async function provisionTenant(
     [generateId(), tenantId, vendorUserId],
   )
 
+  if (def.slug === 'aquaerp-demo') {
+    await seedShowcaseLarge(ctx, def, passwordHash)
+  }
+
   return ctx
 }
 
@@ -848,6 +852,544 @@ async function seedMisc(ctx: TenantSeedCtx): Promise<void> {
       ctx.ownerId,
     ],
   )
+}
+
+async function seedShowcaseLarge(
+  ctx: TenantSeedCtx,
+  def: (typeof DEMO_TENANTS)[0],
+  passwordHash: string,
+): Promise<void> {
+  console.log(`  🚀 Generating large showcase dataset for ${ctx.name}...`)
+
+  // 1. Create extra users (crew and captains)
+  const crewUsers = [
+    { email: 'captain-nyali@demo.aquaerp.local', first: 'Said', last: 'Bakari', role: 'user' },
+    { email: 'crew-juma@demo.aquaerp.local', first: 'Juma', last: 'Ali', role: 'user' },
+    { email: 'crew-mwangi@demo.aquaerp.local', first: 'Peter', last: 'Mwangi', role: 'user' },
+    { email: 'crew-otieno@demo.aquaerp.local', first: 'Kevin', last: 'Otieno', role: 'user' },
+  ]
+  const crewIds: string[] = []
+  for (const c of crewUsers) {
+    const id = await ensureUser(c.email, c.first, c.last, c.role, passwordHash)
+    crewIds.push(id)
+    // Add to tenant_members
+    await execute(
+      `INSERT IGNORE INTO tenant_members (id, tenant_id, user_id, branch_id, role, status)
+       VALUES (?, ?, ?, ?, 'staff', 'active')`,
+      [generateId(), ctx.tenantId, id, ctx.branchId],
+    )
+  }
+
+  // 2. Create extra boats
+  const extraBoats = [
+    { name: 'Mombasa Wave', reg: 'KEN-MB-002', type: 'fiber', cap: 600 },
+    { name: 'Nyali Explorer', reg: 'KEN-MB-003', type: 'fiber', cap: 800 },
+    { name: 'Likoni Express', reg: 'KEN-MB-004', type: 'wooden', cap: 450 },
+  ]
+  const boatIds = [ctx.boatId]
+  for (const b of extraBoats) {
+    const id = generateId()
+    boatIds.push(id)
+    await execute(
+      `INSERT INTO boats (id, tenant_id, owner_id, registration_number, name, type, capacity_kg, status, gps_enabled)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', TRUE)`,
+      [id, ctx.tenantId, ctx.ownerId, b.reg, b.name, b.type, b.cap],
+    )
+
+    // Add crew to boat
+    for (const crewId of crewIds) {
+      await execute(
+        `INSERT IGNORE INTO boat_crew (id, boat_id, crew_member_id, role, status, joined_date)
+         VALUES (?, ?, ?, 'deckhand', 'active', CURDATE())`,
+        [generateId(), id, crewId],
+      )
+    }
+  }
+
+  // 3. Generate fishing trips and catches over the last 12 months
+  // We want ~60 trips spread over 365 days.
+  const speciesList = ctx.speciesIds // Nile Perch, Tilapia, Tuna
+  const now = new Date()
+  let tripCount = 0
+
+  // To make financial charts look rich and continuous, we distribute trips evenly
+  for (let dayOffset = 360; dayOffset >= 5; dayOffset -= 6) {
+    const departureTime = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000)
+    departureTime.setHours(4 + Math.floor(Math.random() * 3), Math.floor(Math.random() * 60), 0, 0)
+    const returnTime = new Date(departureTime.getTime() + (6 + Math.floor(Math.random() * 5)) * 60 * 60 * 1000)
+
+    const boatId = boatIds[tripCount % boatIds.length]
+    const captainId = tripCount % 2 === 0 ? ctx.ownerId : crewIds[0]
+    const tripId = generateId()
+    tripCount++
+
+    const zones = ['Zone A', 'Zone B', 'Deep Sea', 'Inshore']
+    const weatherList = ['Clear', 'Partly Cloudy', 'Light Rain', 'Sunny']
+    const seaStates = ['calm', 'moderate', 'rough']
+
+    await execute(
+      `INSERT INTO fishing_trips (id, tenant_id, boat_id, captain_id, landing_site_id, departure_time, return_time, status, fishing_zone, weather_conditions, sea_state, fuel_used_liters, fuel_cost, total_catch_kg, total_revenue)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, 0, 0)`,
+      [
+        tripId,
+        ctx.tenantId,
+        boatId,
+        captainId,
+        ctx.landingSiteId,
+        departureTime,
+        returnTime,
+        zones[tripCount % zones.length],
+        weatherList[tripCount % weatherList.length],
+        seaStates[tripCount % seaStates.length],
+        50 + Math.floor(Math.random() * 100),
+        7000 + Math.floor(Math.random() * 8000),
+      ],
+    )
+
+    // Add 1-3 catches for this trip
+    const numCatches = 1 + (tripCount % 3)
+    let totalTripCatch = 0
+    let totalTripRevenue = 0
+
+    for (let c = 0; c < numCatches; c++) {
+      const speciesId = speciesList[(tripCount + c) % speciesList.length]
+      const weight = 80 + Math.floor(Math.random() * 150)
+      const grade = ['A', 'B', 'C'][c % 3] as 'A' | 'B' | 'C'
+      const unitPrice = grade === 'A' ? 450 + (tripCount % 100) : grade === 'B' ? 350 + (tripCount % 50) : 250
+      const catchValue = weight * unitPrice
+
+      await execute(
+        `INSERT INTO catches (id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price, storage_method, recorded_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'iced', ?, ?)`,
+        [generateId(), ctx.tenantId, tripId, speciesId, weight, grade, unitPrice, captainId, departureTime],
+      )
+
+      totalTripCatch += weight
+      totalTripRevenue += catchValue
+
+      // Create traceability lot for Grade A
+      if (grade === 'A' && tripCount % 3 === 0) {
+        await execute(
+          `INSERT INTO traceability_lots (id, tenant_id, lot_code, catch_id, species_name, vessel_name, landing_site, catch_date, grading, msc_certified, fao_area, storage_temp_c, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'FAO-51', -18.5, 'active')`,
+          [
+            generateId(),
+            ctx.tenantId,
+            `LOT-${ctx.slug.toUpperCase()}-${tripCount}-${c}`,
+            generateId(), // mock catch link
+            c === 0 ? 'Nile Perch' : 'Tuna',
+            `Showcase Vessel ${tripCount % boatIds.length}`,
+            `${def.county} Landing`,
+            departureTime,
+            grade,
+          ],
+        )
+      }
+    }
+
+    // Update trip totals
+    await execute(
+      `UPDATE fishing_trips SET total_catch_kg = ?, total_revenue = ? WHERE id = ?`,
+      [totalTripCatch, totalTripRevenue, tripId],
+    )
+  }
+
+  // 3.5 Seed ongoing (in-progress) fishing trips that depart weeks ago and will take weeks to complete
+  console.log('  Seeding ongoing trips for catch logging...')
+  const ongoingTripsData = [
+    {
+      id: generateId(),
+      boatId: boatIds[0],
+      captainId: ctx.ownerId,
+      departureTime: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000), // 2 weeks ago
+      zone: 'Deep Sea',
+    },
+    {
+      id: generateId(),
+      boatId: boatIds[1 % boatIds.length],
+      captainId: crewIds[0] ?? ctx.ownerId,
+      departureTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
+      zone: 'Zone B',
+    }
+  ]
+
+  for (const ot of ongoingTripsData) {
+    await execute(
+      `INSERT INTO fishing_trips (id, tenant_id, boat_id, captain_id, landing_site_id, departure_time, return_time, status, fishing_zone, weather_conditions, sea_state, fuel_used_liters, fuel_cost, total_catch_kg, total_revenue)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, 'ongoing', ?, 'Partly Cloudy', 'moderate', 0, 0, 0, 0)`,
+      [
+        ot.id,
+        ctx.tenantId,
+        ot.boatId,
+        ot.captainId,
+        ctx.landingSiteId,
+        ot.departureTime,
+        ot.zone,
+      ],
+    )
+  }
+
+  // 4. Generate orders & wallet transactions over the last 12 months
+  // ~45 orders.
+  const buyerWallet = await queryOne<{ id: string }>(
+    `SELECT id FROM wallets WHERE user_id = ?`,
+    [ctx.buyerId],
+  )
+  const ownerWallet = await queryOne<{ id: string }>(
+    `SELECT id FROM wallets WHERE user_id = ?`,
+    [ctx.ownerId],
+  )
+
+  let orderCount = 0
+  for (let dayOffset = 340; dayOffset >= 10; dayOffset -= 8) {
+    const orderDate = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000)
+    orderDate.setHours(10 + (orderCount % 6), (orderCount * 13) % 60, 0, 0)
+
+    const orderId = generateId()
+    orderCount++
+    const orderNum = `ORD-SHOWCASE-${ctx.slug.toUpperCase().slice(0, 8)}-${orderCount}`
+    
+    // Choose status
+    const status = orderCount % 12 === 0 ? 'cancelled' : orderCount % 8 === 0 ? 'processing' : 'delivered'
+    const paymentStatus = status === 'cancelled' ? 'refunded' : 'paid'
+
+    const subtotal = 20000 + Math.floor(Math.random() * 30000)
+    const deliveryFee = 500
+    const tax = Math.round(subtotal * 0.16 * 100) / 100
+    const total = subtotal + deliveryFee + tax
+
+    await execute(
+      `INSERT INTO orders (id, tenant_id, order_number, buyer_id, seller_id, status, subtotal, delivery_fee, tax, total, payment_status, delivery_address, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId,
+        ctx.tenantId,
+        orderNum,
+        ctx.buyerId,
+        ctx.ownerId,
+        status,
+        subtotal,
+        deliveryFee,
+        tax,
+        total,
+        paymentStatus,
+        `Depot Station ${orderCount % 4}, Mombasa`,
+        orderDate,
+      ],
+    )
+
+    // Insert order items
+    await execute(
+      `INSERT INTO order_items (id, order_id, listing_id, species_id, quantity_kg, unit_price)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        generateId(),
+        orderId,
+        ctx.listingId,
+        speciesList[orderCount % speciesList.length],
+        50 + (orderCount % 10) * 10,
+        350 + (orderCount % 5) * 20,
+      ],
+    )
+
+    // Insert transactions
+    if (ownerWallet && buyerWallet && paymentStatus === 'paid') {
+      // Buyer pays
+      await execute(
+        `INSERT INTO transactions (id, wallet_id, type, amount, currency, balance_before, balance_after, description, status, payment_method, created_at)
+         VALUES (?, ?, 'purchase', ?, 'KES', 100000, 100000 - ?, ?, 'completed', 'mpesa', ?)`,
+        [generateId(), buyerWallet.id, -total, total, `Purchase order ${orderNum}`, orderDate],
+      )
+      // Owner receives
+      await execute(
+        `INSERT INTO transactions (id, wallet_id, type, amount, currency, balance_before, balance_after, description, status, payment_method, created_at)
+         VALUES (?, ?, 'deposit', ?, 'KES', 50000, 50000 + ?, ?, 'completed', 'mpesa', ?)`,
+        [generateId(), ownerWallet.id, total, total, `Sales payout for ${orderNum}`, orderDate],
+      )
+    }
+
+    // Insert logistics delivery record
+    await execute(
+      `INSERT INTO deliveries (id, tenant_id, order_id, tracking_code, status, driver_user_id, pickup_address, delivery_address, scheduled_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        generateId(),
+        ctx.tenantId,
+        orderId,
+        `TRK-SC-${orderCount}`,
+        status === 'delivered' ? 'delivered' : 'in_transit',
+        ctx.ownerId,
+        `${ctx.county} Landing Site`,
+        `Depot Station ${orderCount % 4}, Mombasa`,
+        orderDate,
+      ],
+    )
+  }
+
+  // 5. Seed realistic expenses
+  // ~30 expenses spread over 12 months
+  const expenseCategories = ['fuel', 'ice', 'maintenance', 'salary', 'misc', 'licenses']
+  const expenseDescs = {
+    fuel: 'Marine fuel refill for boat trip',
+    ice: 'Crushed ice block purchase for catch preservation',
+    maintenance: 'Engine repair and oil change',
+    salary: 'Crew day-payout wage share',
+    licenses: 'BMU licensing and safety inspection',
+    misc: 'Harbor berthing and logistics fees',
+  }
+  let expCount = 0
+  for (let dayOffset = 350; dayOffset >= 12; dayOffset -= 11) {
+    const expDate = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000)
+    const category = expenseCategories[expCount % expenseCategories.length]
+    const amount = 3000 + Math.floor(Math.random() * 15000)
+    expCount++
+
+    await execute(
+      `INSERT INTO expenses (id, tenant_id, user_id, boat_id, category, description, amount, status, expense_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'approved', ?)`,
+      [
+        generateId(),
+        ctx.tenantId,
+        ctx.ownerId,
+        boatIds[expCount % boatIds.length],
+        category,
+        expenseDescs[category as keyof typeof expenseDescs] || 'Operations expense',
+        amount,
+        expDate,
+      ],
+    )
+  }
+
+  // 6. Seed license compliance issues (expired, expiring, valid)
+  const lTypes = ['fishing', 'trading', 'transportation'] as const
+  for (let i = 0; i < crewIds.length; i++) {
+    const cId = crewIds[i]
+    // 1 expired, 1 expiring in 10 days, others valid
+    const daysToExpire = i === 0 ? -15 : i === 1 ? 10 : 180
+    const expires = new Date(now.getTime() + daysToExpire * 24 * 60 * 60 * 1000)
+    const issued = new Date(expires.getTime() - 365 * 24 * 60 * 60 * 1000)
+
+    await execute(
+      `INSERT INTO licenses (id, tenant_id, user_id, license_type, license_number, issued_date, expires_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        generateId(),
+        ctx.tenantId,
+        cId,
+        lTypes[i % lTypes.length],
+        `LIC-SC-${i + 1}`,
+        issued,
+        expires,
+        daysToExpire < 0 ? 'expired' : 'active',
+      ],
+    )
+  }
+
+  // 7. Seed comprehensive cold chain storage logs and temperature logs
+  // Temperature readings: 120 readings (hourly over last 5 days) per zone
+  const zones = await query<{ id: string; target_temp_c: number }>(
+    `SELECT id, target_temp_c FROM storage_zones WHERE tenant_id = ?`,
+    [ctx.tenantId],
+  )
+  for (const z of zones) {
+    for (let h = 120; h >= 0; h--) {
+      const readDate = new Date(now.getTime() - h * 60 * 60 * 1000)
+      const target = Number(z.target_temp_c)
+      // fluctuate slightly around target
+      const reading = target + (Math.sin(h / 6) * 1.5) + (Math.random() * 0.5)
+      const humidity = 70 + Math.floor(Math.random() * 20)
+
+      await execute(
+        `INSERT INTO temperature_readings (id, tenant_id, zone_id, facility_id, reading_c, humidity_pct, recorded_at, source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'iot')`,
+        [generateId(), ctx.tenantId, z.id, ctx.facilityId, reading, humidity, readDate],
+      )
+    }
+  }
+
+  // 8. Monthly P&L accounting entries matching the revenue/expenses
+  // For each of the last 12 months, we summarize total revenue and expenses, and write journal entries
+  const cashAcc = await queryOne<{ id: string }>(
+    `SELECT id FROM gl_accounts WHERE tenant_id = ? AND code = '1000'`,
+    [ctx.tenantId],
+  )
+  const revAcc = await queryOne<{ id: string }>(
+    `SELECT id FROM gl_accounts WHERE tenant_id = ? AND code = '4000'`,
+    [ctx.tenantId],
+  )
+  const expAcc = await queryOne<{ id: string }>(
+    `SELECT id FROM gl_accounts WHERE tenant_id = ? AND code = '5100'`,
+    [ctx.tenantId],
+  )
+
+  if (cashAcc?.id && revAcc?.id && expAcc?.id) {
+    for (let m = 11; m >= 0; m--) {
+      const entryDate = new Date(now.getFullYear(), now.getMonth() - m, 28)
+      const monthlyRev = 180000 + (Math.sin(m) * 50000) + Math.floor(Math.random() * 30000)
+      const monthlyExp = 90000 + (Math.cos(m) * 20000) + Math.floor(Math.random() * 15000)
+
+      // Revenue entry
+      const rEntryId = generateId()
+      await execute(
+        `INSERT INTO journal_entries (id, tenant_id, entry_number, entry_date, description, reference_type, status, created_by)
+         VALUES (?, ?, ?, ?, 'Monthly Sales Summary', 'manual', 'posted', ?)`,
+        [rEntryId, ctx.tenantId, `JE-REV-2025-${12 - m}`, entryDate, ctx.ownerId],
+      )
+      await execute(
+        `INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit, memo)
+         VALUES (?, ?, ?, ?, 0, 'Sales cash receipts')`,
+        [generateId(), rEntryId, cashAcc.id, monthlyRev],
+      )
+      await execute(
+        `INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit, memo)
+         VALUES (?, ?, ?, 0, ?, 'Monthly revenue recognition')`,
+        [generateId(), rEntryId, revAcc.id, monthlyRev],
+      )
+
+      // Expense entry
+      const eEntryId = generateId()
+      await execute(
+        `INSERT INTO journal_entries (id, tenant_id, entry_number, entry_date, description, reference_type, status, created_by)
+         VALUES (?, ?, ?, ?, 'Monthly Operations Expense', 'manual', 'posted', ?)`,
+        [eEntryId, ctx.tenantId, `JE-EXP-2025-${12 - m}`, entryDate, ctx.ownerId],
+      )
+      await execute(
+        `INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit, memo)
+         VALUES (?, ?, ?, ?, 0, 'Operating expense recognition')`,
+        [generateId(), eEntryId, expAcc.id, monthlyExp],
+      )
+      await execute(
+        `INSERT INTO journal_lines (id, journal_entry_id, account_id, debit, credit, memo)
+         VALUES (?, ?, ?, 0, ?, 'Cash disbursement')`,
+        [generateId(), eEntryId, cashAcc.id, monthlyExp],
+      )
+    }
+  }
+
+  // 9. Seed storage records
+  for (let i = 0; i < 25; i++) {
+    const entryDate = new Date(now.getTime() - (30 - i) * 24 * 60 * 60 * 1000)
+    const exitDate = i % 2 === 0 ? new Date(entryDate.getTime() + (2 + Math.floor(Math.random() * 5)) * 24 * 60 * 60 * 1000) : null
+    const status = exitDate ? 'removed' : i % 5 === 0 ? 'expired' : 'stored'
+
+    await execute(
+      `INSERT INTO storage_records (id, tenant_id, facility_id, species_id, quantity_kg, grade, storage_method, entry_date, exit_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        generateId(),
+        ctx.tenantId,
+        ctx.facilityId,
+        speciesList[i % speciesList.length],
+        50 + Math.floor(Math.random() * 100),
+        ['A', 'B', 'C'][i % 3],
+        'iced',
+        entryDate,
+        exitDate,
+        status,
+      ],
+    )
+  }
+
+  // 10. Seed beautiful storefront products with high quality Unsplash photos
+  console.log('  Adding storefront showcase products with photos...')
+  // Clear any existing simple products first
+  await execute(`DELETE FROM product_catalog WHERE tenant_id = ?`, [ctx.tenantId])
+  await execute(`DELETE FROM fish_listings WHERE tenant_id = ?`, [ctx.tenantId])
+
+  const vendorRow = await queryOne<{ id: string }>(
+    `SELECT id FROM marketplace_vendors WHERE tenant_id = ? AND user_id = ? LIMIT 1`,
+    [ctx.tenantId, ctx.ownerId],
+  )
+  const vId = vendorRow?.id ?? generateId()
+
+  const showcaseProducts = [
+    {
+      sku: 'SKU-SHOWCASE-PERCH',
+      name: 'Premium Nile Perch Fillet',
+      speciesId: speciesList[0],
+      price: 480,
+      image: 'https://images.unsplash.com/photo-1534482421-64566f976cfa?auto=format&fit=crop&w=600&q=80',
+      category: 'fresh',
+      unit: 'kg'
+    },
+    {
+      sku: 'SKU-SHOWCASE-TILAPIA',
+      name: 'Fresh Lake Victoria Tilapia',
+      speciesId: speciesList[1],
+      price: 360,
+      image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
+      category: 'fresh',
+      unit: 'kg'
+    },
+    {
+      sku: 'SKU-SHOWCASE-TUNA',
+      name: 'Yellowfin Tuna Steaks',
+      speciesId: speciesList[2],
+      price: 680,
+      image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80',
+      category: 'frozen',
+      unit: 'kg'
+    },
+    {
+      sku: 'SKU-SHOWCASE-SNAPPER',
+      name: 'Whole Red Snapper',
+      speciesId: speciesList[1],
+      price: 520,
+      image: 'https://images.unsplash.com/photo-1559737607-3578909a3636?auto=format&fit=crop&w=600&q=80',
+      category: 'fresh',
+      unit: 'kg'
+    },
+    {
+      sku: 'SKU-SHOWCASE-LOBSTER',
+      name: 'Mombasa Rock Lobster',
+      speciesId: speciesList[2],
+      price: 1400,
+      image: 'https://images.unsplash.com/photo-1553618551-fba689030290?auto=format&fit=crop&w=600&q=80',
+      category: 'live',
+      unit: 'kg'
+    },
+    {
+      sku: 'SKU-SHOWCASE-PRAWNS',
+      name: 'Jumbo Tiger Prawns',
+      speciesId: speciesList[1],
+      price: 950,
+      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=80',
+      category: 'frozen',
+      unit: 'kg'
+    }
+  ]
+
+  for (const p of showcaseProducts) {
+    const pId = generateId()
+    // Insert into product catalog
+    await execute(
+      `INSERT INTO product_catalog (
+        id, tenant_id, vendor_id, sku, name, species_id, category, unit,
+        base_price, image_url, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      [pId, ctx.tenantId, vId, p.sku, p.name, p.speciesId, p.category, p.unit, p.price, p.image],
+    )
+
+    // Insert into marketplace listings
+    await execute(
+      `INSERT INTO fish_listings (
+        id, tenant_id, seller_id, species_id, fish_type, quantity_kg,
+        available_quantity_kg, grade, price_per_kg, landing_site_id,
+        storage_method, status, expires_at
+      ) VALUES (?, ?, ?, ?, ?, 200, 200, 'A', ?, ?, 'iced', 'available', DATE_ADD(NOW(), INTERVAL 14 DAY))`,
+      [generateId(), ctx.tenantId, ctx.ownerId, p.speciesId, p.name, p.price, ctx.landingSiteId],
+    )
+  }
+
+  // Update storefront settings hero image
+  await execute(
+    `UPDATE tenant_storefront_settings 
+     SET hero_image_url = 'https://images.unsplash.com/photo-1518156677180-95a2893f3e9f?auto=format&fit=crop&w=1200&q=80'
+     WHERE tenant_id = ?`,
+    [ctx.tenantId],
+  )
+
+  console.log(`  ✓ Successfully seeded large showcase dataset!`)
 }
 
 async function main(): Promise<void> {

@@ -14,6 +14,12 @@ export interface TenantSettings {
   vat_number?: string
   branding?: TenantBranding
   stripe_customer_id?: string
+  bank_name?: string
+  bank_branch?: string
+  bank_account_number?: string
+  bank_account_name?: string
+  bank_swift_code?: string
+  mpesa_paybill?: string
   [key: string]: unknown
 }
 
@@ -32,6 +38,12 @@ export interface UpdateTenantSettingsInput {
   name?: string
   defaultCurrency?: string
   timezone?: string
+  bankName?: string
+  bankBranch?: string
+  bankAccountNumber?: string
+  bankAccountName?: string
+  bankSwiftCode?: string
+  mpesaPaybill?: string
 }
 
 export interface Branch {
@@ -127,6 +139,12 @@ export async function updateTenantSettings(
   if (input.branding !== undefined) {
     settings.branding = { ...(settings.branding ?? {}), ...input.branding }
   }
+  if (input.bankName !== undefined) settings.bank_name = input.bankName
+  if (input.bankBranch !== undefined) settings.bank_branch = input.bankBranch
+  if (input.bankAccountNumber !== undefined) settings.bank_account_number = input.bankAccountNumber
+  if (input.bankAccountName !== undefined) settings.bank_account_name = input.bankAccountName
+  if (input.bankSwiftCode !== undefined) settings.bank_swift_code = input.bankSwiftCode
+  if (input.mpesaPaybill !== undefined) settings.mpesa_paybill = input.mpesaPaybill
 
   const updates: string[] = ['settings = ?', 'updated_at = NOW()']
   const params: unknown[] = [JSON.stringify(settings)]

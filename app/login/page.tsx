@@ -200,7 +200,7 @@ function LoginForm() {
           Maritime commerce, simplified.
         </h1>
         <p className="mt-3 max-w-md text-muted-foreground">
-          One platform for fishing operations, cold chain, marketplace, and finance — built for
+          One platform for BMU operations, cold chain, marketplace, and finance — built for
           Africa&apos;s blue economy.
         </p>
         <div className="mt-8 grid grid-cols-2 gap-3">

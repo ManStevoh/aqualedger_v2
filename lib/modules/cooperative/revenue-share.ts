@@ -39,14 +39,17 @@ export async function calculateCooperativeShares(tenantId: string, periodMonth: 
 }
 
 export async function listCooperativeShares(tenantId: string, periodMonth?: string) {
-  const conditions = [tenantWhere()]
+  const conditions = [tenantWhere('crs.tenant_id')]
   const params: unknown[] = [tenantId]
   if (periodMonth) {
-    conditions.push('period_month = ?')
+    conditions.push('crs.period_month = ?')
     params.push(periodMonth)
   }
   return query(
-    `SELECT * FROM cooperative_revenue_shares WHERE ${conditions.join(' AND ')} ORDER BY share_pct DESC`,
+    `SELECT crs.*, CONCAT(u.first_name, ' ', u.last_name) as member_name, u.email as member_email
+     FROM cooperative_revenue_shares crs
+     LEFT JOIN users u ON crs.member_user_id = u.id
+     WHERE ${conditions.join(' AND ')} ORDER BY crs.share_pct DESC`,
     params,
   )
 }

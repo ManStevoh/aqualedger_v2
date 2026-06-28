@@ -3,12 +3,16 @@
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useDashboardPageMeta } from '@/lib/hooks/use-dashboard-page'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { StatCard } from '@/components/dashboard/stat-card'
-import { Users, MapPin, TrendingUp, AlertCircle, Plus } from 'lucide-react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
+import {
+  Users, MapPin, TrendingUp, AlertCircle, Plus, Fish,
+  Scale, FileText, ShieldCheck, ShieldAlert, ExternalLink,
+} from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { authFetchJson, createBmu } from '@/lib/api'
 import {
   Dialog,
@@ -30,9 +34,13 @@ interface BMU {
   members: number
   activeBoats: number
   totalCatches: number
+  totalCatchKg: number
   revenue: number
   status: 'active' | 'inactive'
   manager: string
+  activeLicenses: number
+  expiringLicenses: number
+  expiredLicenses: number
 }
 
 export default function BMUPage() {
@@ -65,10 +73,14 @@ export default function BMUPage() {
             region: (b.county as string) || '',
             members: Number(b.total_members) || 0,
             activeBoats: Number(b.total_boats) || 0,
-            totalCatches: 0,
-            revenue: 0,
+            totalCatches: Number(b.total_catches) || 0,
+            totalCatchKg: Number(b.total_catch_kg) || 0,
+            revenue: Number(b.catch_revenue) || 0,
             status: (b.status as string) === 'active' ? 'active' : 'inactive',
             manager: (b.chairman_name as string) || '—',
+            activeLicenses: Number(b.active_licenses) || 0,
+            expiringLicenses: Number(b.expiring_licenses) || 0,
+            expiredLicenses: Number(b.expired_licenses) || 0,
           })),
         )
       } else {
@@ -110,104 +122,195 @@ export default function BMUPage() {
   const activeBMUs = bmus.filter(b => b.status === 'active').length
   const totalMembers = bmus.reduce((sum, b) => sum + b.members, 0)
   const totalRevenue = bmus.reduce((sum, b) => sum + b.revenue, 0)
-  const avgCatchesPerBMU = bmus.reduce((sum, b) => sum + b.totalCatches, 0) / (bmus.length || 1)
+  const totalCatchKg = bmus.reduce((sum, b) => sum + b.totalCatchKg, 0)
+  const totalCatches = bmus.reduce((sum, b) => sum + b.totalCatches, 0)
+  const totalActiveLicenses = bmus.reduce((sum, b) => sum + b.activeLicenses, 0)
+  const totalExpiringLicenses = bmus.reduce((sum, b) => sum + b.expiringLicenses, 0)
+  const totalExpiredLicenses = bmus.reduce((sum, b) => sum + b.expiredLicenses, 0)
 
-  const chartData = bmus.map(bmu => ({
-    name: bmu.name,
-    value: bmu.revenue,
-  }))
+  const revenueChartData = bmus
+    .filter(b => b.revenue > 0)
+    .map(bmu => ({
+      name: bmu.name,
+      value: bmu.revenue,
+    }))
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+  const catchChartData = bmus
+    .filter(b => b.totalCatchKg > 0)
+    .map(bmu => ({
+      name: bmu.name.length > 12 ? bmu.name.slice(0, 12) + '…' : bmu.name,
+      catchKg: Math.round(bmu.totalCatchKg),
+      revenue: Math.round(bmu.revenue),
+    }))
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
   return (
     <DashboardPageLayout title={meta.title} description={meta.description} breadcrumbs={meta.breadcrumbs} actions={<><Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="w-4 h-4" />
           Add BMU
         </Button></>}>
-<div className="grid gap-4 md:grid-cols-4">
+
+      {/* KPI Stats Row */}
+      <StatCardGrid>
         <StatCard
           title="Active BMUs"
           value={activeBMUs}
           icon={<MapPin className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 5, isPositive: true }}
+          description={`${bmus.length} total registered`}
+          loading={loading}
         />
         <StatCard
           title="Total Members"
           value={totalMembers}
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 12, isPositive: true }}
+          description="Across all BMUs"
+          loading={loading}
+        />
+        <StatCard
+          title="Total Catch"
+          value={totalCatchKg > 1000 ? `${(totalCatchKg / 1000).toFixed(1)}T` : `${totalCatchKg.toLocaleString()} kg`}
+          icon={<Fish className="h-4 w-4 text-muted-foreground" />}
+          description={`${totalCatches.toLocaleString()} catch records`}
+          loading={loading}
         />
         <StatCard
           title="Total Revenue"
-          value={`$${totalRevenue.toLocaleString()}`}
+          value={totalRevenue > 1000000 ? `KES ${(totalRevenue / 1000000).toFixed(2)}M` : `KES ${totalRevenue.toLocaleString()}`}
           icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 8, isPositive: true }}
+          description="From catch sales"
+          loading={loading}
         />
-        <StatCard
-          title="Avg Catches/BMU"
-          value={Math.round(avgCatchesPerBMU)}
-          icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
-          trend={{ value: 3, isPositive: false }}
-        />
-      </div>
+      </StatCardGrid>
 
+      {/* Charts Row */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Revenue Distribution</CardTitle>
-            <CardDescription>Revenue by BMU</CardDescription>
+            <CardDescription>Catch revenue by BMU</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: $${value.toLocaleString()}`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-              </PieChart>
-            </ResponsiveContainer>
+            {revenueChartData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-12">
+                No revenue data yet. Catches must be linked to landing sites with BMU associations.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={revenueChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {revenueChartData.map((_entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => `KES ${value.toLocaleString()}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>BMU Performance</CardTitle>
-            <CardDescription>Key metrics by location</CardDescription>
+            <CardTitle>Catch Volume by BMU</CardTitle>
+            <CardDescription>Total catch weight (kg) per BMU</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {bmus.map((bmu) => (
-                <div key={bmu.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{bmu.name}</p>
-                    <p className="text-sm text-muted-foreground">{bmu.location} • {bmu.region}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-lg">${bmu.revenue.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground">{bmu.members} members</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {catchChartData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-12">
+                No catch data yet. Log catches from fishing trips linked to BMU landing sites.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={catchChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis />
+                  <Tooltip formatter={(value: number) => `${value.toLocaleString()} kg`} />
+                  <Bar dataKey="catchKg" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Catch (kg)" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
 
+      {/* Certifications & Compliance */}
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Certifications &amp; Compliance
+            </CardTitle>
+            <CardDescription>
+              License status across all BMU-linked members
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <Link href="/dashboard/licenses">
+              <ExternalLink className="h-3.5 w-3.5" />
+              View all licenses
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalActiveLicenses}</p>
+                <p className="text-sm text-muted-foreground">Active licenses</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalExpiringLicenses}</p>
+                <p className="text-sm text-muted-foreground">Expiring within 30 days</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <ShieldAlert className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalExpiredLicenses}</p>
+                <p className="text-sm text-muted-foreground">Expired licenses</p>
+              </div>
+            </div>
+          </div>
+          {totalExpiringLicenses > 0 && (
+            <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-3">
+              <p className="text-sm text-amber-800 font-medium">
+                ⚠️ {totalExpiringLicenses} license{totalExpiringLicenses > 1 ? 's' : ''} expiring soon across BMUs.{' '}
+                <Link href="/dashboard/licenses" className="underline underline-offset-2 font-semibold">
+                  Review & renew →
+                </Link>
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* BMU Performance Table */}
       <Card>
         <CardHeader>
           <CardTitle>All BMUs</CardTitle>
-          <CardDescription>Complete list of Beach Management Units</CardDescription>
+          <CardDescription>Complete list of Beach Management Units with performance data</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="relative w-full overflow-auto">
@@ -216,35 +319,70 @@ export default function BMUPage() {
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-medium">Name</th>
                   <th className="text-left py-3 px-4 font-medium">Location</th>
-                  <th className="text-left py-3 px-4 font-medium">Members</th>
-                  <th className="text-left py-3 px-4 font-medium">Active Boats</th>
-                  <th className="text-left py-3 px-4 font-medium">Catches</th>
-                  <th className="text-left py-3 px-4 font-medium">Revenue</th>
-                  <th className="text-left py-3 px-4 font-medium">Manager</th>
+                  <th className="text-right py-3 px-4 font-medium">Members</th>
+                  <th className="text-right py-3 px-4 font-medium">Boats</th>
+                  <th className="text-right py-3 px-4 font-medium">Catches</th>
+                  <th className="text-right py-3 px-4 font-medium">Catch (kg)</th>
+                  <th className="text-right py-3 px-4 font-medium">Revenue</th>
+                  <th className="text-center py-3 px-4 font-medium">Licenses</th>
+                  <th className="text-left py-3 px-4 font-medium">Chairman</th>
                   <th className="text-left py-3 px-4 font-medium">Status</th>
-                  <th className="text-left py-3 px-4 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {bmus.map((bmu) => (
-                  <tr key={bmu.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-4 font-medium">{bmu.name}</td>
-                    <td className="py-3 px-4">{bmu.location}</td>
-                    <td className="py-3 px-4">{bmu.members}</td>
-                    <td className="py-3 px-4">{bmu.activeBoats}</td>
-                    <td className="py-3 px-4">{bmu.totalCatches}</td>
-                    <td className="py-3 px-4 font-semibold">${bmu.revenue.toLocaleString()}</td>
-                    <td className="py-3 px-4">{bmu.manager}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant={bmu.status === 'active' ? 'default' : 'secondary'}>
-                        {bmu.status.charAt(0).toUpperCase() + bmu.status.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Button variant="ghost" size="sm">View</Button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                      Loading BMU data…
                     </td>
                   </tr>
-                ))}
+                ) : bmus.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                      No BMUs registered yet. Click &quot;Add BMU&quot; to get started.
+                    </td>
+                  </tr>
+                ) : (
+                  bmus.map((bmu) => (
+                    <tr key={bmu.id} className="border-b hover:bg-muted/50">
+                      <td className="py-3 px-4 font-medium">{bmu.name}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{bmu.location} {bmu.region && bmu.region !== bmu.location ? `• ${bmu.region}` : ''}</td>
+                      <td className="py-3 px-4 text-right">{bmu.members}</td>
+                      <td className="py-3 px-4 text-right">{bmu.activeBoats}</td>
+                      <td className="py-3 px-4 text-right">{bmu.totalCatches.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right font-medium">
+                        {bmu.totalCatchKg > 1000
+                          ? `${(bmu.totalCatchKg / 1000).toFixed(1)}T`
+                          : `${bmu.totalCatchKg.toLocaleString()}`}
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold text-green-600">
+                        {bmu.revenue > 0 ? `KES ${bmu.revenue.toLocaleString()}` : '—'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {bmu.activeLicenses > 0 && (
+                            <Badge variant="default" className="text-xs">{bmu.activeLicenses}</Badge>
+                          )}
+                          {bmu.expiringLicenses > 0 && (
+                            <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 border-amber-200">{bmu.expiringLicenses}</Badge>
+                          )}
+                          {bmu.expiredLicenses > 0 && (
+                            <Badge variant="destructive" className="text-xs">{bmu.expiredLicenses}</Badge>
+                          )}
+                          {bmu.activeLicenses === 0 && bmu.expiringLicenses === 0 && bmu.expiredLicenses === 0 && (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">{bmu.manager}</td>
+                      <td className="py-3 px-4">
+                        <Badge variant={bmu.status === 'active' ? 'default' : 'secondary'}>
+                          {bmu.status.charAt(0).toUpperCase() + bmu.status.slice(1)}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -282,4 +420,3 @@ export default function BMUPage() {
     </DashboardPageLayout>
   )
 }
-
