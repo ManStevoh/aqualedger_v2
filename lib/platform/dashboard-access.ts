@@ -64,11 +64,12 @@ export async function checkDashboardModuleAccess(pathname: string): Promise<Dash
 }
 
 export async function assertDashboardModuleAccess(pathname: string): Promise<void> {
-  const result = await checkDashboardModuleAccess(pathname)
+  const cleanPath = pathname.split('?')[0].split('#')[0]
+  const result = await checkDashboardModuleAccess(cleanPath)
   if (!result.allowed) {
-    if (pathname.startsWith('/admin')) {
+    if (cleanPath.startsWith('/admin')) {
       redirect('/dashboard')
-    } else {
+    } else if (cleanPath !== '/dashboard') {
       redirect(`/dashboard?module_disabled=${encodeURIComponent(result.moduleId)}`)
     }
   }

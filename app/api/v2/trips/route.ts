@@ -129,6 +129,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function toMysqlDateTime(d?: string | Date | number | null): string {
+  if (!d) return new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const date = new Date(d)
+  if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 19).replace('T', ' ')
+  return date.toISOString().slice(0, 19).replace('T', ' ')
+}
+
 // POST /api/v2/trips - Create a new trip
 export async function POST(request: NextRequest) {
   try {
@@ -177,6 +184,7 @@ export async function POST(request: NextRequest) {
     
     const id = generateId()
     const captain = captainId || auth.userId
+    const formattedDeparture = toMysqlDateTime(departureTime)
     
     await query(
       `INSERT INTO fishing_trips (
@@ -184,7 +192,7 @@ export async function POST(request: NextRequest) {
         status, fishing_zone, weather_conditions, sea_state, notes
       ) VALUES (?, ?, ?, ?, ?, ?, 'ongoing', ?, ?, ?, ?)`,
       [
-        id, auth.tenantId, boatId, captain, landingSiteId || null, departureTime,
+        id, auth.tenantId, boatId, captain, landingSiteId || null, formattedDeparture,
         fishingZone || null, weatherConditions || null, seaState || null, notes || null
       ]
     )
@@ -239,6 +247,7 @@ export async function PUT(request: NextRequest) {
     // Handle trip completion
     if (action === 'complete') {
       const { returnTime, fuelUsedLiters, fuelCost, otherExpenses } = updates
+      const formattedReturn = toMysqlDateTime(returnTime)
       
       await execute(
         `UPDATE fishing_trips SET
@@ -247,7 +256,7 @@ export async function PUT(request: NextRequest) {
           fuel_used_liters = ?,
           fuel_cost = ?
         WHERE id = ? AND tenant_id = ?`,
-        [returnTime || new Date().toISOString(), fuelUsedLiters || 0, fuelCost || 0, id, auth.tenantId],
+        [formattedReturn, fuelUsedLiters || 0, fuelCost || 0, id, auth.tenantId],
       )
       
       // Calculate total catch and revenue from catches table

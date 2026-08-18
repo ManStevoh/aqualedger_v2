@@ -30,6 +30,24 @@ type MeResponse = {
   error?: string
 }
 
+const DEFAULT_MODULE_IDS = [
+  'platform',
+  'tenant',
+  'fishing',
+  'commerce',
+  'inventory',
+  'coldchain',
+  'procurement',
+  'crm',
+  'accounting',
+  'logistics',
+  'hr',
+  'analytics',
+  'notifications',
+  'integrations',
+  'ai',
+]
+
 function mapMeUser(u: NonNullable<MeResponse['data']>['user']): User {
   return {
     id: u.id,
@@ -115,17 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (tenantModRes.success && tenantModRes.data?.enabledModuleIds?.length) {
             setEnabledModuleIds(tenantModRes.data.enabledModuleIds)
           } else {
-            const modRes = await apiFetch('/v2/platform/modules').then((r) =>
-              r.json() as Promise<{ success: boolean; data?: { enabledModuleIds: string[] } }>,
-            )
-            if (modRes.success && modRes.data?.enabledModuleIds?.length) {
-              setEnabledModuleIds(modRes.data.enabledModuleIds)
-            } else {
-              setEnabledModuleIds(['platform'])
-            }
+            setEnabledModuleIds(DEFAULT_MODULE_IDS)
           }
         } catch {
-          setEnabledModuleIds(['platform'])
+          setEnabledModuleIds(DEFAULT_MODULE_IDS)
         }
 
         if (pathname !== '/dashboard/onboarding') {

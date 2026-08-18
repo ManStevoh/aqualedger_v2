@@ -21,6 +21,10 @@ export function forbidden(message = 'Forbidden'): ApiError {
   return new ApiError(message, 403, 'FORBIDDEN')
 }
 
+export function paymentRequired(message = 'Payment required'): ApiError {
+  return new ApiError(message, 402, 'PAYMENT_REQUIRED')
+}
+
 export function notFound(message = 'Not found'): never {
   throw new ApiError(message, 404, 'NOT_FOUND')
 }

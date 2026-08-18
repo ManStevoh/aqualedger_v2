@@ -45,11 +45,32 @@ export async function POST(request: NextRequest) {
     if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.created') {
       const sub = event.data?.object ?? {}
       const meta = sub.metadata as { tenant_id?: string; plan?: string } | undefined
-      if (meta?.tenant_id && meta.plan) {
+      const tenantId = meta?.tenant_id
+      const plan = meta?.plan as TenantPlan | undefined
+      if (tenantId && plan) {
         await applyStripeSubscriptionPlan(
-          meta.tenant_id,
-          meta.plan as TenantPlan,
+          tenantId,
+          plan,
           sub.id as string,
+          {
+            currentPeriodStart: typeof sub.current_period_start === 'number' ? sub.current_period_start : null,
+            currentPeriodEnd: typeof sub.current_period_end === 'number' ? sub.current_period_end : null,
+            cancelAtPeriodEnd: typeof sub.cancel_at_period_end === 'boolean' ? sub.cancel_at_period_end : null,
+            status: sub.status === 'past_due' ? 'active' : sub.status === 'canceled' ? 'cancelled' : 'active',
+          },
+        )
+      }
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data?.object ?? {}
+      const subId = invoice.subscription as string | undefined
+      if (subId) {
+        // Set a 7-day grace period on invoice payment failure
+        const graceEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        await execute(
+          `UPDATE tenants SET grace_period_ends_at = ?, updated_at = NOW() WHERE JSON_UNQUOTE(JSON_EXTRACT(settings, '$.stripe_subscription_id')) = ?`,
+          [graceEnd, subId],
         )
       }
     }
@@ -58,9 +79,10 @@ export async function POST(request: NextRequest) {
       const sub = event.data?.object ?? {}
       const meta = sub.metadata as { tenant_id?: string } | undefined
       if (meta?.tenant_id) {
-        await execute(`UPDATE tenants SET plan = 'trial', updated_at = NOW() WHERE id = ?`, [
-          meta.tenant_id,
-        ])
+        await execute(
+          `UPDATE tenants SET plan = 'trial', status = 'cancelled', updated_at = NOW() WHERE id = ?`,
+          [meta.tenant_id],
+        )
       }
     }
 

@@ -25,28 +25,47 @@ export function StorefrontWithSearch({ initialProducts, storeSlug, ...rest }: Pr
   )
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams()
-    if (q) params.set('q', q)
-    if (category) params.set('category', category)
-    const res = await publicApiFetch(`/store/${storeSlug}/products?${params}`)
-    const data = await res.json()
-    if (data.success) {
-      setProducts(
-        (data.data.products as StorefrontProduct[]).map((p) => ({
-          id: p.id,
-          name: p.name,
-          sku: p.sku,
-          price: Number(p.price),
-          unit: p.unit,
-          category: p.category,
-          imageUrl: p.imageUrl,
-          grade: p.grade,
-          traceable: p.traceable,
-        })),
-      )
-      if (data.data.categories) setCategories(data.data.categories)
+    try {
+      const params = new URLSearchParams()
+      if (q) params.set('q', q)
+      if (category) params.set('category', category)
+      const res = await publicApiFetch(`/store/${storeSlug}/products?${params}`)
+      const data = await res.json()
+      if (data.success && Array.isArray(data.data?.products)) {
+        setProducts(
+          (data.data.products as StorefrontProduct[]).map((p) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            price: Number(p.price),
+            unit: p.unit,
+            category: p.category,
+            imageUrl: p.imageUrl,
+            grade: p.grade,
+            traceable: p.traceable,
+          })),
+        )
+        if (data.data.categories) setCategories(data.data.categories)
+      }
+    } catch {
+      // Client-side fallback if network fetch fails over local network IP
+      let filtered = [...initialProducts]
+      if (q) {
+        const queryLower = q.toLowerCase()
+        filtered = filtered.filter(
+          (p) =>
+            p.name.toLowerCase().includes(queryLower) ||
+            p.category?.toLowerCase().includes(queryLower),
+        )
+      }
+      if (category) {
+        filtered = filtered.filter(
+          (p) => p.category?.toLowerCase() === category.toLowerCase(),
+        )
+      }
+      setProducts(filtered)
     }
-  }, [storeSlug, q, category])
+  }, [storeSlug, q, category, initialProducts])
 
   useEffect(() => {
     const t = setTimeout(() => {

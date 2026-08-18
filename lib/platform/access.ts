@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { queryOne } from '@/lib/db'
 import { requireAuth, type JWTPayload, type UserRole } from '@/lib/auth'
 import { forbidden } from '@/lib/api-handler'
-import { type TenantMemberRole, type TenantContext } from '@/lib/tenant'
+import { type TenantMemberRole, type TenantContext, type Tenant, getTenantExpiryStatus } from '@/lib/tenant'
 import { resolveActiveTenantId } from '@/lib/platform/tenant-resolve'
 import {
   hasPermission,
@@ -48,10 +48,30 @@ export async function getAuthContext(): Promise<AuthContext> {
   return { ...auth, tenantId, memberRole, rolePermissions }
 }
 
+export async function assertTenantActive(tenantId: string): Promise<void> {
+  const tenant = await queryOne<Tenant>(
+    `SELECT id, slug, name, plan, status, trial_starts_at, trial_ends_at,
+            current_period_start, current_period_end, cancel_at_period_end,
+            grace_period_ends_at, created_at
+     FROM tenants WHERE id = ?`,
+    [tenantId],
+  )
+  if (!tenant) return
+
+  const expiry = getTenantExpiryStatus(tenant)
+  if (expiry.isSuspendedOrCancelled) {
+    throw forbidden(`Tenant organization is ${tenant.status}. Access restricted.`)
+  }
+}
+
 export async function requirePermission(permission: Permission): Promise<AuthContext> {
   const ctx = await getAuthContext()
   if (!ctx.memberRole || !hasPermission(ctx.memberRole, permission, ctx.role, ctx.rolePermissions)) {
     throw new Error('Forbidden')
+  }
+  // If user is super_admin impersonating or super_admin role, skip expiry guards
+  if (ctx.role !== 'super_admin') {
+    await assertTenantActive(ctx.tenantId)
   }
   return ctx
 }

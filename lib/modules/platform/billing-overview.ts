@@ -31,11 +31,29 @@ export interface TenantBillingRow {
   }
 }
 
+export interface PlatformBillingSummary {
+  totalTenants: number
+  activeTenants: number
+  overLimitCount: number
+  estimatedMrr: number
+  planCounts: Record<TenantPlan, number>
+}
+
+const PLAN_MONTHLY_RATES: Record<TenantPlan, number> = {
+  trial: 0,
+  starter: 6500,
+  professional: 19500,
+  enterprise: 65000,
+}
+
 function pct(used: number, max: number): number {
   return max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0
 }
 
-export async function listTenantBilling(): Promise<TenantBillingRow[]> {
+export async function listTenantBilling(): Promise<{
+  tenants: TenantBillingRow[]
+  summary: PlatformBillingSummary
+}> {
   const rows = await query<{
     id: string
     slug: string
@@ -59,7 +77,17 @@ export async function listTenantBilling(): Promise<TenantBillingRow[]> {
      ORDER BY t.name ASC`,
   )
 
-  return rows.map((r) => {
+  const planCounts: Record<TenantPlan, number> = {
+    trial: 0,
+    starter: 0,
+    professional: 0,
+    enterprise: 0,
+  }
+  let overLimitCount = 0
+  let activeTenants = 0
+  let estimatedMrr = 0
+
+  const tenants: TenantBillingRow[] = rows.map((r) => {
     const limits = getPlanLimits(r.plan)
     const usage: TenantBillingUsage = {
       users: Number(r.user_count),
@@ -74,6 +102,17 @@ export async function listTenantBilling(): Promise<TenantBillingRow[]> {
         usage.users >= limits.maxUsers ||
         usage.products >= limits.maxProducts ||
         usage.branches >= limits.maxBranches,
+    }
+
+    if (overLimit.any) overLimitCount++
+    if (r.status === 'active') {
+      activeTenants++
+      estimatedMrr += PLAN_MONTHLY_RATES[r.plan] ?? 0
+    }
+    if (planCounts[r.plan] !== undefined) {
+      planCounts[r.plan]++
+    } else {
+      planCounts[r.plan] = 1
     }
 
     return {
@@ -92,4 +131,15 @@ export async function listTenantBilling(): Promise<TenantBillingRow[]> {
       },
     }
   })
+
+  return {
+    tenants,
+    summary: {
+      totalTenants: tenants.length,
+      activeTenants,
+      overLimitCount,
+      estimatedMrr,
+      planCounts,
+    },
+  }
 }

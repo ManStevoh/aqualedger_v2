@@ -57,39 +57,41 @@ export const API_ALWAYS_ALLOWED_PREFIXES = [
 export const DASHBOARD_ALWAYS_ALLOWED_PREFIXES = ['/admin/modules', '/dashboard/admin/modules']
 
 export function resolveModuleFromApiPath(pathname: string): ModuleId | null {
+  const clean = pathname.split('?')[0].split('#')[0]
   for (const prefix of API_ALWAYS_ALLOWED_PREFIXES) {
-    if (pathname.startsWith(prefix)) return null
+    if (clean.startsWith(prefix)) return null
   }
-  const match = pathname.match(/^\/api\/v2\/([^/]+)/)
+  const match = clean.match(/^\/api\/v2\/([^/]+)/)
   if (!match) return null
   return API_SEGMENT_MODULE[match[1]] ?? null
 }
 
 export function resolveModuleFromDashboardPath(pathname: string): ModuleId | null {
+  const clean = pathname.split('?')[0].split('#')[0]
   for (const prefix of DASHBOARD_ALWAYS_ALLOWED_PREFIXES) {
-    if (pathname.startsWith(prefix)) return null
+    if (clean.startsWith(prefix)) return null
   }
-  if (pathname.startsWith('/admin')) {
+  if (clean.startsWith('/admin')) {
     return 'platform'
   }
-  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/modules')) {
+  if (clean === '/dashboard' || clean.startsWith('/dashboard/modules')) {
     return 'platform'
   }
 
   for (const mod of ERP_MODULES) {
     if (mod.id === 'platform') continue
     for (const item of mod.nav) {
+      if (!item.href || item.href === '/dashboard') continue
       if (
-        pathname === item.href ||
-        (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`)) ||
-        (item.href !== '/dashboard' && pathname.startsWith(item.href))
+        clean === item.href ||
+        clean.startsWith(`${item.href}/`)
       ) {
         return mod.id
       }
     }
   }
 
-  const dashMatch = pathname.match(/^\/dashboard\/([^/]+)/)
+  const dashMatch = clean.match(/^\/dashboard\/([^/]+)/)
   if (!dashMatch) return null
   const segment = dashMatch[1]
   const prefixMap: Record<string, ModuleId> = {

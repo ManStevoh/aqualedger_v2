@@ -74,8 +74,8 @@ export async function listTenantExports(limit = 50): Promise<TenantDataExportRow
      FROM tenant_data_exports e
      INNER JOIN tenants t ON t.id = e.tenant_id
      ORDER BY e.created_at DESC
-     LIMIT ?`,
-    [safeLimit],
+     LIMIT ${safeLimit}`,
+    [],
   )
 
   return rows.map((r) => ({
@@ -145,8 +145,8 @@ export async function processPendingExports(limit = 5): Promise<number> {
   const safeLimit = Math.min(Math.max(limit, 1), 20)
   const pending = await query<{ id: string; tenant_id: string }>(
     `SELECT id, tenant_id FROM tenant_data_exports
-     WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?`,
-    [safeLimit],
+     WHERE status = 'pending' ORDER BY created_at ASC LIMIT ${safeLimit}`,
+    [],
   )
 
   let processed = 0

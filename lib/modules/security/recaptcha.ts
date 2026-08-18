@@ -244,8 +244,8 @@ export async function listRecaptchaAuditEvents(limit = 25): Promise<RecaptchaAud
      FROM audit_logs
      WHERE action = 'security.recaptcha'
      ORDER BY created_at DESC
-     LIMIT ?`,
-    [Math.min(limit, 100)],
+     LIMIT ${Math.min(limit, 100)}`,
+    [],
   )
 
   return rows.map((row) => {

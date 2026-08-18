@@ -1,6 +1,6 @@
 import { query, queryOne, execute } from '@/lib/db'
 import { notFound } from '@/lib/api-handler'
-import { tenantWhere, resolveTenantId } from '@/lib/tenant'
+import { tenantWhere, resolveTenantId, getTenantExpiryStatus } from '@/lib/tenant'
 import type { Tenant, TenantMemberRole, TenantPlan } from '@/lib/tenant'
 import { getPlanLimits, planDisplayLabel, type PlanLimits } from './plan-limits'
 
@@ -91,6 +91,8 @@ export async function resolveUserTenantId(userId: string): Promise<string> {
 export async function getTenant(tenantId: string): Promise<TenantDetail> {
   const tenant = await queryOne<TenantDetail & { settings: string | TenantSettings | null }>(
     `SELECT id, slug, name, legal_name, default_currency, country_code, plan, status,
+            trial_starts_at, trial_ends_at, current_period_start, current_period_end,
+            cancel_at_period_end, grace_period_ends_at, created_at,
             logo_url, primary_color, timezone, settings
      FROM tenants WHERE id = ?`,
     [tenantId],
@@ -110,11 +112,15 @@ export async function getTenant(tenantId: string): Promise<TenantDetail> {
   return { ...tenant, settings }
 }
 
-export function getSubscriptionPlanDisplay(plan: TenantPlan): {
+export function getSubscriptionPlanDisplay(
+  plan: TenantPlan,
+  tenant?: Partial<Tenant>,
+): {
   plan: TenantPlan
   label: string
   features: string[]
   limits: PlanLimits
+  expiryStatus?: ReturnType<typeof import('@/lib/tenant').getTenantExpiryStatus>
 } {
   const limits = getPlanLimits(plan)
   const features = [
@@ -124,7 +130,8 @@ export function getSubscriptionPlanDisplay(plan: TenantPlan): {
     limits.analyticsAdvanced ? 'Advanced analytics' : 'Standard analytics',
     limits.apiAccess ? 'API access' : 'Dashboard only',
   ]
-  return { plan, label: planDisplayLabel(plan), features, limits }
+  const expiryStatus = tenant ? getTenantExpiryStatus(tenant) : undefined
+  return { plan, label: planDisplayLabel(plan), features, limits, expiryStatus }
 }
 
 export async function updateTenantSettings(

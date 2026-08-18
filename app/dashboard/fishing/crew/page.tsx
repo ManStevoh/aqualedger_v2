@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -23,7 +22,7 @@ import {
 } from '@/components/ui/select'
 import { DataTable } from '@/components/dashboard/data-table'
 import { authFetchJson, useBoats } from '@/lib/api'
-import { UserCog, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, UserCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface CrewRow {
@@ -38,6 +37,15 @@ interface CrewRow {
   registration_number?: string
 }
 
+interface TenantMemberItem {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  email: string
+  role: string
+}
+
 const roleLabels: Record<string, string> = {
   captain: 'Captain',
   engineer: 'Engineer',
@@ -47,6 +55,7 @@ const roleLabels: Record<string, string> = {
 
 export default function CrewPage() {
   const [crew, setCrew] = useState<CrewRow[]>([])
+  const [tenantMembers, setTenantMembers] = useState<TenantMemberItem[]>([])
   const [loading, setLoading] = useState(true)
   const [boatFilter, setBoatFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -75,13 +84,28 @@ export default function CrewPage() {
     }
   }, [boatFilter])
 
+  const fetchMembers = useCallback(async () => {
+    try {
+      const res = await authFetchJson<{
+        success: boolean
+        data?: { members: TenantMemberItem[] }
+      }>('/api/v2/tenant')
+      if (res.success && res.data?.members) {
+        setTenantMembers(res.data.members)
+      }
+    } catch {
+      /* optional fallback */
+    }
+  }, [])
+
   useEffect(() => {
     fetchCrew()
-  }, [fetchCrew])
+    fetchMembers()
+  }, [fetchCrew, fetchMembers])
 
   const handleAdd = async () => {
-    if (!boatId || !crewMemberId.trim()) {
-      toast.error('Boat and crew member user ID are required')
+    if (!boatId || !crewMemberId) {
+      toast.error('Please select both a boat and a crew member')
       return
     }
     setSubmitting(true)
@@ -93,7 +117,7 @@ export default function CrewPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             boatId,
-            crewMemberId: crewMemberId.trim(),
+            crewMemberId,
             role,
           }),
         },
@@ -102,7 +126,7 @@ export default function CrewPage() {
         toast.error(res.error || 'Could not add crew')
         return
       }
-      toast.success('Crew member assigned')
+      toast.success('Crew member assigned successfully')
       setDialogOpen(false)
       setCrewMemberId('')
       fetchCrew()
@@ -131,16 +155,18 @@ export default function CrewPage() {
   }
 
   return (
-    <DashboardPageLayout title="Boat crew" description="Assign fishermen and officers to vessels." actions={
+    <DashboardPageLayout
+      title="Boat crew"
+      description="Assign fishermen and officers to vessels."
+      actions={
         <Button className="gap-2" onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4" />
           Add crew
         </Button>
-      }>
-
-
-      <div className="flex items-center gap-3 max-w-xs">
-        <Label className="shrink-0">Boat</Label>
+      }
+    >
+      <div className="flex items-center gap-3 max-w-xs mb-4">
+        <Label className="shrink-0">Filter by Boat</Label>
         <Select value={boatFilter} onValueChange={setBoatFilter}>
           <SelectTrigger>
             <SelectValue placeholder="All boats" />
@@ -157,24 +183,26 @@ export default function CrewPage() {
       </div>
 
       <DataTable
-        title="Active crew"
+        title="Active crew assignments"
         loading={loading}
         data={crew}
-        emptyMessage="No crew assignments"
+        emptyMessage="No crew assignments found"
         columns={[
-          { key: 'boat_name', header: 'Boat', cell: (row) => row.boat_name || '—' },
-          { key: 'crew_name', header: 'Member', cell: (row) => row.crew_name || row.crew_member_id },
-          { key: 'crew_email', header: 'Email', cell: (row) => row.crew_email || '—' },
+          { key: 'boat_name', header: 'Boat Name', cell: (row) => row.boat_name || '—' },
+          { key: 'crew_name', header: 'Crew Member', cell: (row) => row.crew_name || row.crew_member_id },
+          { key: 'crew_email', header: 'Email Address', cell: (row) => row.crew_email || '—' },
           {
             key: 'role',
-            header: 'Role',
+            header: 'Crew Role',
             cell: (row) => (
-              <Badge variant="outline">{roleLabels[row.role] || row.role}</Badge>
+              <Badge variant="outline" className="capitalize font-semibold">
+                {roleLabels[row.role] || row.role}
+              </Badge>
             ),
           },
           {
             key: 'joined_date',
-            header: 'Joined',
+            header: 'Assigned Date',
             cell: (row) => new Date(row.joined_date).toLocaleDateString(),
           },
           {
@@ -189,20 +217,24 @@ export default function CrewPage() {
         ]}
       />
 
+      {/* Add Crew Member Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add crew member</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-primary" /> Add Crew Member to Vessel
+            </DialogTitle>
             <DialogDescription>
-              Link an existing user ID to a boat (captain, engineer, deckhand, nets officer).
+              Select a registered team member or fisherman to assign to a vessel.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="space-y-4 py-2">
+            {/* Boat Selector */}
             <div className="space-y-2">
-              <Label>Boat</Label>
+              <Label className="text-xs font-semibold">Target Boat / Vessel</Label>
               <Select value={boatId} onValueChange={setBoatId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select boat" />
+                  <SelectValue placeholder="Select boat..." />
                 </SelectTrigger>
                 <SelectContent>
                   {boats.map((b: { id: string; name: string }) => (
@@ -213,16 +245,34 @@ export default function CrewPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Crew Member Dropdown */}
             <div className="space-y-2">
-              <Label>Crew member user ID</Label>
-              <Input
-                value={crewMemberId}
-                onChange={(e) => setCrewMemberId(e.target.value)}
-                placeholder="UUID from Users / Team"
-              />
+              <Label className="text-xs font-semibold">Select Crew Member / Fisherman</Label>
+              <Select value={crewMemberId} onValueChange={setCrewMemberId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team member or fisherman..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenantMembers.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No team members found
+                    </SelectItem>
+                  ) : (
+                    tenantMembers.map((m) => (
+                      <SelectItem key={m.user_id} value={m.user_id}>
+                        {m.first_name} {m.last_name} ({m.email}) —{' '}
+                        <span className="capitalize font-mono text-[10px]">{m.role.replace(/_/g, ' ')}</span>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Role Selector */}
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label className="text-xs font-semibold">Vessel Duty Role</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger>
                   <SelectValue />
@@ -241,8 +291,8 @@ export default function CrewPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAdd} disabled={submitting}>
-              {submitting ? 'Adding…' : 'Add'}
+            <Button onClick={handleAdd} disabled={submitting || !boatId || !crewMemberId}>
+              {submitting ? 'Assigning…' : 'Assign Crew Member'}
             </Button>
           </DialogFooter>
         </DialogContent>

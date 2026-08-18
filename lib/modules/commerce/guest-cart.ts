@@ -8,6 +8,8 @@ export interface GuestCartItem {
   unit_price: number
   line_total: number
   product_name?: string
+  image_url?: string | null
+  category?: string | null
 }
 
 export interface GuestCartView {
@@ -52,7 +54,7 @@ export async function getGuestCartView(
 ): Promise<GuestCartView> {
   const cart = await getOrCreateGuestCart(tenantId, sessionToken)
   const items = await query<GuestCartItem>(
-    `SELECT ci.*, pc.name as product_name
+    `SELECT ci.*, pc.name as product_name, pc.image_url, pc.category
      FROM commerce_guest_cart_items ci
      JOIN product_catalog pc ON ci.product_id = pc.id
      WHERE ci.cart_id = ?

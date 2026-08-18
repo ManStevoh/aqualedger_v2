@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { apiHandler, jsonOk } from '@/lib/api-handler'
+import { queryOne } from '@/lib/db'
 import { requirePermission } from '@/lib/platform/access'
 import {
   getTenant,
@@ -33,15 +34,25 @@ const patchSchema = z.object({
 export const GET = apiHandler(async () => {
   const ctx = await requirePermission('tenant.settings.read')
 
-  const [tenant, branches, members] = await Promise.all([
+  const [tenant, branches, members, productCountRow] = await Promise.all([
     getTenant(ctx.tenantId),
     listBranches(ctx.tenantId),
     listTenantMembers(ctx.tenantId),
+    queryOne<{ count: number }>(
+      `SELECT COUNT(*) as count FROM product_catalog WHERE tenant_id = ?`,
+      [ctx.tenantId],
+    ),
   ])
 
-  const subscription = getSubscriptionPlanDisplay(tenant.plan)
+  const subscription = getSubscriptionPlanDisplay(tenant.plan, tenant)
 
-  return jsonOk({ tenant, branches, members, subscription })
+  return jsonOk({
+    tenant,
+    branches,
+    members,
+    subscription,
+    productCount: Number(productCountRow?.count ?? 0),
+  })
 }, 'v2/tenant')
 
 export const PATCH = apiHandler(async (request: NextRequest) => {

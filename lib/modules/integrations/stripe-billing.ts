@@ -220,15 +220,50 @@ export async function applyStripeSubscriptionPlan(
   tenantId: string,
   plan: TenantPlan,
   stripeSubscriptionId?: string,
+  options?: {
+    currentPeriodStart?: Date | number | null
+    currentPeriodEnd?: Date | number | null
+    cancelAtPeriodEnd?: boolean | null
+    status?: string
+  },
 ): Promise<void> {
   const tenant = await getTenant(tenantId)
   const settings: TenantSettings = {
     ...(tenant.settings ?? {}),
     stripe_subscription_id: stripeSubscriptionId ?? tenant.settings?.stripe_subscription_id,
   }
-  await execute(`UPDATE tenants SET plan = ?, settings = ?, updated_at = NOW() WHERE id = ?`, [
-    plan,
-    JSON.stringify(settings),
-    tenantId,
-  ])
+
+  const updates: string[] = ['plan = ?', 'settings = ?', 'updated_at = NOW()']
+  const params: unknown[] = [plan, JSON.stringify(settings)]
+
+  if (options?.currentPeriodStart) {
+    updates.push('current_period_start = ?')
+    params.push(
+      options.currentPeriodStart instanceof Date
+        ? options.currentPeriodStart
+        : new Date(options.currentPeriodStart * 1000),
+    )
+  }
+
+  if (options?.currentPeriodEnd) {
+    updates.push('current_period_end = ?')
+    params.push(
+      options.currentPeriodEnd instanceof Date
+        ? options.currentPeriodEnd
+        : new Date(options.currentPeriodEnd * 1000),
+    )
+  }
+
+  if (options?.cancelAtPeriodEnd !== undefined && options.cancelAtPeriodEnd !== null) {
+    updates.push('cancel_at_period_end = ?')
+    params.push(options.cancelAtPeriodEnd ? 1 : 0)
+  }
+
+  if (options?.status) {
+    updates.push('status = ?')
+    params.push(options.status)
+  }
+
+  params.push(tenantId)
+  await execute(`UPDATE tenants SET ${updates.join(', ')} WHERE id = ?`, params)
 }

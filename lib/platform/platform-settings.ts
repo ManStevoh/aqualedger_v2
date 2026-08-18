@@ -8,15 +8,23 @@ export type PlatformBrandingSetting = {
   primary_color: string
   app_name: string
 }
+export type DeveloperSetting = {
+  local_dev_mode: boolean
+  mock_mpesa_callbacks: boolean
+  bypass_rate_limits: boolean
+  debug_logging: boolean
+  api_sandbox_enabled: boolean
+}
 
 export type PlatformSettings = {
   maintenance: MaintenanceSetting
   signup: SignupSetting
   announcement: AnnouncementSetting
   branding: PlatformBrandingSetting
+  developer: DeveloperSetting
 }
 
-const SETTING_KEYS = ['maintenance', 'signup', 'announcement', 'branding'] as const
+const SETTING_KEYS = ['maintenance', 'signup', 'announcement', 'branding', 'developer'] as const
 export type PlatformSettingKey = (typeof SETTING_KEYS)[number]
 
 const DEFAULTS: PlatformSettings = {
@@ -24,6 +32,13 @@ const DEFAULTS: PlatformSettings = {
   signup: { locked: false },
   announcement: { enabled: false, title: '', body: '' },
   branding: { logo_url: '', primary_color: '', app_name: '' },
+  developer: {
+    local_dev_mode: true,
+    mock_mpesa_callbacks: false,
+    bypass_rate_limits: false,
+    debug_logging: false,
+    api_sandbox_enabled: false,
+  },
 }
 
 let maintenanceCache: { value: MaintenanceSetting; expiresAt: number } | null = null
@@ -44,7 +59,7 @@ function parseJson<T>(raw: unknown, fallback: T): T {
 
 export async function getSettings(): Promise<PlatformSettings> {
   const rows = await query<{ setting_key: string; setting_value: unknown }>(
-    `SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN (?, ?, ?, ?)`,
+    `SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN (?, ?, ?, ?, ?)`,
     [...SETTING_KEYS],
   )
   const map = new Map(rows.map((r) => [r.setting_key, r.setting_value]))
@@ -53,6 +68,7 @@ export async function getSettings(): Promise<PlatformSettings> {
     signup: parseJson(map.get('signup'), DEFAULTS.signup),
     announcement: parseJson(map.get('announcement'), DEFAULTS.announcement),
     branding: parseJson(map.get('branding'), DEFAULTS.branding),
+    developer: parseJson(map.get('developer'), DEFAULTS.developer),
   }
 }
 
@@ -125,6 +141,11 @@ export interface PlatformSettingsUi {
   brandingLogoUrl: string
   brandingPrimaryColor: string
   brandingAppName: string
+  localDevMode: boolean
+  mockMpesaCallbacks: boolean
+  bypassRateLimits: boolean
+  debugLogging: boolean
+  apiSandboxEnabled: boolean
 }
 
 export function settingsToUi(settings: PlatformSettings): PlatformSettingsUi {
@@ -138,6 +159,11 @@ export function settingsToUi(settings: PlatformSettings): PlatformSettingsUi {
     brandingLogoUrl: settings.branding.logo_url ?? '',
     brandingPrimaryColor: settings.branding.primary_color ?? '',
     brandingAppName: settings.branding.app_name ?? '',
+    localDevMode: settings.developer.local_dev_mode ?? true,
+    mockMpesaCallbacks: settings.developer.mock_mpesa_callbacks ?? false,
+    bypassRateLimits: settings.developer.bypass_rate_limits ?? false,
+    debugLogging: settings.developer.debug_logging ?? false,
+    apiSandboxEnabled: settings.developer.api_sandbox_enabled ?? false,
   }
 }
 
@@ -189,6 +215,26 @@ export async function saveAllUiSettings(
         logo_url: ui.brandingLogoUrl ?? current.branding.logo_url,
         primary_color: ui.brandingPrimaryColor ?? current.branding.primary_color,
         app_name: ui.brandingAppName ?? current.branding.app_name,
+      },
+      updatedBy,
+    )
+  }
+  if (
+    ui.localDevMode !== undefined ||
+    ui.mockMpesaCallbacks !== undefined ||
+    ui.bypassRateLimits !== undefined ||
+    ui.debugLogging !== undefined ||
+    ui.apiSandboxEnabled !== undefined
+  ) {
+    const current = await getSettings()
+    await updateSetting(
+      'developer',
+      {
+        local_dev_mode: ui.localDevMode ?? current.developer.local_dev_mode,
+        mock_mpesa_callbacks: ui.mockMpesaCallbacks ?? current.developer.mock_mpesa_callbacks,
+        bypass_rate_limits: ui.bypassRateLimits ?? current.developer.bypass_rate_limits,
+        debug_logging: ui.debugLogging ?? current.developer.debug_logging,
+        api_sandbox_enabled: ui.apiSandboxEnabled ?? current.developer.api_sandbox_enabled,
       },
       updatedBy,
     )

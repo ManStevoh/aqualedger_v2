@@ -180,6 +180,12 @@ export default function FishAuctionsPage() {
     <DashboardPageLayout
       title="Fish auctions"
       description="Landing-site auctions linked to traceability lots"
+      actions={
+        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+          <Plus className="h-4 w-4" />
+          Schedule auction
+        </Button>
+      }
     >
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total" value={auctions.length} loading={loading} icon={<Gavel className="h-4 w-4 text-muted-foreground" />} />

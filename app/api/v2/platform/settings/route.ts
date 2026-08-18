@@ -17,7 +17,7 @@ export const GET = apiHandler(async () => {
 }, 'v2/platform/settings')
 
 const legacyPatchSchema = z.object({
-  key: z.enum(['maintenance', 'signup', 'announcement', 'branding']),
+  key: z.enum(['maintenance', 'signup', 'announcement', 'branding', 'developer']),
   value: z.record(z.unknown()),
 })
 
@@ -31,9 +31,14 @@ const uiPatchSchema = z.object({
   brandingLogoUrl: z.string().max(500).optional(),
   brandingPrimaryColor: z.string().max(20).optional(),
   brandingAppName: z.string().max(120).optional(),
+  localDevMode: z.boolean().optional(),
+  mockMpesaCallbacks: z.boolean().optional(),
+  bypassRateLimits: z.boolean().optional(),
+  debugLogging: z.boolean().optional(),
+  apiSandboxEnabled: z.boolean().optional(),
 })
 
-export const PATCH = apiHandler(async (request: NextRequest) => {
+async function handleSaveSettings(request: NextRequest) {
   const auth = await requireSuperAdmin()
   const body = await request.json()
 
@@ -50,4 +55,7 @@ export const PATCH = apiHandler(async (request: NextRequest) => {
   const parsed = uiPatchSchema.parse(body)
   const ui = await saveAllUiSettings(parsed, auth.userId)
   return jsonOk({ ...ui })
-}, 'v2/platform/settings')
+}
+
+export const PATCH = apiHandler(handleSaveSettings, 'v2/platform/settings')
+export const POST = apiHandler(handleSaveSettings, 'v2/platform/settings/save')

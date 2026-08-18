@@ -33,7 +33,7 @@ import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layou
 import { DataTableShell } from '@/components/dashboard/data-table-shell'
 import { ResponsiveFormGrid } from '@/components/dashboard/responsive-form-grid'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
-import { authFetchJson } from '@/lib/api'
+import { authFetchJson, useBoats } from '@/lib/api'
 import { Shield, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -77,6 +77,7 @@ export default function InsurancePage() {
   const [policyNumber, setPolicyNumber] = useState('')
   const [insurer, setInsurer] = useState('')
   const [policyType, setPolicyType] = useState('hull')
+  const [boatId, setBoatId] = useState<string>('none')
   const [premium, setPremium] = useState('')
   const [coverage, setCoverage] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -85,6 +86,9 @@ export default function InsurancePage() {
   const [incidentDate, setIncidentDate] = useState('')
   const [claimDesc, setClaimDesc] = useState('')
   const [claimAmount, setClaimAmount] = useState('')
+
+  const { data: boatsData } = useBoats()
+  const boats = boatsData?.data?.items || []
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -115,11 +119,16 @@ export default function InsurancePage() {
   }, [load])
 
   const createPolicy = async () => {
+    if (!policyNumber.trim() || !insurer.trim()) {
+      toast.error('Policy number and insurer name are required')
+      return
+    }
     const res = await authFetchJson<{ success: boolean; error?: string }>('/api/v2/risk/insurance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'policy',
+        boatId: boatId === 'none' ? null : boatId,
         policyNumber: policyNumber.trim(),
         insurerName: insurer.trim(),
         policyType,
@@ -130,11 +139,14 @@ export default function InsurancePage() {
       }),
     })
     if (!res.success) {
-      toast.error(res.error || 'Failed')
+      toast.error(res.error || 'Failed to create policy')
       return
     }
-    toast.success('Policy added')
+    toast.success('Insurance policy created successfully')
     setPolicyDialog(false)
+    setPolicyNumber('')
+    setInsurer('')
+    setBoatId('none')
     load()
   }
 
@@ -227,7 +239,7 @@ export default function InsurancePage() {
                       <TableHead>Policy #</TableHead>
                       <TableHead>Insurer</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Vessel</TableHead>
+                      <TableHead>Vessel / Boat</TableHead>
                       <TableHead>Coverage</TableHead>
                       <TableHead>Valid</TableHead>
                     </TableRow>
@@ -237,12 +249,12 @@ export default function InsurancePage() {
                       <TableRow key={p.id}>
                         <TableCell className="font-mono text-sm">{p.policy_number}</TableCell>
                         <TableCell>{p.insurer_name}</TableCell>
-                        <TableCell>{p.policy_type}</TableCell>
-                        <TableCell>{p.boat_name || '—'}</TableCell>
+                        <TableCell className="capitalize">{p.policy_type}</TableCell>
+                        <TableCell className="font-medium">{p.boat_name || 'General Fleet'}</TableCell>
                         <TableCell>{kes(Number(p.coverage_amount))}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           <span className="block">{p.start_date} → {p.end_date}</span>
-                          <Badge className="mt-1" variant="outline">
+                          <Badge className="mt-1 capitalize" variant="outline">
                             {p.status}
                           </Badge>
                         </TableCell>
@@ -278,7 +290,7 @@ export default function InsurancePage() {
                         <TableCell>{c.incident_date}</TableCell>
                         <TableCell>{kes(Number(c.claimed_amount))}</TableCell>
                         <TableCell>
-                          <Badge>{c.status}</Badge>
+                          <Badge className="capitalize">{c.status}</Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap">
@@ -322,60 +334,105 @@ export default function InsurancePage() {
         </TabsContent>
       </Tabs>
 
+      {/* Add Insurance Policy Dialog */}
       <Dialog open={policyDialog} onOpenChange={setPolicyDialog}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Add insurance policy</DialogTitle></DialogHeader>
-          <div className="grid gap-3 py-2">
-            <ResponsiveFormGrid>
-              <div className="space-y-2"><Label>Policy #</Label><Input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Insurer</Label><Input value={insurer} onChange={(e) => setInsurer(e.target.value)} /></div>
-            </ResponsiveFormGrid>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Insurance Policy</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            {/* Target Vessel Selection Dropdown */}
             <div className="space-y-2">
-              <Label>Type</Label>
-              <Select value={policyType} onValueChange={setPolicyType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-semibold">Target Vessel / Boat</Label>
+              <Select value={boatId} onValueChange={setBoatId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select boat (optional)" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hull">Hull</SelectItem>
-                  <SelectItem value="liability">Liability</SelectItem>
-                  <SelectItem value="cargo">Cargo</SelectItem>
-                  <SelectItem value="crew">Crew</SelectItem>
-                  <SelectItem value="comprehensive">Comprehensive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <ResponsiveFormGrid>
-              <div className="space-y-2"><Label>Premium</Label><Input type="number" value={premium} onChange={(e) => setPremium(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Coverage</Label><Input type="number" value={coverage} onChange={(e) => setCoverage(e.target.value)} /></div>
-            </ResponsiveFormGrid>
-            <ResponsiveFormGrid>
-              <div className="space-y-2"><Label>Start</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
-              <div className="space-y-2"><Label>End</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
-            </ResponsiveFormGrid>
-          </div>
-          <DialogFooter><Button onClick={createPolicy}>Save policy</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={claimDialog} onOpenChange={setClaimDialog}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto">
-          <DialogHeader><DialogTitle>File insurance claim</DialogTitle></DialogHeader>
-          <div className="grid gap-3 py-2">
-            <div className="space-y-2">
-              <Label>Policy</Label>
-              <Select value={claimPolicyId} onValueChange={setClaimPolicyId}>
-                <SelectTrigger><SelectValue placeholder="Select policy" /></SelectTrigger>
-                <SelectContent>
-                  {policies.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.policy_number} — {p.insurer_name}</SelectItem>
+                  <SelectItem value="none">General / All Fleet Cover</SelectItem>
+                  {boats.map((b: { id: string; name: string; registration_number?: string }) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name} {b.registration_number ? `(${b.registration_number})` : ''}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2"><Label>Incident date</Label><Input type="date" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Description</Label><Input value={claimDesc} onChange={(e) => setClaimDesc(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Amount claimed</Label><Input type="number" value={claimAmount} onChange={(e) => setClaimAmount(e.target.value)} /></div>
+
+            <ResponsiveFormGrid>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Policy #</Label>
+                <Input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} placeholder="e.g. POL-1082" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Insurer Name</Label>
+                <Input value={insurer} onChange={(e) => setInsurer(e.target.value)} placeholder="e.g. Kenya Marine Insurance" />
+              </div>
+            </ResponsiveFormGrid>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Coverage Type</Label>
+              <Select value={policyType} onValueChange={setPolicyType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hull">Hull & Machinery</SelectItem>
+                  <SelectItem value="liability">Third Party Liability</SelectItem>
+                  <SelectItem value="cargo">Fish Cargo & Catch</SelectItem>
+                  <SelectItem value="crew">Crew Personal Injury</SelectItem>
+                  <SelectItem value="comprehensive">Comprehensive All-Risk</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <ResponsiveFormGrid>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Premium (KES)</Label>
+                <Input type="number" value={premium} onChange={(e) => setPremium(e.target.value)} placeholder="0" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Coverage Amount (KES)</Label>
+                <Input type="number" value={coverage} onChange={(e) => setCoverage(e.target.value)} placeholder="0" />
+              </div>
+            </ResponsiveFormGrid>
+
+            <ResponsiveFormGrid>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Start Date</Label>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">End Date</Label>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+            </ResponsiveFormGrid>
           </div>
-          <DialogFooter><Button onClick={createClaim}>Submit claim</Button></DialogFooter>
+          <DialogFooter>
+            <Button onClick={createPolicy}>Save Policy</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Insurance Claim Dialog */}
+      <Dialog open={claimDialog} onOpenChange={setClaimDialog}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader><DialogTitle>File Insurance Claim</DialogTitle></DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Policy</Label>
+              <Select value={claimPolicyId} onValueChange={setClaimPolicyId}>
+                <SelectTrigger><SelectValue placeholder="Select policy..." /></SelectTrigger>
+                <SelectContent>
+                  {policies.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.policy_number} — {p.insurer_name} ({p.boat_name || 'Fleet'})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label className="text-xs font-semibold">Incident Date</Label><Input type="date" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} /></div>
+            <div className="space-y-2"><Label className="text-xs font-semibold">Incident Description</Label><Input value={claimDesc} onChange={(e) => setClaimDesc(e.target.value)} placeholder="Describe damage or loss..." /></div>
+            <div className="space-y-2"><Label className="text-xs font-semibold">Amount Claimed (KES)</Label><Input type="number" value={claimAmount} onChange={(e) => setClaimAmount(e.target.value)} placeholder="0" /></div>
+          </div>
+          <DialogFooter><Button onClick={createClaim}>Submit Claim</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardPageLayout>

@@ -62,13 +62,12 @@ export async function listPlatformUsers(opts: {
        (SELECT GROUP_CONCAT(CONCAT(t.name, ' (', t.slug, ')') ORDER BY tm.joined_at SEPARATOR ' · ')
         FROM tenant_members tm
         INNER JOIN tenants t ON t.id = tm.tenant_id
-        WHERE tm.user_id = u.id
-        LIMIT 5) AS tenant_labels
+        WHERE tm.user_id = u.id) AS tenant_labels
      FROM users u
      ${where}
      ORDER BY u.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
+     LIMIT ${limit} OFFSET ${offset}`,
+    params,
   )
 
   return {

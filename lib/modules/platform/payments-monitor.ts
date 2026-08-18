@@ -106,8 +106,8 @@ export async function listPaymentIntents(
      INNER JOIN tenants t ON t.id = pi.tenant_id
      WHERE ${where}
      ORDER BY pi.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
+     LIMIT ${limit} OFFSET ${offset}`,
+    params,
   )
 
   return {
@@ -138,9 +138,9 @@ export async function getPaymentStats(periodDays = 7): Promise<PaymentStats> {
   const byStatusRows = await query<{ status: string; count: number; amount: number }>(
     `SELECT status, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS amount
      FROM payment_intents
-     WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+     WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
      GROUP BY status`,
-    [days],
+    [],
   )
 
   const byStatus: Record<string, number> = {}

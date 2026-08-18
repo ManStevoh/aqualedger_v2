@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
     const rawGrade = typeof grade === 'string' ? grade : 'B'
     const gradeMap: Record<string, string> = { premium: 'A', export: 'B', local: 'C' }
     const dbGrade =
-      ['A', 'B', 'C', 'reject'].includes(rawGrade) ? rawGrade : gradeMap[rawGrade] || 'B'
+      ['A', 'B', 'C'].includes(rawGrade) ? rawGrade : gradeMap[rawGrade] || 'B'
 
     await query(
       `INSERT INTO catches (

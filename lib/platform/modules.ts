@@ -52,6 +52,7 @@ import {
   CreditCard,
   Receipt,
   ShieldCheck,
+  Code2,
 } from 'lucide-react'
 
 export type ModuleId =
@@ -415,7 +416,8 @@ export function getNavForRole(
           { title: 'Platform Analytics', href: '/admin/analytics', permission: 'platform.tenants.manage', icon: BarChart3, section: 'Finance & Analytics' },
           { title: 'Payments', href: '/admin/payments', permission: 'platform.tenants.manage', icon: CreditCard },
           { title: 'Billing', href: '/admin/billing', permission: 'platform.tenants.manage', icon: Receipt },
-          { title: 'Modules', href: '/admin/modules', permission: 'platform.tenants.manage', icon: LayoutGrid, section: 'System Control & Health' },
+          { title: 'Developer Options', href: '/admin/developer', permission: 'platform.tenants.manage', icon: Code2, section: 'System Control & Health' },
+          { title: 'Modules', href: '/admin/modules', permission: 'platform.tenants.manage', icon: LayoutGrid },
           { title: 'Platform Audit', href: '/admin/audit', permission: 'platform.tenants.manage', icon: Shield },
           { title: 'System Health', href: '/admin/health', permission: 'platform.tenants.manage', icon: HeartPulse },
           { title: 'Platform Settings', href: '/admin/settings', permission: 'platform.tenants.manage', icon: Settings, section: 'Platform Configuration' },
