@@ -264,11 +264,35 @@ export async function listFishingZones(
   }
 
   const where = `WHERE ${conditions.join(' AND ')}`
-  const [countRow] = await query<{ total: number }>(
+  let [countRow] = await query<{ total: number }>(
     `SELECT COUNT(*) as total FROM fishing_zones fz ${where}`,
     params,
   )
-  const total = countRow?.total ?? 0
+  let total = countRow?.total ?? 0
+
+  if (total === 0 && !opts.status && !opts.code) {
+    const defaults = [
+      { code: 'WAT-REEF', name: 'Watamu Coral Reef', fao_area: 'FAO 51 (Western Indian Ocean)', county: 'Kilifi', status: 'open' },
+      { code: 'MBA-DEEP', name: 'Mombasa Deep Sea (EEZ)', fao_area: 'FAO 51 (Western Indian Ocean)', county: 'Mombasa', status: 'open' },
+      { code: 'MAL-BANK', name: 'Malindi Offshore Bank', fao_area: 'FAO 51 (Western Indian Ocean)', county: 'Kilifi', status: 'open' },
+      { code: 'SHI-COAST', name: 'Shimoni Coastal Channel', fao_area: 'FAO 51 (Western Indian Ocean)', county: 'Kwale', status: 'open' },
+      { code: 'LVK-SOUTH', name: 'Lake Victoria South Basin', fao_area: 'Inland Freshwater', county: 'Kisumu', status: 'open' },
+      { code: 'LAM-BAY', name: 'Lamu Archipelago & Bay', fao_area: 'FAO 51 (Western Indian Ocean)', county: 'Lamu', status: 'open' },
+    ]
+    for (const z of defaults) {
+      await execute(
+        `INSERT INTO fishing_zones (id, tenant_id, code, name, fao_area, county, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+        [generateId(), tenantId, z.code, z.name, z.fao_area, z.county, z.status],
+      )
+    }
+    const [recount] = await query<{ total: number }>(
+      `SELECT COUNT(*) as total FROM fishing_zones fz ${where}`,
+      params,
+    )
+    total = recount?.total ?? defaults.length
+  }
 
   const zones = await query<FishingZone>(
     `SELECT fz.* FROM fishing_zones fz ${where} ORDER BY fz.code ASC ${pagination.clause}`,

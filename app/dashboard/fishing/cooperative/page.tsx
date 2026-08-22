@@ -22,7 +22,7 @@ interface CoOpShare {
   catch_kg: number
   revenue_share: number
   share_pct: number
-  status: 'draft' | 'disbursed'
+  status: 'draft' | 'approved' | 'paid' | 'disbursed'
 }
 
 export default function CooperativeSharesPage() {
@@ -84,7 +84,7 @@ export default function CooperativeSharesPage() {
       toast.error('No shares available to disburse')
       return
     }
-    const isAlreadyDisbursed = shares.some(s => s.status === 'disbursed')
+    const isAlreadyDisbursed = shares.some(s => s.status === 'disbursed' || s.status === 'paid')
     if (isAlreadyDisbursed) {
       toast.info('Shares for this period have already been disbursed')
       return
@@ -112,7 +112,7 @@ export default function CooperativeSharesPage() {
   const totalCatch = shares.reduce((sum, s) => sum + Number(s.catch_kg), 0)
   const totalRevenuePool = shares.reduce((sum, s) => sum + Number(s.revenue_share), 0)
   const activeMembers = shares.length
-  const isPeriodDisbursed = shares.length > 0 && shares.every(s => s.status === 'disbursed')
+  const isPeriodDisbursed = shares.length > 0 && shares.every(s => s.status === 'disbursed' || s.status === 'paid')
 
   return (
     <DashboardPageLayout
@@ -228,8 +228,8 @@ export default function CooperativeSharesPage() {
                       KES {Number(s.revenue_share).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <Badge variant={s.status === 'disbursed' ? 'default' : 'secondary'}>
-                        {s.status === 'disbursed' ? 'Disbursed' : 'Draft'}
+                      <Badge variant={s.status === 'disbursed' || s.status === 'paid' ? 'default' : 'secondary'}>
+                        {s.status === 'disbursed' || s.status === 'paid' ? 'Disbursed' : 'Draft'}
                       </Badge>
                     </td>
                   </tr>

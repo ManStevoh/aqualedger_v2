@@ -114,6 +114,12 @@ export default function FishingZonesPage() {
     <DashboardPageLayout
       title="Fishing Zones"
       description="Manage tenant fishing areas, FAO codes, and access status"
+      actions={
+        <Button className="gap-2" onClick={() => setShowDialog(true)}>
+          <Plus className="h-4 w-4" />
+          Add Fishing Zone
+        </Button>
+      }
     >
       <Card>
         <CardHeader>

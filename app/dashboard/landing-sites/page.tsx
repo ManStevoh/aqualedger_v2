@@ -68,9 +68,7 @@ export default function LandingSitesPage() {
   const [newCounty, setNewCounty] = useState('')
   const [newBmuId, setNewBmuId] = useState('')
 
-  const canCreate =
-    currentUser?.role === 'super_admin' ||
-    currentUser?.role === 'investor'
+  const canCreate = Boolean(currentUser)
 
   const load = async () => {
     setLoading(true)

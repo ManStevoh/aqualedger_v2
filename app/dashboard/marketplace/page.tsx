@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { StatCard } from '@/components/dashboard/stat-card'
-import { TrendingUp, ShoppingCart, DollarSign, Filter, Plus, CheckCircle2, Star, MessageSquare } from 'lucide-react'
+import { TrendingUp, ShoppingCart, DollarSign, Filter, Plus, CheckCircle2, Star, MessageSquare, Gavel } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAppStore } from '@/lib/store'
 import {
@@ -42,6 +42,18 @@ import { toast } from 'sonner'
 interface ListingReviewSummary {
   avg: number
   count: number
+}
+
+interface LiveMarketAuction {
+  id: string
+  lot_code: string | null
+  species_name: string
+  quantity_kg: number
+  starting_price: number
+  winning_price: number | null
+  buyer_name: string | null
+  status: string
+  auction_date: string
 }
 
 function StarDisplay({ rating }: { rating: number }) {
@@ -77,6 +89,14 @@ export default function MarketplacePage() {
   const [submitting, setSubmitting] = useState(false)
   const [reviewSummaries, setReviewSummaries] = useState<Record<string, ListingReviewSummary>>({})
 
+  // Live Auctions state
+  const [liveAuctions, setLiveAuctions] = useState<LiveMarketAuction[]>([])
+  const [selectedAuction, setSelectedAuction] = useState<LiveMarketAuction | null>(null)
+  const [auctionBidderName, setAuctionBidderName] = useState('')
+  const [auctionBidderPhone, setAuctionBidderPhone] = useState('')
+  const [auctionBidAmount, setAuctionBidAmount] = useState('')
+  const [isBidding, setIsBidding] = useState(false)
+
   const [reviewRating, setReviewRating] = useState('5')
   const [reviewComment, setReviewComment] = useState('')
 
@@ -96,6 +116,64 @@ export default function MarketplacePage() {
   const { data: speciesList = [] } = useFishSpecies()
 
   const items = listingsData?.data?.items || []
+
+  const fetchLiveAuctions = useCallback(async () => {
+    try {
+      const res = await authFetchJson<{ success: boolean; data?: { auctions: LiveMarketAuction[] } }>(
+        '/api/v2/fishing-ops/auctions?limit=20',
+      )
+      if (res.success && res.data?.auctions) {
+        setLiveAuctions(res.data.auctions.filter((a) => a.status === 'live' || a.status === 'scheduled'))
+      }
+    } catch {
+      setLiveAuctions([])
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchLiveAuctions()
+  }, [fetchLiveAuctions])
+
+  const openAuctionBidModal = (auction: LiveMarketAuction) => {
+    setSelectedAuction(auction)
+    setAuctionBidderName(currentUser?.name || '')
+    setAuctionBidderPhone('')
+    const min = auction.winning_price ?? auction.starting_price
+    setAuctionBidAmount(String(Number(min) + 100))
+  }
+
+  const handlePlaceAuctionBid = async () => {
+    if (!selectedAuction || !auctionBidderName.trim() || !auctionBidAmount) {
+      toast.error('Bidder name and amount are required')
+      return
+    }
+    setIsBidding(true)
+    try {
+      const res = await authFetchJson<{ success: boolean; error?: string }>(
+        `/api/v2/fishing-ops/auctions/${selectedAuction.id}/bids`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bidderName: auctionBidderName.trim(),
+            bidderPhone: auctionBidderPhone.trim() || undefined,
+            bidAmount: Number(auctionBidAmount),
+          }),
+        },
+      )
+      if (!res.success) {
+        toast.error(res.error || 'Bid rejected')
+        return
+      }
+      toast.success('Auction bid placed! Notification sent to coastal seller.')
+      setSelectedAuction(null)
+      await fetchLiveAuctions()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setIsBidding(false)
+    }
+  }
 
   const fetchReviewSummaries = useCallback(async () => {
     try {
@@ -391,6 +469,80 @@ export default function MarketplacePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Live Landing-Site Auctions Showcase (Syndicated) */}
+      <Card className="border-amber-200 dark:border-amber-900/50 bg-amber-50/20 dark:bg-amber-950/10">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-amber-600 animate-pulse" />
+              Live Landing-Site Auctions
+            </CardTitle>
+            <CardDescription>
+              Direct auctions from coastal BMUs &amp; vessel landings. Remote B2B buyers can bid in real-time.
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+            {liveAuctions.length} Live Auction{liveAuctions.length !== 1 ? 's' : ''}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          {liveAuctions.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              No active landing-site auctions at this time. Send a catch lot to auction from Catch Management.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {liveAuctions.map((auc) => (
+                <div
+                  key={auc.id}
+                  className="rounded-lg border bg-card p-4 space-y-3 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-semibold text-base block">{auc.species_name}</span>
+                      <span className="text-xs font-mono text-muted-foreground">{auc.lot_code || 'LOT-LIVE'}</span>
+                    </div>
+                    <Badge className="bg-emerald-600 text-white text-[10px] uppercase tracking-wider">
+                      {auc.status}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs border-y py-2 my-1 border-dashed">
+                    <div>
+                      <span className="text-muted-foreground block">Quantity</span>
+                      <span className="font-semibold">{Number(auc.quantity_kg).toLocaleString()} kg</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">Start Price</span>
+                      <span className="font-semibold">KES {Number(auc.starting_price).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-1">
+                    <div>
+                      <span className="text-[11px] text-muted-foreground block">Current High Bid</span>
+                      <span className="font-bold text-emerald-600 text-sm">
+                        {auc.winning_price
+                          ? `KES ${Number(auc.winning_price).toLocaleString()}`
+                          : 'No bids yet'}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="gap-1 bg-amber-600 hover:bg-amber-700 text-white"
+                      onClick={() => openAuctionBidModal(auc)}
+                    >
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Place Bid
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -690,6 +842,71 @@ export default function MarketplacePage() {
             </Button>
             <Button type="button" onClick={applyFilters}>
               Apply filters
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Place Auction Bid Dialog */}
+      <Dialog open={selectedAuction !== null} onOpenChange={(open) => !open && setSelectedAuction(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-amber-600" />
+              Place Auction Bid (B2B Marketplace)
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAuction ? `${selectedAuction.species_name} · ${selectedAuction.lot_code || 'no lot'}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAuction && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-muted/60 p-3 space-y-1 text-sm">
+                <div className="flex justify-between font-medium">
+                  <span>Lot Quantity: {Number(selectedAuction.quantity_kg).toLocaleString()} kg</span>
+                  <span>Start: KES {Number(selectedAuction.starting_price).toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-emerald-600 font-semibold">
+                  Current High Bid: {selectedAuction.winning_price ? `KES ${Number(selectedAuction.winning_price).toLocaleString()}` : 'No bids placed yet'}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Bidder Name / Company</Label>
+                <Input
+                  value={auctionBidderName}
+                  onChange={(e) => setAuctionBidderName(e.target.value)}
+                  placeholder="e.g. Malindi Beach Hotel"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Phone (SMS / WhatsApp Notifications)</Label>
+                <Input
+                  value={auctionBidderPhone}
+                  onChange={(e) => setAuctionBidderPhone(e.target.value)}
+                  placeholder="+254 700 000 000"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Bid Amount (KES Total)</Label>
+                <Input
+                  type="number"
+                  value={auctionBidAmount}
+                  onChange={(e) => setAuctionBidAmount(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedAuction(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePlaceAuctionBid} disabled={isBidding} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {isBidding ? 'Submitting Bid…' : 'Place Winning Bid'}
             </Button>
           </DialogFooter>
         </DialogContent>

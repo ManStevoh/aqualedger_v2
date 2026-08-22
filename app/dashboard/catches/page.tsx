@@ -2,7 +2,7 @@
 
 import { DashboardPageLayout } from '@/components/dashboard/dashboard-page-layout'
 import { useState } from 'react'
-import { Fish, DollarSign, Scale, Star, Plus, Filter, Award, Printer, QrCode, Receipt, ShieldCheck, Download } from 'lucide-react'
+import { Fish, DollarSign, Scale, Star, Plus, Filter, Award, Printer, QrCode, Receipt, ShieldCheck, Download, Gavel } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,7 @@ import {
   SelectValue } from '@/components/ui/select'
 import { StatCard, StatCardGrid } from '@/components/dashboard/stat-card'
 import { DataTable } from '@/components/dashboard/data-table'
-import { useCatches, useTrips, logCatch, useFishSpecies } from '@/lib/api'
+import { useCatches, useTrips, logCatch, useFishSpecies, authFetchJson } from '@/lib/api'
 import { toast } from 'sonner'
 import { useCatchDistribution } from '@/lib/api'
 import type { Catch, FishingTrip } from '@/lib/types'
@@ -64,6 +64,10 @@ export default function CatchesPage() {
   })
   const [showLogDialog, setShowLogDialog] = useState(false)
   const [selectedReceiptCatch, setSelectedReceiptCatch] = useState<Catch | null>(null)
+  const [auctionTargetCatch, setAuctionTargetCatch] = useState<Catch | null>(null)
+  const [auctionStartingPrice, setAuctionStartingPrice] = useState('')
+  const [auctionDate, setAuctionDate] = useState('')
+  const [isSendingToAuction, setIsSendingToAuction] = useState(false)
   const [gradeFilter, setGradeFilter] = useState<string>('all')
   const [selectedTrip, setSelectedTrip] = useState('')
   const [fishType, setFishType] = useState('')
@@ -88,6 +92,48 @@ export default function CatchesPage() {
   const totalValue = catches.reduce((sum: number, c: Catch) => sum + c.totalValue, 0)
   const premiumCatch = catches.filter((c: Catch) => displayGrade(c.grade) === 'A').reduce((sum: number, c: Catch) => sum + c.weight, 0)
   const avgPrice = catches.length > 0 ? totalValue / totalWeight : 0
+
+  const handleOpenSendToAuction = (item: Catch) => {
+    setAuctionTargetCatch(item)
+    setAuctionStartingPrice(String(item.pricePerKg || 100))
+    const nowIso = new Date().toISOString().slice(0, 16)
+    setAuctionDate(nowIso)
+  }
+
+  const handleSendToAuctionSubmit = async () => {
+    if (!auctionTargetCatch || !auctionStartingPrice || !auctionDate) {
+      toast.error('Starting price and auction date are required')
+      return
+    }
+    setIsSendingToAuction(true)
+    try {
+      const lotCode = `LOT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${auctionTargetCatch.id.slice(0, 6).toUpperCase()}`
+      const res = await authFetchJson<{ success: boolean; error?: string }>(
+        '/api/v2/fishing-ops/auctions',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            speciesName: auctionTargetCatch.fishType,
+            lotCode,
+            quantityKg: auctionTargetCatch.weight,
+            startingPrice: Number(auctionStartingPrice),
+            auctionDate,
+          }),
+        },
+      )
+      if (!res.success) {
+        toast.error(res.error || 'Failed to schedule auction')
+        return
+      }
+      toast.success('Catch lot sent to auction! Available on Fish Auctions & B2B Marketplace.')
+      setAuctionTargetCatch(null)
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setIsSendingToAuction(false)
+    }
+  }
 
   const handleLogCatch = async () => {
     if (!selectedTrip || !fishType || !weight || !grade || !pricePerKg) return
@@ -176,9 +222,20 @@ export default function CatchesPage() {
       key: 'actions',
       header: 'Actions',
       cell: (item: Catch) => (
-        <Button variant="outline" size="sm" onClick={() => setSelectedReceiptCatch(item)}>
-          View Receipt
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs"
+            onClick={() => handleOpenSendToAuction(item)}
+          >
+            <Gavel className="h-3.5 w-3.5 text-amber-600" />
+            Auction
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSelectedReceiptCatch(item)}>
+            View Receipt
+          </Button>
+        </div>
       ),
     },
   ]
@@ -609,6 +666,62 @@ export default function CatchesPage() {
               Print / PDF
             </Button>
             <Button onClick={() => setSelectedReceiptCatch(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Catch Lot to Auction Dialog */}
+      <Dialog open={auctionTargetCatch !== null} onOpenChange={(open) => !open && setAuctionTargetCatch(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gavel className="h-5 w-5 text-amber-600" />
+              Send Catch Lot to Auction
+            </DialogTitle>
+            <DialogDescription>
+              Schedule a live landing-site auction for this logged catch lot.
+            </DialogDescription>
+          </DialogHeader>
+
+          {auctionTargetCatch && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-muted/60 p-3 space-y-1 text-sm">
+                <div className="flex justify-between font-medium">
+                  <span>Species: {auctionTargetCatch.fishType}</span>
+                  <span className="font-semibold">{auctionTargetCatch.weight} kg</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Grade {displayGrade(auctionTargetCatch.grade)} · Original Val: KES {auctionTargetCatch.totalValue?.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Starting Price (KES per kg)</Label>
+                <Input
+                  type="number"
+                  value={auctionStartingPrice}
+                  onChange={(e) => setAuctionStartingPrice(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Auction Date &amp; Time</Label>
+                <Input
+                  type="datetime-local"
+                  value={auctionDate}
+                  onChange={(e) => setAuctionDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAuctionTargetCatch(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendToAuctionSubmit} disabled={isSendingToAuction}>
+              {isSendingToAuction ? 'Scheduling…' : 'Schedule Auction'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

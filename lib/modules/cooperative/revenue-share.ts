@@ -3,26 +3,42 @@ import { tenantWhere } from '@/lib/tenant'
 
 export async function calculateCooperativeShares(tenantId: string, periodMonth: string) {
   const members = await query<{ user_id: string; catch_kg: number }>(
-    `SELECT c.recorded_by as user_id, COALESCE(SUM(c.quantity_kg), 0) as catch_kg
+    `SELECT COALESCE(c.recorded_by, t.captain_id, b.owner_id) as user_id,
+            COALESCE(SUM(c.quantity_kg), 0) as catch_kg
      FROM catches c
      JOIN fishing_trips t ON c.trip_id = t.id
      JOIN boats b ON t.boat_id = b.id
-     WHERE b.tenant_id = ?
-       AND DATE_FORMAT(c.recorded_at, '%Y-%m') = ?
-     GROUP BY c.recorded_by`,
+     WHERE c.tenant_id = ?
+       AND DATE_FORMAT(c.created_at, '%Y-%m') = ?
+       AND COALESCE(c.recorded_by, t.captain_id, b.owner_id) IS NOT NULL
+     GROUP BY COALESCE(c.recorded_by, t.captain_id, b.owner_id)`,
     [tenantId, periodMonth],
   )
 
   const totalKg = members.reduce((s, m) => s + Number(m.catch_kg), 0)
-  const [revenue] = await query<{ total: number }>(
+  
+  const [tripRevenue] = await query<{ total: number }>(
     `SELECT COALESCE(SUM(total_revenue), 0) as total FROM fishing_trips
-     WHERE ${tenantWhere()} AND DATE_FORMAT(return_time, '%Y-%m') = ? AND status = 'completed'`,
+     WHERE tenant_id = ? AND (
+       DATE_FORMAT(return_time, '%Y-%m') = ? OR
+       DATE_FORMAT(departure_time, '%Y-%m') = ? OR
+       DATE_FORMAT(created_at, '%Y-%m') = ?
+     )`,
+    [tenantId, periodMonth, periodMonth, periodMonth],
+  )
+
+  const [catchValue] = await query<{ total: number }>(
+    `SELECT COALESCE(SUM(total_value), 0) as total FROM catches
+     WHERE tenant_id = ? AND DATE_FORMAT(created_at, '%Y-%m') = ?`,
     [tenantId, periodMonth],
   )
-  const pool = Number(revenue?.total ?? 0) * 0.7
+
+  const grossRevenue = Math.max(Number(tripRevenue?.total ?? 0), Number(catchValue?.total ?? 0))
+  const pool = grossRevenue * 0.7
 
   const results = []
   for (const m of members) {
+    if (!m.user_id) continue
     const kg = Number(m.catch_kg)
     const pct = totalKg > 0 ? (kg / totalKg) * 100 : 0
     const share = totalKg > 0 ? (kg / totalKg) * pool : 0
@@ -45,11 +61,24 @@ export async function listCooperativeShares(tenantId: string, periodMonth?: stri
     conditions.push('crs.period_month = ?')
     params.push(periodMonth)
   }
-  return query(
+  let rows = await query(
     `SELECT crs.*, CONCAT(u.first_name, ' ', u.last_name) as member_name, u.email as member_email
      FROM cooperative_revenue_shares crs
      LEFT JOIN users u ON crs.member_user_id = u.id
      WHERE ${conditions.join(' AND ')} ORDER BY crs.share_pct DESC`,
     params,
   )
+
+  if (rows.length === 0 && periodMonth) {
+    await calculateCooperativeShares(tenantId, periodMonth)
+    rows = await query(
+      `SELECT crs.*, CONCAT(u.first_name, ' ', u.last_name) as member_name, u.email as member_email
+       FROM cooperative_revenue_shares crs
+       LEFT JOIN users u ON crs.member_user_id = u.id
+       WHERE ${conditions.join(' AND ')} ORDER BY crs.share_pct DESC`,
+      params,
+    )
+  }
+
+  return rows
 }

@@ -122,10 +122,23 @@ export async function GET(request: NextRequest) {
       [auth.tenantId],
     )
     
+    // Get active landing-site auctions for B2B marketplace syndication (Cross-tenant platform-wide)
+    const auctions = await query(
+      `SELECT fa.*,
+              t.name as tenant_name,
+              (SELECT COUNT(*) FROM auction_bids ab WHERE ab.auction_id = fa.id) as bid_count
+       FROM fish_auctions fa
+       LEFT JOIN tenants t ON fa.tenant_id = t.id
+       WHERE fa.status IN ('live', 'scheduled')
+       ORDER BY fa.created_at DESC LIMIT 50`,
+      [],
+    )
+
     return NextResponse.json({
       success: true,
       data: {
         listings,
+        auctions,
         stats: stats || { total_listings: 0, total_available_kg: 0, avg_price: 0 },
         pagination: {
           page,

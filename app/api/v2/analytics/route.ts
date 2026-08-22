@@ -148,9 +148,9 @@ export async function GET(request: NextRequest) {
       )
 
       const dailyCatches = await query<{ date: string; total_kg: number; total_value: number }>(
-        `SELECT DATE(c.recorded_at) as date, COALESCE(SUM(c.quantity_kg), 0) as total_kg, COALESCE(SUM(c.total_value), 0) as total_value
+        `SELECT DATE(c.created_at) as date, COALESCE(SUM(c.quantity_kg), 0) as total_kg, COALESCE(SUM(c.total_value), 0) as total_value
          FROM catches c ${catchJoin} ${catchWhere}
-         GROUP BY DATE(c.recorded_at) ORDER BY date`,
+         GROUP BY DATE(c.created_at) ORDER BY date`,
         catchParams,
       )
       

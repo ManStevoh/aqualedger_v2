@@ -27,7 +27,7 @@ export const PUT = apiHandler(async (request: NextRequest) => {
     await request.json(),
   )
   await execute(
-    `UPDATE cooperative_revenue_shares SET status = 'disbursed'
+    `UPDATE cooperative_revenue_shares SET status = 'paid', paid_at = NOW()
      WHERE tenant_id = ? AND period_month = ?`,
     [ctx.tenantId, periodMonth],
   )

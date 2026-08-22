@@ -358,7 +358,7 @@ export async function createTraceabilityLot(
       id: string
       grade: string
       quantity_kg: number
-      created_at: string
+      created_at: string | Date
       species_name: string
       vessel_name: string | null
       landing_site_name: string | null
@@ -379,7 +379,11 @@ export async function createTraceabilityLot(
     speciesName = speciesName ?? catchRow.species_name
     vesselName = vesselName ?? catchRow.vessel_name
     landingSite = landingSite ?? catchRow.landing_site_name
-    catchDate = catchDate ?? catchRow.created_at.split('T')[0]
+    const formattedCatchDate =
+      catchRow.created_at instanceof Date
+        ? catchRow.created_at.toISOString().split('T')[0]
+        : String(catchRow.created_at).split('T')[0].split(' ')[0]
+    catchDate = catchDate ?? formattedCatchDate
     grading = (grading ?? catchRow.grade) as TraceabilityLotCreateInput['grading']
     if (!lotCode) {
       lotCode = `LOT-${catchRow.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`

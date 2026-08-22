@@ -232,11 +232,11 @@ export async function POST(request: NextRequest) {
     await query(
       `INSERT INTO catches (
         id, tenant_id, trip_id, species_id, quantity_kg, grade, unit_price,
-        storage_method, recorded_by, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        storage_method, recorded_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, auth.tenantId, tripId, resolvedSpeciesId, quantityKg, dbGrade, unitPrice,
-        storageMethod || 'iced', auth.userId, notes || null
+        storageMethod || 'iced', auth.userId
       ]
     )
     
@@ -320,7 +320,7 @@ export async function PUT(request: NextRequest) {
       )
     }
     
-    const allowedFields = ['quantity_kg', 'grade', 'unit_price', 'storage_method', 'notes']
+    const allowedFields = ['quantity_kg', 'grade', 'unit_price', 'storage_method']
     const updateParts: string[] = []
     const updateParams: unknown[] = []
     
