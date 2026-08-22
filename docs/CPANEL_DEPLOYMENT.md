@@ -4,7 +4,28 @@ This guide describes how to deploy **AquaERP** (configured with Next.js `standal
 
 ---
 
-## 1. Database Setup
+## ⚡ 0. In-Place Update Procedure (For Already Running Applications)
+
+If your application is **already live and running on cPanel** and you are applying an update/upgrade:
+
+1. **Upload & Extract updated `deploy.zip`**:
+   - Log into cPanel **File Manager**.
+   - Navigate to your existing application directory (e.g., `/home/username/aquaerp`).
+   - Upload `deploy.zip` and extract it directly over the existing folder (confirming **Overwrite**).
+   - *Your existing `.env` file and database remain untouched.*
+
+2. **Execute New Database Migrations via Web (Zero Terminal Required)**:
+   - Visit: `https://yourdomain.com/setup?key=1987` (or `https://yourdomain.com/api/setup?key=1987`).
+   - Click **Run Setup & Migrations**.
+   - *The automated installer detects pre-existing tables, skips schema creation, and executes ONLY new/pending migration SQL files.*
+
+3. **Restart Application**:
+   - In cPanel **Setup Node.js App**, click **Restart**.
+   - Your updated application is live!
+
+---
+
+## 1. Fresh Database Setup (Initial Installation Only)
 
 AquaERP runs on MySQL. Follow these steps to configure the database on cPanel:
 
@@ -33,13 +54,23 @@ AquaERP runs on MySQL. Follow these steps to configure the database on cPanel:
    >   ```
    > - **Using a Text Editor**: Open the `.sql` file, search for `DEFINER=`root`@`%`` or `/*!50017 DEFINER=`root`@`%`*/` (or similar) and replace them with an empty string.
 
-3. **Verify and Run Pending Migrations**:
-   - Since you are importing an existing database dump, you must verify and run any new/pending migrations to bring the schema up to date.
-   - *Option A (Via SSH Terminal)*: Connect to your cPanel hosting via SSH, change directory to your app root, and run:
-     ```bash
-     node scripts/run-migrations.mjs
+3. **Run Automatic Database Migrations & Setup (Zero Terminal Required)**:
+   - Since you do not have cPanel SSH/Terminal access, AquaLedger includes an **Automated Web Setup & Migration Assistant**.
+   - Simply navigate to your website URL appending `/setup` in your browser:
      ```
-   - *Option B (Via phpMyAdmin)*: Check the SQL migration files inside the `database/migrations/` folder. If there are migration scripts newer than your database dump, run them in chronological order (by date prefix) inside phpMyAdmin's **SQL** tab.
+     https://yourdomain.com/setup?key=1987
+     ```
+   - Alternatively, you can make a direct API call or visit:
+     ```
+     https://yourdomain.com/api/setup?key=1987
+     ```
+   - **What happens automatically**:
+     - Tests your MySQL database connection using credentials from `.env`.
+     - Creates the database if it doesn't exist.
+     - Initializes the base schema (`database/schema.sql`).
+     - Executes all 35+ pending migration SQL scripts in `database/migrations/`.
+     - Ensures the platform Super Admin user exists (`admin@aqualedger.co.ke` / `Admin@123`).
+     - Returns a live execution log and status report.
 
 ---
 
